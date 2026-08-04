@@ -1,0 +1,64 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "companyName": "Tech Solutions Ltd",
+      "registrationNumber": "REG001",
+      "businessType": "manufacturer",
+      "country": "saudi",
+      "city": "Riyadh",
+      "address": "123 Business Street, Riyadh",
+      "industriesServed": "manufacturing",
+      "productServices": [
+        {
+          "category": "electronics",
+          "description": "High-quality electronic components"
+        }
+      ],
+      "differentiators": "We provide innovative solutions with 24/7 support",
+      "numberOfEmployees": "150",
+      "officeLocations": "multiple",
+      "annualTurnover": "$5M",
+      "capacityToDeliver": "Can deliver 1000 units monthly across GCC",
+      "existingClients": "Saudi Aramco, SABIC",
+      "primaryRepFirstName": "Ahmed",
+      "primaryRepLastName": "Al-Rashid",
+      "primaryRepPhone": "501234567",
+      "primaryRepPhoneCode": "+966",
+      "primaryRepEmail": "ahmed@techsolutions.com",
+      "primaryRepRelationship": "CEO",
+      "primaryRepNationality": "saudi",
+      "password": "SecurePass123"
+    },
+    {
+      "id": 2,
+      "companyName": "Global Logistics Inc",
+      "registrationNumber": "REG002",
+      "businessType": "distributor",
+      "country": "uae",
+      "city": "Dubai",
+      "address": "456 Trade Center, Dubai",
+      "industriesServed": "logistics",
+      "productServices": [
+        {
+          "category": "textiles",
+          "description": "Premium textile distribution"
+        }
+      ],
+      "differentiators": "Fast delivery with competitive pricing",
+      "numberOfEmployees": "200",
+      "officeLocations": "multiple",
+      "annualTurnover": "$8M",
+      "capacityToDeliver": "Can handle 5000 units monthly",
+      "existingClients": "Emirates Airlines, DP World",
+      "primaryRepFirstName": "Fatima",
+      "primaryRepLastName": "Al-Mansouri",
+      "primaryRepPhone": "501234568",
+      "primaryRepPhoneCode": "+971",
+      "primaryRepEmail": "fatima@globallogistics.com",
+      "primaryRepRelationship": "Director",
+      "primaryRepNationality": "emirati",
+      "password": "LogisticsPro456"
+    }
+  ]
+}
