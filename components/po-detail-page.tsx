@@ -1,8 +1,27 @@
-
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, Download, Sparkles, FileText, Building2, Receipt, ShieldCheck } from "lucide-react"
+import {
+  ArrowLeft,
+  Download,
+  X,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  FileCheck2,
+  Brain,
+  CircleDollarSign,
+  PackageCheck,
+  Receipt,
+  UserCheck,
+  CopyCheck,
+} from "lucide-react"
+
 import POActionsMenu from "./po-actions-menu"
 import AmendPOModal from "./amend-po-modal"
 
@@ -11,45 +30,58 @@ interface PODetailPageProps {
   onBack: () => void
 }
 
-interface ValidationDetail {
-  label: string
-  value: string
-}
+type ValidationStatus = "PASS" | "WARNING" | "FAIL"
 
-interface ValidationCheck {
-  name: string
-  status: "passed" | "warning" | "failed"
+interface ValidationItem {
   title: string
-  details: ValidationDetail[]
-  explanation?: string
+  status: ValidationStatus
+  reason: string
 }
 
-interface InvoiceValidationResult {
+interface ValidationResponse {
+  validations: ValidationItem[]
   confidenceScore: number
   riskLevel: "Low Risk" | "Medium Risk" | "High Risk"
-  overallStatus: "Compliant" | "Action Required" | "Rejected"
-  summary: string
-  validations: ValidationCheck[]
   recommendation: {
-    action: string
-    reason: string
+    summary: string
+    action:
+      | "Post Invoice"
+      | "Route for Finance Approval"
+      | "Request Vendor Clarification"
+      | "Reject Invoice"
+    why: string[]
   }
 }
 
-export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
+export default function PODetailPage({
+  poNumber,
+  onBack,
+}: PODetailPageProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "documents" | "delivery" | "invoices"
   >("overview")
 
   const [isAmendPOOpen, setIsAmendPOOpen] = useState(false)
+
   const [isValidating, setIsValidating] = useState(false)
-  const [validationResult, setValidationResult] =
-    useState<InvoiceValidationResult | null>(null)
+
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
 
-  // const GEMINI_API_KEY = ""
+  const [validationResult, setValidationResult] =
+    useState<ValidationResponse | null>(null)
 
-  // Mock PO data
+  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
+
+  const [expandedReasons, setExpandedReasons] = useState<
+    Record<number, boolean>
+  >({})
+
+  const [hoveredInvoice, setHoveredInvoice] = useState<string | null>(null)
+
+  // ---------------------------------------------------------
+  // MOCK PO DATA
+  // ---------------------------------------------------------
+
   const poData = {
     id: `PO${poNumber}`,
     title: "Employee Welcome Kit for Upcoming Inductions",
@@ -62,6 +94,7 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
     poIssuedDate: "12/08/2025",
     expectedDeliveryDate: "31/12/2025",
     totalPOValue: "12,146,000 ⱡ",
+
     vendor: {
       name: "Kaar Technologies",
       poValue: "100,000,000",
@@ -69,6 +102,7 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
       contact: "+123 7866 2891",
       logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/kaarlogo-eFdSHghYTMP6iXhiqBNTuHylpVZm0D.png",
     },
+
     goods: [
       {
         description: "Dell Latitude Laptop",
@@ -99,8 +133,13 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
         totalPrice: "14,400,000",
       },
     ],
+
     totalCost: "1,015,000",
   }
+
+  // ---------------------------------------------------------
+  // DOCUMENTS
+  // ---------------------------------------------------------
 
   const documents = [
     {
@@ -154,6 +193,10 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
     },
   ]
 
+  // ---------------------------------------------------------
+  // DELIVERY DATA
+  // ---------------------------------------------------------
+
   const deliveryData = [
     {
       grnNumber: "1070000137",
@@ -184,298 +227,685 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
     },
   ]
 
+  // ---------------------------------------------------------
+  // INVOICE DATA
+  // ---------------------------------------------------------
+
   const invoiceData = [
     {
-      invoiceRef: "1070000137",
-      invoiceNumber: "5100001234",
-      invoiceDate: "20 May 2025",
-      paymentDueDate: "14 Jun 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "4500001234",
-      purchaseOrderAmount: "12,500.00",
-      goodsReceipt: "5000012345",
+      invoiceRef: "0005000069",
+      invoiceNumber: "5100001236",
+      invoiceDate: "16 Aug 2025",
+      paymentDueDate: "15 Sep 2025",
+      vendorName: "Global Engineering Ltd.",
+      purchaseOrder: "4500001567",
+      purchaseOrderAmount: "10000.00",
+      purchaseOrderVendorName: "Global Engineering Ltd.",
+      goodsReceipt: "5000012890",
+      goodsReceiptQuantity: "10",
       fiscalYear: "2025",
       currency: "SAR",
-      amount: "10,000.00",
-      taxAmount: "1,500.00",
-      netAmount: "8,500.00",
+      invoiceQuantity: "10",
+      amount: "10000.00",
+      taxAmount: "1500.00",
+      netAmount: "8500.00",
       paymentTerms: "Net 30",
-      vendorPaymentTerms: "Net 45",
+      vendorPaymentTerms: "Net 30",
       paymentMethod: "Bank Transfer",
       paymentReference: "1900000123",
-      status: "Paid",
-      postingDate: "22 May 2025",
+      status: "Submitted",
+      postingDate: "17 Aug 2025",
       documentType: "Vendor Invoice",
       companyCode: "1000",
       attachment: "Invoice.pdf",
     },
+
     {
-      invoiceRef: "0005000068",
-      invoiceNumber: "5100001235",
-      invoiceDate: "29 Jul 2025",
-      paymentDueDate: "28 Aug 2025",
-      vendorName: "XYZ Industrial Supplies",
-      purchaseOrder: "4500001456",
-      purchaseOrderAmount: "15,000.00",
-      goodsReceipt: "5000012678",
+      invoiceRef: "0005000070",
+      invoiceNumber: "5100001237",
+      invoiceDate: "18 Aug 2025",
+      paymentDueDate: "17 Sep 2025",
+      vendorName: "ABC Trading Co.",
+      purchaseOrder: "4500001234",
+      purchaseOrderAmount: "15000.00",
+      purchaseOrderVendorName: "ABC Trading Co.",
+      goodsReceipt: "5000012345",
+      goodsReceiptQuantity: "20",
       fiscalYear: "2025",
       currency: "SAR",
-      amount: "10,000.00",
-      taxAmount: "1,500.00",
-      netAmount: "8,500.00",
+      invoiceQuantity: "18",
+      amount: "15000.00",
+      taxAmount: "2250.00",
+      netAmount: "12750.00",
       paymentTerms: "Net 30",
       vendorPaymentTerms: "Net 30",
       paymentMethod: "Bank Transfer",
       paymentReference: "1900000124",
       status: "Paid",
-      postingDate: "30 Jul 2025",
+      postingDate: "19 Aug 2025",
       documentType: "Vendor Invoice",
       companyCode: "1000",
       attachment: "Invoice.pdf",
     },
+
     {
-      invoiceRef: "0005000069",
-      invoiceNumber: "5100001236",
-      invoiceDate: "16 Aug 2020",
-      paymentDueDate: "15 Sep 2020",
-      vendorName: "Global Engineering Ltd.",
-      purchaseOrder: "4500001567",
-      purchaseOrderAmount: "10,000.00",
-      goodsReceipt: "5000012890",
-      fiscalYear: "2020",
+      invoiceRef: "0005000071",
+      invoiceNumber: "5100001238",
+      invoiceDate: "20 Aug 2025",
+      paymentDueDate: "19 Sep 2025",
+      vendorName: "XYZ Industrial Supplies",
+      purchaseOrder: "",
+      purchaseOrderAmount: "20000.00",
+      purchaseOrderVendorName: "XYZ Industrial Supplies",
+      goodsReceipt: "5000012678",
+      goodsReceiptQuantity: "25",
+      fiscalYear: "2025",
       currency: "SAR",
-      amount: "10,000.00",
-      taxAmount: "1,500.00",
-      netAmount: "8,500.00",
+      invoiceQuantity: "20",
+      amount: "22000.00",
+      taxAmount: "",
+      netAmount: "22000.00",
       paymentTerms: "Net 30",
+      vendorPaymentTerms: "",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000125",
+      status: "Submitted",
+      postingDate: "21 Aug 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000072",
+      invoiceNumber: "5100001239",
+      invoiceDate: "22 Aug 2025",
+      paymentDueDate: "21 Sep 2025",
+      vendorName: "ABC Trading Co.",
+      purchaseOrder: "4500001456",
+      purchaseOrderAmount: "12000.00",
+      purchaseOrderVendorName: "XYZ Industrial Supplies",
+      goodsReceipt: "5000012678",
+      goodsReceiptQuantity: "15",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "10",
+      amount: "12000.00",
+      taxAmount: "1800.00",
+      netAmount: "10200.00",
+      paymentTerms: "Net 30",
+      vendorPaymentTerms: "Immediate",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000126",
+      status: "Rejected",
+      postingDate: "23 Aug 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000073",
+      invoiceNumber: "5100001240",
+      invoiceDate: "24 Aug 2025",
+      paymentDueDate: "23 Sep 2025",
+      vendorName: "National Steel Works",
+      purchaseOrder: "4500001789",
+      purchaseOrderAmount: "25000.00",
+      purchaseOrderVendorName: "National Steel Works",
+      goodsReceipt: "",
+      goodsReceiptQuantity: "",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "15",
+      amount: "24000.00",
+      taxAmount: "0",
+      netAmount: "24000.00",
+      paymentTerms: "Net 45",
+      vendorPaymentTerms: "Net 45",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000127",
+      status: "Submitted",
+      postingDate: "25 Aug 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000074",
+      invoiceNumber: "5100001241",
+      invoiceDate: "26 Aug 2025",
+      paymentDueDate: "25 Sep 2025",
+      vendorName: "Global Engineering Ltd.",
+      purchaseOrder: "4500001890",
+      purchaseOrderAmount: "18000.00",
+      purchaseOrderVendorName: "Global Engineering Ltd.",
+      goodsReceipt: "5000013001",
+      goodsReceiptQuantity: "10",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "15",
+      amount: "20000.00",
+      taxAmount: "3000.00",
+      netAmount: "17000.00",
+      paymentTerms: "Net 30",
+      vendorPaymentTerms: "Immediate",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000128",
+      status: "Submitted",
+      postingDate: "27 Aug 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000075",
+      invoiceNumber: "5100001242",
+      invoiceDate: "28 Aug 2025",
+      paymentDueDate: "27 Sep 2025",
+      vendorName: "ABC Trading Co.",
+      purchaseOrder: "",
+      purchaseOrderAmount: "25000.00",
+      purchaseOrderVendorName: "XYZ Industrial Supplies",
+      goodsReceipt: "",
+      goodsReceiptQuantity: "",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "20",
+      amount: "28000.00",
+      taxAmount: "",
+      netAmount: "28000.00",
+      paymentTerms: "",
       vendorPaymentTerms: "Immediate",
       paymentMethod: "-",
       paymentReference: "-",
-      status: "Submitted",
-      postingDate: "17 Aug 2020",
+      status: "Rejected",
+      postingDate: "29 Aug 2025",
       documentType: "Vendor Invoice",
       companyCode: "1000",
       attachment: "Invoice not generated",
     },
+
+    {
+      invoiceRef: "0005000076",
+      invoiceNumber: "5100001243",
+      invoiceDate: "30 Aug 2025",
+      paymentDueDate: "29 Sep 2025",
+      vendorName: "Eastern Electricals",
+      purchaseOrder: "4500001991",
+      purchaseOrderAmount: "30000.00",
+      purchaseOrderVendorName: "Eastern Electricals",
+      goodsReceipt: "5000013200",
+      goodsReceiptQuantity: "30",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "25",
+      amount: "28000.00",
+      taxAmount: "0",
+      netAmount: "28000.00",
+      paymentTerms: "Net 60",
+      vendorPaymentTerms: "Net 60",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000129",
+      status: "Submitted",
+      postingDate: "31 Aug 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000077",
+      invoiceNumber: "5100001244",
+      invoiceDate: "01 Sep 2025",
+      paymentDueDate: "01 Oct 2025",
+      vendorName: "Prime Industrial Services",
+      purchaseOrder: "4500002050",
+      purchaseOrderAmount: "12000.00",
+      purchaseOrderVendorName: "Prime Industrial Services",
+      goodsReceipt: "5000013300",
+      goodsReceiptQuantity: "12",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "12",
+      amount: "12000.00",
+      taxAmount: "-100",
+      netAmount: "12100.00",
+      paymentTerms: "Net 45",
+      vendorPaymentTerms: "",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000130",
+      status: "Submitted",
+      postingDate: "02 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000078",
+      invoiceNumber: "5100001245",
+      invoiceDate: "03 Sep 2025",
+      paymentDueDate: "03 Oct 2025",
+      vendorName: "ABC Trading Co.",
+      purchaseOrder: "4500001234",
+      purchaseOrderAmount: "15000.00",
+      purchaseOrderVendorName: "ABC Trading Co.",
+      goodsReceipt: "5000012345",
+      goodsReceiptQuantity: "20",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "18",
+      amount: "15000.00",
+      taxAmount: "2250.00",
+      netAmount: "12750.00",
+      paymentTerms: "Net 30",
+      vendorPaymentTerms: "Net 30",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000131",
+      status: "Paid",
+      postingDate: "04 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000079",
+      invoiceNumber: "5100001246",
+      invoiceDate: "05 Sep 2025",
+      paymentDueDate: "05 Oct 2025",
+      vendorName: "Modern Industrial Co.",
+      purchaseOrder: "4500002100",
+      purchaseOrderAmount: "18000.00",
+      purchaseOrderVendorName: "National Steel Works",
+      goodsReceipt: "",
+      goodsReceiptQuantity: "",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "12",
+      amount: "17000.00",
+      taxAmount: "0",
+      netAmount: "17000.00",
+      paymentTerms: "Immediate",
+      vendorPaymentTerms: "Net 30",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000132",
+      status: "Submitted",
+      postingDate: "06 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000080",
+      invoiceNumber: "5100001247",
+      invoiceDate: "07 Sep 2025",
+      paymentDueDate: "07 Oct 2025",
+      vendorName: "Prime Industrial Services",
+      purchaseOrder: "4500002150",
+      purchaseOrderAmount: "10000.00",
+      purchaseOrderVendorName: "Prime Industrial Services",
+      goodsReceipt: "5000013400",
+      goodsReceiptQuantity: "10",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "10",
+      amount: "12000.00",
+      taxAmount: "-500",
+      netAmount: "12500.00",
+      paymentTerms: "Net 30",
+      vendorPaymentTerms: "Net 30",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000133",
+      status: "Rejected",
+      postingDate: "08 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000081",
+      invoiceNumber: "5100001248",
+      invoiceDate: "09 Sep 2025",
+      paymentDueDate: "09 Oct 2025",
+      vendorName: "Eastern Electricals",
+      purchaseOrder: "",
+      purchaseOrderAmount: "22000.00",
+      purchaseOrderVendorName: "Eastern Electricals",
+      goodsReceipt: "5000013500",
+      goodsReceiptQuantity: "10",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "15",
+      amount: "22000.00",
+      taxAmount: "3300.00",
+      netAmount: "18700.00",
+      paymentTerms: "",
+      vendorPaymentTerms: "Net 45",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "-",
+      status: "Submitted",
+      postingDate: "10 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000082",
+      invoiceNumber: "5100001249",
+      invoiceDate: "11 Sep 2025",
+      paymentDueDate: "11 Oct 2025",
+      vendorName: "ABC Trading Co.",
+      purchaseOrder: "4500002200",
+      purchaseOrderAmount: "16000.00",
+      purchaseOrderVendorName: "Global Engineering Ltd.",
+      goodsReceipt: "5000013600",
+      goodsReceiptQuantity: "10",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "14",
+      amount: "18000.00",
+      taxAmount: "0",
+      netAmount: "18000.00",
+      paymentTerms: "Net 60",
+      vendorPaymentTerms: "Immediate",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000134",
+      status: "Submitted",
+      postingDate: "12 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
+
+    {
+      invoiceRef: "0005000083",
+      invoiceNumber: "5100001250",
+      invoiceDate: "13 Sep 2025",
+      paymentDueDate: "13 Oct 2025",
+      vendorName: "National Steel Works",
+      purchaseOrder: "4500002250",
+      purchaseOrderAmount: "50000.00",
+      purchaseOrderVendorName: "National Steel Works",
+      goodsReceipt: "5000013700",
+      goodsReceiptQuantity: "50",
+      fiscalYear: "2025",
+      currency: "SAR",
+      invoiceQuantity: "50",
+      amount: "50000.00",
+      taxAmount: "7500.00",
+      netAmount: "42500.00",
+      paymentTerms: "Net 45",
+      vendorPaymentTerms: "Net 45",
+      paymentMethod: "Bank Transfer",
+      paymentReference: "1900000135",
+      status: "Paid",
+      postingDate: "14 Sep 2025",
+      documentType: "Vendor Invoice",
+      companyCode: "1000",
+      attachment: "Invoice.pdf",
+    },
   ]
 
-  const validateInvoice = async () => {
-    if (!selectedInvoice) {
-      alert("Please select an invoice.")
-      return
-    }
+  // ---------------------------------------------------------
+  // VALIDATION
+  // ---------------------------------------------------------
+
+  const validateInvoice = async (invoice: any) => {
+    if (!invoice) return
 
     try {
+      setSelectedInvoice(invoice)
       setIsValidating(true)
       setValidationResult(null)
+      setIsValidationModalOpen(true)
+      setExpandedReasons({})
 
       const prompt = `
-You are an Procurement and Accounts Payable Invoice Validation Assistant.
+You are an expert Procurement and Accounts Payable Invoice Validation Assistant.
 
-Your task is to validate ONE selected invoice using the business validation rules provided below.
+Validate ONLY the selected invoice using the exact rules below.
 
-Do not assume or invent any values.
+Do not invent values.
+Do not use external information.
+Do not assume missing values.
 
-Use ONLY the data provided.
+SELECTED INVOICE:
+${JSON.stringify(invoice, null, 2)}
 
-Perform all calculations yourself from the supplied invoice fields.
-
-Do not make assumptions beyond the stated validation rules.
-
-Return ONLY valid JSON.
-
-==========================================================
-SELECTED INVOICE
-==========================================================
-
-${JSON.stringify(selectedInvoice, null, 2)}
-
-==========================================================
-REFERENCE INVOICE DATASET
-==========================================================
-
+REFERENCE INVOICE DATASET:
 ${JSON.stringify(invoiceData, null, 2)}
 
-==========================================================
-VALIDATION RULES
-==========================================================
+VALIDATION RULES:
 
-1. Invoice Amount Validation
+1. Purchase Order Exists Validation
+
+Field:
+purchaseOrder
+
+If purchaseOrder is not empty:
+PASS
+
+If purchaseOrder is empty:
+FAIL
+
+Reason:
+Purchase Order does not exist.
+
+2. Vendor Match Validation
 
 Compare:
+vendorName
+purchaseOrderVendorName
 
+If values match exactly:
+PASS
+
+If values do not match:
+FAIL
+
+Reason:
+Invoice vendor does not match the Purchase Order vendor.
+
+3. Goods Receipt Exists Validation
+
+Field:
+goodsReceipt
+
+If goodsReceipt is not empty:
+PASS
+
+If goodsReceipt is empty:
+FAIL
+
+Reason:
+Goods Receipt document not found.
+
+4. Invoice Quantity Validation
+
+Compare:
+invoiceQuantity
+goodsReceiptQuantity
+
+Convert both values to numbers.
+
+If Invoice Quantity <= Goods Receipt Quantity:
+PASS
+
+If Invoice Quantity > Goods Receipt Quantity:
+FAIL
+
+Reason:
+Invoice quantity exceeds the Goods Receipt quantity.
+
+5. Invoice Amount Validation
+
+Compare:
 purchaseOrderAmount
 amount
 
-Rules:
+Convert both values to numbers.
 
-- If Invoice Amount < Purchase Order Amount
-    WARNING
+If Invoice Amount < Purchase Order Amount:
+WARNING
 
-- If Invoice Amount == Purchase Order Amount
-    PASS
+If Invoice Amount == Purchase Order Amount:
+PASS
 
-- If Invoice Amount > Purchase Order Amount
-    FAIL
+If Invoice Amount > Purchase Order Amount:
+FAIL
 
-----------------------------------------------------------
+If the invoice amount exceeds the PO amount, calculate the percentage by which it exceeds the PO amount.
 
-2. Tax Validation
+6. Tax Validation
 
-Use field:
-
+Field:
 taxAmount
 
-Rules:
+If taxAmount > 0:
+PASS
 
-- taxAmount > 0
-    PASS
+If taxAmount == 0:
+WARNING
 
-- taxAmount == 0
-    WARNING
+If taxAmount is empty or missing:
+FAIL
 
-- taxAmount is empty or missing
-    FAIL
-
-----------------------------------------------------------
-
-3. Payment Terms Validation
+7. Payment Terms Validation
 
 Compare:
-
 paymentTerms
 vendorPaymentTerms
 
-Rules:
+If both values match:
+PASS
 
-- Both values equal
-    PASS
+If either value is missing:
+WARNING
 
-- Either value missing
-    WARNING
+If both exist but do not match:
+FAIL
 
-- Values different
-    FAIL
+8. Similar Invoice Validation
 
-----------------------------------------------------------
+Compare selected invoice against ALL OTHER invoices.
 
-4. Similar Invoice Validation
-
-Compare the selected invoice against ALL OTHER invoices.
-
-Exclude the selected invoice.
+Exclude the selected invoice itself.
 
 Compare ONLY:
-
 invoiceRef
 purchaseOrder
 goodsReceipt
 vendorName
 
-Rules:
+If none match:
+PASS
 
-- None match
-    PASS
+If one or more fields match:
+WARNING
 
-- One or more fields match
-    WARNING
+If all four fields match:
+FAIL
 
-- All four fields match
-    FAIL
+State which fields matched and their values.
 
-==========================================================
-OVERALL CONFIDENCE SCORE
-==========================================================
+CONFIDENCE SCORE:
 
-Provide:
+Provide a confidence score from 0 to 100.
 
-Confidence Score:
-0-100%
+RISK LEVEL:
 
-Risk Level:
-
+Choose:
 Low Risk
 Medium Risk
 High Risk
 
-==========================================================
-AI RECOMMENDATION
-==========================================================
+AI RECOMMENDATION:
 
-Provide:
+Choose exactly ONE:
+Post Invoice
+Route for Finance Approval
+Request Vendor Clarification
+Reject Invoice
 
-Concise Overall Summary
+The summary must be 2-4 business-friendly sentences.
 
-Recommended Action
+Only mention WARNING and FAIL validations in the summary.
 
-Explain WHY
+The "why" array should contain reasons ONLY for WARNING and FAIL validations.
 
-==========================================================
-OUTPUT FORMAT
-==========================================================
+IMPORTANT:
 
 Return ONLY valid JSON.
 
-Do not return Markdown.
+Do not use markdown.
 Do not use code fences.
-Do not add any text before or after the JSON.
 
-Use exactly this structure:
+Return exactly this JSON structure:
 
 {
-  "confidenceScore": 80,
-  "riskLevel": "Medium Risk",
-  "overallStatus": "Action Required",
-  "summary": "Invoice amount is lower than the Purchase Order amount.",
   "validations": [
     {
-      "name": "Invoice Amount",
-      "status": "warning",
-      "title": "Variance detected",
-      "details": [
-        { "label": "Invoice", "value": "SAR 10,000" },
-        { "label": "PO Amount", "value": "SAR 15,000" },
-        { "label": "Difference", "value": "SAR 5,000 lower" }
-      ],
-      "explanation": "The invoice amount is lower than the Purchase Order amount."
+      "title": "Purchase Order Exists",
+      "status": "PASS",
+      "reason": "..."
     },
     {
-      "name": "Tax Validation",
-      "status": "passed",
-      "title": "Passed",
-      "details": [
-        { "label": "Tax amount", "value": "SAR 1,500" }
-      ],
-      "explanation": "Tax amount is greater than 0."
+      "title": "Vendor Match",
+      "status": "PASS",
+      "reason": "..."
     },
     {
-      "name": "Payment Terms",
-      "status": "passed",
-      "title": "Passed",
-      "details": [
-        { "label": "Payment Terms", "value": "Net 30 = Net 30" }
-      ],
-      "explanation": "Payment terms match the vendor payment terms."
+      "title": "Goods Receipt Exists",
+      "status": "PASS",
+      "reason": "..."
     },
     {
-      "name": "Duplicate Check",
-      "status": "passed",
-      "title": "Passed",
-      "details": [
-        { "label": "Result", "value": "No similar invoices found" }
-      ],
-      "explanation": "No similar invoices were found."
+      "title": "Invoice Quantity Validation",
+      "status": "PASS",
+      "reason": "..."
+    },
+    {
+      "title": "Invoice Amount Validation",
+      "status": "PASS",
+      "reason": "..."
+    },
+    {
+      "title": "Tax Validation",
+      "status": "PASS",
+      "reason": "..."
+    },
+    {
+      "title": "Payment Terms Validation",
+      "status": "PASS",
+      "reason": "..."
+    },
+    {
+      "title": "Similar Invoice Validation",
+      "status": "PASS",
+      "reason": "..."
     }
   ],
+  "confidenceScore": 95,
+  "riskLevel": "Low Risk",
   "recommendation": {
-    "action": "Route for Finance Approval",
-    "reason": "The invoice amount is lower than the PO amount. Verify whether this is due to partial delivery, a price change, or an adjustment to the purchase order."
+    "summary": "...",
+    "action": "Post Invoice",
+    "why": [
+      "..."
+    ]
   }
 }
 `
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: {
@@ -491,34 +921,180 @@ Use exactly this structure:
                 ],
               },
             ],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: "application/json",
+            },
           }),
         }
       )
 
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status}`)
+      }
+
       const data = await response.json()
 
       const rawResult =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
+        data.candidates?.[0]?.content?.parts?.[0]?.text
 
-      const cleanedResult = rawResult
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim()
-
-      try {
-        setValidationResult(JSON.parse(cleanedResult))
-      } catch (parseError) {
-        console.error(
-          "Failed to parse AI validation response:",
-          parseError
-        )
-        setValidationResult(null)
+      if (!rawResult) {
+        throw new Error("No validation response received from AI.")
       }
-    } catch (err) {
-      console.error(err)
+
+      const parsedResult: ValidationResponse = JSON.parse(rawResult)
+
+      setValidationResult(parsedResult)
+    } catch (error) {
+      console.error("Invoice validation error:", error)
+
+      setValidationResult({
+        validations: [
+          {
+            title: "Validation Error",
+            status: "FAIL",
+            reason:
+              "The AI validation service could not complete the validation. Please try again.",
+          },
+        ],
+        confidenceScore: 0,
+        riskLevel: "High Risk",
+        recommendation: {
+          summary:
+            "The invoice could not be validated because the AI validation service returned an error.",
+          action: "Route for Finance Approval",
+          why: [
+            "AI validation could not be completed successfully.",
+          ],
+        },
+      })
     } finally {
       setIsValidating(false)
+    }
+  }
+
+  // ---------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------
+
+  const toggleReason = (index: number) => {
+    setExpandedReasons((previous) => ({
+      ...previous,
+      [index]: !previous[index],
+    }))
+  }
+
+  const closeValidationModal = () => {
+    if (isValidating) return
+
+    setIsValidationModalOpen(false)
+  }
+
+  const getStatusConfig = (status: ValidationStatus) => {
+    switch (status) {
+      case "PASS":
+        return {
+          icon: <CheckCircle2 size={20} />,
+          label: "Passed",
+          container:
+            "border-green-200 bg-green-50",
+          iconContainer:
+            "bg-green-100 text-green-700",
+          text: "text-green-700",
+        }
+
+      case "WARNING":
+        return {
+          icon: <AlertTriangle size={20} />,
+          label: "Warning",
+          container:
+            "border-amber-200 bg-amber-50",
+          iconContainer:
+            "bg-amber-100 text-amber-700",
+          text: "text-amber-700",
+        }
+
+      case "FAIL":
+        return {
+          icon: <XCircle size={20} />,
+          label: "Failed",
+          container:
+            "border-red-200 bg-red-50",
+          iconContainer:
+            "bg-red-100 text-red-700",
+          text: "text-red-700",
+        }
+    }
+  }
+
+  const getRiskConfig = (risk: string) => {
+    if (risk === "Low Risk") {
+      return {
+        bg: "bg-green-50",
+        border: "border-green-200",
+        text: "text-green-700",
+        icon: <ShieldCheck size={20} />,
+      }
+    }
+
+    if (risk === "Medium Risk") {
+      return {
+        bg: "bg-amber-50",
+        border: "border-amber-200",
+        text: "text-amber-700",
+        icon: <AlertTriangle size={20} />,
+      }
+    }
+
+    return {
+      bg: "bg-red-50",
+      border: "border-red-200",
+      text: "text-red-700",
+      icon: <XCircle size={20} />,
+    }
+  }
+
+  const getRecommendationConfig = (action: string) => {
+    switch (action) {
+      case "Post Invoice":
+        return {
+          icon: <CheckCircle2 size={22} />,
+          bg: "bg-green-50",
+          border: "border-green-200",
+          text: "text-green-700",
+        }
+
+      case "Route for Finance Approval":
+        return {
+          icon: <UserCheck size={22} />,
+          bg: "bg-blue-50",
+          border: "border-blue-200",
+          text: "text-blue-700",
+        }
+
+      case "Request Vendor Clarification":
+        return {
+          icon: <AlertTriangle size={22} />,
+          bg: "bg-amber-50",
+          border: "border-amber-200",
+          text: "text-amber-700",
+        }
+
+      case "Reject Invoice":
+        return {
+          icon: <XCircle size={22} />,
+          bg: "bg-red-50",
+          border: "border-red-200",
+          text: "text-red-700",
+        }
+
+      default:
+        return {
+          icon: <Brain size={22} />,
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          text: "text-gray-700",
+        }
     }
   }
 
@@ -532,48 +1108,51 @@ Use exactly this structure:
     console.log("Cancel PO clicked")
   }
 
+  // ---------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------
+
   return (
-    <div className="min-h-screen bg-[#f7f9f8] text-gray-900">
+    <div className="min-h-screen bg-gray-50">
 
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/95 px-4 py-4 backdrop-blur sm:px-6">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-          <div className="flex min-w-0 items-center gap-3">
+      <div className="border-b border-gray-200 bg-white px-6 py-4">
+        <div className="flex items-center justify-between">
+
+          <div className="flex items-center gap-3">
+
             <button
               onClick={onBack}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+              className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={20} />
             </button>
 
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                Purchase Order
-              </p>
+            <h1 className="text-lg font-semibold text-gray-900">
+              {poData.id}/{" "}
+              <span className="text-green-700">
+                {activeTab === "overview"
+                  ? "PO overview"
+                  : activeTab === "documents"
+                    ? "Documents"
+                    : activeTab === "delivery"
+                      ? "Delivery & GRN"
+                      : "Invoices & payments"}
+              </span>
+            </h1>
 
-              <h1 className="truncate text-base font-semibold text-gray-900 sm:text-lg">
-                {poData.id}
-                <span className="mx-2 text-gray-300">/</span>
-                <span className="text-green-700">
-                  {activeTab === "overview"
-                    ? "PO overview"
-                    : activeTab === "documents"
-                      ? "Documents"
-                      : activeTab === "delivery"
-                        ? "Delivery & GRN"
-                        : "Invoices & payments"}
-                </span>
-              </h1>
-            </div>
           </div>
 
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="flex items-center gap-2">
+
             <button
               onClick={handleDownloadPO}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
-              <Download size={17} />
+              <Download size={18} />
               Download PO
             </button>
 
@@ -581,91 +1160,109 @@ Use exactly this structure:
               onAmendPO={handleAmendPO}
               onCancelPO={handleCancelPO}
             />
+
           </div>
+
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 bg-white px-4 sm:px-6">
-        <div className="mx-auto flex max-w-[1600px] gap-7 overflow-x-auto">
+      {/* =====================================================
+          TABS
+      ===================================================== */}
+
+      <div className="border-b border-gray-200 bg-white px-6">
+
+        <div className="flex gap-8">
 
           {[
             ["overview", "PO overview"],
             ["documents", "Documents"],
             ["delivery", "Delivery & GRN"],
             ["invoices", "Invoices & payments"],
-          ].map(([value, label]) => (
+          ].map(([key, label]) => (
+
             <button
-              key={value}
-              onClick={() =>
-                setActiveTab(
-                  value as
-                    | "overview"
-                    | "documents"
-                    | "delivery"
-                    | "invoices"
-                )
-              }
-              className={`relative whitespace-nowrap py-4 text-sm font-medium transition ${
-                activeTab === value
-                  ? "text-green-700"
-                  : "text-gray-500 hover:text-gray-900"
+              key={key}
+              onClick={() => setActiveTab(key as any)}
+              className={`border-b-2 py-4 text-sm font-medium transition ${
+                activeTab === key
+                  ? "border-green-600 text-green-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
               {label}
-
-              {activeTab === value && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-green-600" />
-              )}
             </button>
+
           ))}
+
         </div>
+
       </div>
 
-      {/* Content */}
-      <div className="mx-auto max-w-[1600px] p-4 sm:p-6">
+      {/* =====================================================
+          CONTENT
+      ===================================================== */}
 
-        {/* PO Overview */}
+      <div className="p-6">
+
+        {/* ===================================================
+            OVERVIEW
+        =================================================== */}
+
         {activeTab === "overview" && (
-          <div className="space-y-5">
+
+          <div className="space-y-6">
 
             {/* Progress */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
 
-              <div className="flex items-center justify-between gap-1">
-                {[1, 2, 3, 4, 5, 6, 7].map((step, index) => (
+            <div className="rounded-lg bg-white p-6">
+
+              <div className="flex items-center justify-between gap-2">
+
+                {[1, 2, 3, 4].map((item) => (
                   <div
-                    key={step}
-                    className="flex flex-1 items-center last:flex-none"
+                    key={item}
+                    className="flex flex-1 items-center gap-1"
                   >
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        index < 4
-                          ? "bg-green-600 text-white"
-                          : index === 4
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {index < 4 ? "✓" : "◆"}
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                      ✓
                     </div>
 
-                    {index < 6 && (
-                      <div
-                        className={`mx-1 h-1 flex-1 rounded-full ${
-                          index < 3
-                            ? "bg-green-600"
-                            : index === 3
-                              ? "bg-blue-600"
-                              : "bg-gray-200"
-                        }`}
-                      />
-                    )}
+                    <div className="h-1 flex-1 bg-green-600" />
                   </div>
                 ))}
+
+                <div className="flex flex-1 items-center gap-1">
+
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                    ◆
+                  </div>
+
+                  <div className="h-1 flex-1 bg-gray-300" />
+
+                </div>
+
+                {[6, 7].map((item) => (
+                  <div
+                    key={item}
+                    className="flex flex-1 items-center gap-1"
+                  >
+
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-sm font-bold text-gray-600">
+                      ◆
+                    </div>
+
+                    {item !== 7 && (
+                      <div className="h-1 flex-1 bg-gray-300" />
+                    )}
+
+                  </div>
+                ))}
+
               </div>
 
-              <div className="mt-3 hidden justify-between text-[11px] text-gray-500 lg:flex">
+              <div className="mt-3 flex justify-between text-xs text-gray-600">
+
                 <span>Order Placed</span>
                 <span>Confirmed</span>
                 <span>In Transit</span>
@@ -673,67 +1270,143 @@ Use exactly this structure:
                 <span>Delivery/Service</span>
                 <span>Invoice processing</span>
                 <span>Payment & closure</span>
+
               </div>
+
             </div>
 
             {/* Request Details */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="mb-6 text-base font-bold text-gray-900">
+
+            <div className="rounded-lg bg-white p-6">
+
+              <h2 className="mb-6 text-lg font-semibold text-green-700">
                 Request details
               </h2>
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  ["Request title", poData.title],
-                  ["PO Number", poData.poNumber],
-                  ["PR Number", poData.prNumber],
-                  ["RFP Number", poData.rfpNumber],
-                  ["PR type", poData.prType],
-                  ["Department", poData.department],
-                  ["Status", poData.status],
-                  ["PO issued date", poData.poIssuedDate],
-                  ["Expected delivery date", poData.expectedDeliveryDate],
-                  ["Total PO value", poData.totalPOValue],
-                ].map(([label, value], index) => (
-                  <div key={label}>
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                      {label}
-                    </p>
+              <div className="grid grid-cols-4 gap-6">
 
-                    <p
-                      className={`text-sm font-semibold ${
-                        label === "PR Number" || label === "RFP Number"
-                          ? "text-blue-600"
-                          : label === "Status"
-                            ? "text-orange-600"
-                            : "text-gray-900"
-                      }`}
-                    >
-                      {value}
-                    </p>
-                  </div>
-                ))}
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Request title
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.title}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    PO Number
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.poNumber}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    PR Number
+                  </p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {poData.prNumber}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    RFP Number
+                  </p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {poData.rfpNumber}
+                  </p>
+                </div>
+
               </div>
+
+              <div className="mt-6 grid grid-cols-4 gap-6">
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    PR type
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.prType}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Department
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.department}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Status
+                  </p>
+                  <p className="text-sm font-semibold text-orange-600">
+                    {poData.status}
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="mt-6 grid grid-cols-4 gap-6">
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    PO issued date
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.poIssuedDate}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Expected delivery date
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.expectedDeliveryDate}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Total PO value
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {poData.totalPOValue}
+                  </p>
+                </div>
+
+              </div>
+
             </div>
 
             {/* Vendor */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-              <div className="mb-6 flex items-center gap-2">
-                <Building2 size={18} className="text-green-700" />
-                <h2 className="text-base font-bold text-gray-900">
-                  Vendor information
-                </h2>
-              </div>
 
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <div className="rounded-lg bg-white p-6">
+
+              <h2 className="mb-6 text-lg font-semibold text-gray-900">
+                Vendor information
+              </h2>
+
+              <div className="flex items-start gap-6">
+
                 <div className="flex-1">
-                  <p className="mb-4 text-sm font-bold text-green-700">
+
+                  <p className="mb-4 text-sm font-semibold text-green-600">
                     {poData.vendor.name}
                   </p>
 
-                  <div className="grid gap-5 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-6">
+
                     <div>
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      <p className="mb-1 text-xs font-medium text-gray-600">
                         PO value
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
@@ -742,240 +1415,315 @@ Use exactly this structure:
                     </div>
 
                     <div>
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      <p className="mb-1 text-xs font-medium text-gray-600">
                         Email
                       </p>
-                      <p className="break-all text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-gray-900">
                         {poData.vendor.email}
                       </p>
                     </div>
 
                     <div>
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      <p className="mb-1 text-xs font-medium text-gray-600">
                         Contact
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
                         {poData.vendor.contact}
                       </p>
                     </div>
+
                   </div>
+
                 </div>
 
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50">
+                <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+
                   <img
-                    src={poData.vendor.logo || "/placeholder.svg"}
+                    src={poData.vendor.logo}
                     alt={poData.vendor.name}
-                    className="h-16 w-16 object-contain"
+                    className="h-20 w-20 object-contain"
                   />
+
                 </div>
+
               </div>
+
             </div>
 
             {/* Goods */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="p-5 sm:p-6">
-                <h2 className="text-base font-bold text-gray-900">
-                  Goods information
-                </h2>
-              </div>
+
+            <div className="rounded-lg bg-white p-6">
+
+              <h2 className="mb-6 text-lg font-semibold text-gray-900">
+                Goods information
+              </h2>
 
               <div className="overflow-x-auto">
+
                 <table className="w-full">
+
                   <thead>
-                    <tr className="border-y border-gray-200 bg-gray-50">
-                      {[
-                        "Item description",
-                        "Quantity",
-                        "Units of measure",
-                        "Unit price",
-                        "Total price",
-                      ].map((header) => (
-                        <th
-                          key={header}
-                          className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500"
-                        >
-                          {header}
-                        </th>
-                      ))}
+
+                    <tr className="border-b border-gray-200">
+
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                        Item description
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                        Quantity
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                        Units of measure
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                        Unit price
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                        Total price
+                      </th>
+
                     </tr>
+
                   </thead>
 
                   <tbody>
-                    {poData.goods.map((item, idx) => (
+
+                    {poData.goods.map((item, index) => (
+
                       <tr
-                        key={idx}
-                        className="border-b border-gray-100 transition hover:bg-gray-50/70"
+                        key={index}
+                        className="border-b border-gray-100"
                       >
-                        <td className="px-5 py-4 text-sm font-medium text-gray-900">
+
+                        <td className="px-4 py-3 text-sm text-gray-900">
                           {item.description}
                         </td>
-                        <td className="px-5 py-4 text-sm text-gray-700">
+
+                        <td className="px-4 py-3 text-sm text-gray-900">
                           {item.quantity}
                         </td>
-                        <td className="px-5 py-4 text-sm text-gray-700">
+
+                        <td className="px-4 py-3 text-sm text-gray-900">
                           {item.unit}
                         </td>
-                        <td className="px-5 py-4 text-sm text-gray-700">
+
+                        <td className="px-4 py-3 text-sm text-gray-900">
                           {item.unitPrice}
                         </td>
-                        <td className="px-5 py-4 text-sm font-semibold text-gray-900">
+
+                        <td className="px-4 py-3 text-sm text-gray-900">
                           {item.totalPrice}
                         </td>
+
                       </tr>
+
                     ))}
+
                   </tbody>
+
                 </table>
+
               </div>
 
-              <div className="flex justify-end p-5 sm:p-6">
-                <div className="w-full max-w-xs">
-                  <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Total cost
-                    </span>
-                    <span className="text-base font-bold text-gray-900">
-                      {poData.totalCost}
-                    </span>
+              <div className="mt-4 flex justify-end">
+
+                <div className="w-64">
+
+                  <div className="flex items-center justify-between border-t border-gray-200 py-3 font-semibold text-gray-900">
+
+                    <span>Total cost</span>
+
+                    <span>{poData.totalCost}</span>
+
                   </div>
+
                 </div>
+
               </div>
+
             </div>
+
           </div>
         )}
 
-        {/* Documents */}
-        {activeTab === "documents" && (
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        {/* ===================================================
+            DOCUMENTS
+        =================================================== */}
 
-            <div className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Documents
-                </p>
-                <h2 className="mt-1 text-base font-bold text-gray-900">
-                  Supporting documents
-                  <span className="ml-2 text-sm font-medium text-gray-400">
-                    (10)
-                  </span>
-                </h2>
-              </div>
+        {activeTab === "documents" && (
+
+          <div className="rounded-lg bg-white p-6">
+
+            <div className="mb-6 flex items-center justify-between">
+
+              <h2 className="text-lg font-semibold text-gray-900">
+                Supporting documents (10)
+              </h2>
 
               <div className="flex gap-2">
-                <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <Download size={17} />
+
+                <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Download size={18} />
                   Download All
                 </button>
 
                 <button className="flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800">
-                  <i className="ri-upload-cloud-2-line" />
+                  <i className="ri-upload-cloud-2-line"></i>
                   Upload
                 </button>
+
               </div>
+
             </div>
 
             <div className="overflow-x-auto">
+
               <table className="w-full">
+
                 <thead>
+
                   <tr className="bg-green-700 text-white">
-                    <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide">
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold">
                       Type of Document
                     </th>
-                    <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide">
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold">
                       Attachment
                     </th>
-                    <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide">
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold">
                       Uploaded By
                     </th>
-                    <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide">
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold">
                       Uploaded Date
                     </th>
+
                   </tr>
+
                 </thead>
 
                 <tbody>
-                  {documents.map((doc, idx) => (
+
+                  {documents.map((doc, index) => (
+
                     <tr
-                      key={idx}
+                      key={index}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
+
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {doc.type}
                       </td>
 
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                            <i className="ri-file-pdf-fill text-lg" />
+
+                        <div className="flex items-center gap-2">
+
+                          <div className="flex h-8 w-8 items-center justify-center rounded bg-red-600 text-xs font-bold text-white">
+                            <i className="ri-file-pdf-fill"></i>
                           </div>
 
                           <div>
-                            <p className="font-medium text-gray-900">
+
+                            <p className="text-sm font-medium text-gray-900">
                               {doc.name}
                             </p>
-                            <p className="text-xs text-gray-400">
+
+                            <p className="text-xs text-gray-500">
                               {doc.size}
                             </p>
+
                           </div>
+
                         </div>
+
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {doc.uploadedBy}
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {doc.uploadedDate}
                       </td>
+
                     </tr>
+
                   ))}
+
                 </tbody>
+
               </table>
+
             </div>
+
           </div>
         )}
 
-        {/* Delivery */}
+        {/* ===================================================
+            DELIVERY
+        =================================================== */}
+
         {activeTab === "delivery" && (
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="p-5 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Fulfilment
-              </p>
-              <h2 className="mt-1 text-base font-bold text-gray-900">
-                Delivery & GRN
-              </h2>
-            </div>
+
+          <div className="rounded-lg bg-white p-6">
 
             <div className="overflow-x-auto">
+
               <table className="w-full">
+
                 <thead>
-                  <tr className="border-y border-gray-200 bg-gray-50">
-                    {[
-                      "GRN number",
-                      "Item description",
-                      "Ordered quantity",
-                      "Delivered quantity",
-                      "Status",
-                      "Received person",
-                      "Receipt",
-                    ].map((header) => (
-                      <th
-                        key={header}
-                        className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500"
-                      >
-                        {header}
-                      </th>
-                    ))}
+
+                  <tr className="border-b border-gray-200">
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      GRN number
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Item description
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Ordered quantity
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Delivered quantity
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Received person
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Receipt
+                    </th>
+
                   </tr>
+
                 </thead>
 
                 <tbody>
-                  {deliveryData.map((item, idx) => (
+
+                  {deliveryData.map((item, index) => (
+
                     <tr
-                      key={idx}
+                      key={index}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {item.grnNumber}
                       </td>
 
@@ -983,623 +1731,1039 @@ Use exactly this structure:
                         {item.itemDescription}
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {item.orderedQty}
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {item.deliveredQty}
                       </td>
 
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`h-2 w-2 rounded-full ${
-                              item.status.includes("Partial")
-                                ? "bg-yellow-500"
-                                : "bg-green-600"
-                            }`}
-                          />
 
-                          <span
-                            className={`font-medium ${
-                              item.status.includes("Partial")
-                                ? "text-yellow-700"
-                                : "text-green-700"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
+                        <div className="flex items-center gap-2">
+
+                          {item.status.includes("Verified") && (
+                            <>
+                              <span className="h-2 w-2 rounded-full bg-green-600" />
+                              <span className="font-medium text-green-600">
+                                Verified
+                              </span>
+                            </>
+                          )}
+
+                          {item.status.includes("Partial") && (
+                            <>
+                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                              <span className="font-medium text-yellow-600">
+                                Partial
+                              </span>
+                            </>
+                          )}
+
+                          {item.status === "Delivered" && (
+                            <>
+                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                              <span className="font-medium text-yellow-600">
+                                Delivered
+                              </span>
+                            </>
+                          )}
+
                         </div>
+
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {item.receivedPerson}
                       </td>
 
                       <td className="px-6 py-4 text-sm">
+
                         <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded bg-red-50 text-red-600">
-                            <i className="ri-file-pdf-fill" />
+
+                          <div className="flex h-6 w-6 items-center justify-center rounded bg-red-600 text-xs text-white">
+                            <i className="ri-file-pdf-fill"></i>
                           </div>
+
                           <span>{item.receipt}</span>
+
                         </div>
+
                       </td>
+
                     </tr>
+
                   ))}
+
                 </tbody>
+
               </table>
+
             </div>
+
           </div>
         )}
 
-        {/* Invoices */}
+        {/* ===================================================
+            INVOICES
+        =================================================== */}
+
         {activeTab === "invoices" && (
-          <div className="space-y-5">
 
-            {/* ======================================================
-                SELECTED INVOICE / VALIDATION CONTROL
-            ======================================================= */}
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-lg bg-white p-6">
 
-              <div className="border-b border-gray-100 px-5 py-4 sm:px-6">
-                <div className="flex items-center gap-2">
-                  <Receipt size={18} className="text-green-700" />
+            {/* Invoice Header */}
+
+            <div className="mb-6 flex items-center justify-between">
+
+              <div>
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                    <Receipt
+                      size={20}
+                      className="text-green-700"
+                    />
+                  </div>
 
                   <div>
-                    <p className="text-sm font-bold text-gray-900">
-                      Invoice Validation
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Select an invoice and run AI-powered validation
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="p-5 sm:p-6">
-
-                {selectedInvoice ? (
-
-                  /* ================= SELECTED INVOICE CARD ================= */
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-
-                    <div className="min-w-0 flex-1">
-
-                      {/* Invoice identity */}
-                      <div className="flex flex-wrap items-center gap-3">
-
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-700">
-                          <FileText size={20} />
-                        </div>
-
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                              Selected Invoice
-                            </p>
-
-                            <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                              {selectedInvoice.status}
-                            </span>
-                          </div>
-
-                          <h2 className="mt-1 text-xl font-bold tracking-tight text-gray-900">
-                            {selectedInvoice.invoiceNumber}
-                          </h2>
-                        </div>
-                      </div>
-
-                      {/* Invoice metadata */}
-                      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
-                        <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
-                          <div className="flex items-center gap-2 text-gray-400">
-                            <Building2 size={14} />
-                            <p className="text-[10px] font-bold uppercase tracking-wider">
-                              Vendor
-                            </p>
-                          </div>
-
-                          <p className="mt-1.5 truncate text-sm font-semibold text-gray-900">
-                            {selectedInvoice.vendorName}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Purchase Order
-                          </p>
-
-                          <p className="mt-1.5 text-sm font-semibold text-gray-900">
-                            {selectedInvoice.purchaseOrder}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Invoice Amount
-                          </p>
-
-                          <p className="mt-1.5 text-sm font-bold text-gray-900">
-                            {selectedInvoice.currency}{" "}
-                            {selectedInvoice.amount}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Due Date
-                          </p>
-
-                          <p className="mt-1.5 text-sm font-semibold text-gray-900">
-                            {selectedInvoice.paymentDueDate}
-                          </p>
-                        </div>
-
-                      </div>
-                    </div>
-
-                    {/* Validation action */}
-                    <div className="shrink-0 lg:pl-4">
-
-                      <button
-                        disabled={!selectedInvoice || isValidating}
-                        onClick={validateInvoice}
-                        className="group flex w-full items-center justify-center gap-2.5 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 hover:shadow-md disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
-                      >
-                        {isValidating ? (
-                          <>
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                            Validating...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={17} />
-                            Validate Invoice
-                          </>
-                        )}
-                      </button>
-
-                      <p className="mt-2 text-center text-[10px] text-gray-400 lg:text-right">
-                        AI-powered validation
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                ) : (
-
-                  /* ================= EMPTY SELECTION STATE ================= */
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50/50 px-6 py-8 text-center">
-
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                      <FileText size={21} />
-                    </div>
-
-                    <p className="mt-3 text-sm font-semibold text-gray-700">
-                      No invoice selected
-                    </p>
-
-                    <p className="mt-1 max-w-md text-xs leading-5 text-gray-400">
-                      Select an invoice from the table below to review its
-                      details and run AI validation.
-                    </p>
-
-                  </div>
-                )}
-
-              </div>
-            </div>
-
-            {/* Invoice table */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
-              <div className="border-b border-gray-100 px-5 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Accounts Payable
-                    </p>
-
-                    <h2 className="mt-1 text-base font-bold text-gray-900">
+                    <h2 className="text-lg font-semibold text-gray-900">
                       Invoices & payments
                     </h2>
+
+                    <p className="text-sm text-gray-500">
+                      Select an invoice to run AI-powered validation
+                    </p>
+
                   </div>
 
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
-                    {invoiceData.length} invoices
-                  </span>
                 </div>
+
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              {/* <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2">
 
-                  <thead>
-                    <tr className="border-y border-gray-200 bg-gray-50">
+                <div className="flex items-center gap-2">
 
-                      <th className="w-12 px-3 py-3" />
+                  <Sparkles
+                    size={16}
+                    className="text-green-700"
+                  />
 
-                      {[
-                        "Invoice Ref.",
-                        "Invoice No.",
-                        "Invoice Date",
-                        "PO Number",
-                        "Amount",
-                        "Due Date",
-                        "Status",
-                        "Payment Ref.",
-                        "Attachment",
-                      ].map((header) => (
-                        <th
-                          key={header}
-                          className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500"
-                        >
-                          {header}
-                        </th>
-                      ))}
+                  <span className="text-sm font-medium text-green-700">
+                    AI Validation Enabled
+                  </span>
 
-                    </tr>
-                  </thead>
+                </div>
 
-                  <tbody>
-                    {invoiceData.map((item, idx) => {
+              </div> */}
 
-                      const isSelected =
-                        selectedInvoice?.invoiceRef === item.invoiceRef
-
-                      return (
-                        <tr
-                          key={idx}
-                          onClick={() => {
-                            setSelectedInvoice(item)
-                            setValidationResult(null)
-                          }}
-                          className={`cursor-pointer border-b transition ${
-                            isSelected
-                              ? "border-green-200 bg-green-50/70"
-                              : "border-gray-100 hover:bg-gray-50"
-                          }`}
-                        >
-
-                          <td className="px-3 py-4">
-                            <input
-                              type="radio"
-                              checked={isSelected}
-                              onChange={() => {
-                                setSelectedInvoice(item)
-                                setValidationResult(null)
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="accent-green-700"
-                            />
-                          </td>
-
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                            {item.invoiceRef}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                            {item.invoiceNumber}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {item.invoiceDate}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {item.purchaseOrder}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                            {item.currency} {item.amount}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {item.paymentDueDate}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm">
-                            <div className="flex items-center gap-2">
-
-                              <span
-                                className={`h-2 w-2 rounded-full ${
-                                  item.status === "Paid"
-                                    ? "bg-green-600"
-                                    : item.status === "Rejected"
-                                      ? "bg-red-600"
-                                      : "bg-yellow-500"
-                                }`}
-                              />
-
-                              <span
-                                className={`font-medium ${
-                                  item.status === "Paid"
-                                    ? "text-green-700"
-                                    : item.status === "Rejected"
-                                      ? "text-red-700"
-                                      : "text-yellow-700"
-                                }`}
-                              >
-                                {item.status}
-                              </span>
-
-                            </div>
-                          </td>
-
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {item.paymentReference}
-                          </td>
-
-                          <td className="px-6 py-4 text-sm">
-                            {item.attachment !== "Invoice not generated" ? (
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                                  <i className="ri-file-pdf-fill" />
-                                </div>
-                                <span className="text-gray-700">
-                                  {item.attachment}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">
-                                {item.attachment}
-                              </span>
-                            )}
-                          </td>
-
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-
-                </table>
-              </div>
             </div>
 
-            {/* AI Validation Result */}
-            {validationResult && (
-              <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* Invoice Table */}
 
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 px-5 py-5 sm:px-6 bg-green-50">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
 
-                  <div className="flex items-center gap-3">
+              <table className="w-full">
 
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700">
-                      <Sparkles size={19} />
-                    </div>
+                <thead>
 
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-green-700">
-                        AI Analysis
-                      </p>
+                  <tr className="border-b border-gray-200 bg-gray-50">
 
-                      <h2 className="text-base font-bold text-gray-900">
-                        Invoice Validation
-                      </h2>
-                    </div>
+                    <th className="w-12 px-4 py-3"></th>
 
-                  </div>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Ref.
+                    </th>
 
-                  <div className="flex items-center gap-3">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice No.
+                    </th>
 
-                    <div className="text-right">
-                      <p className="text-xl font-bold leading-none text-gray-900">
-                        {validationResult.confidenceScore}%
-                      </p>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Date
+                    </th>
 
-                      <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                        Confidence
-                      </p>
-                    </div>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Vendor
+                    </th>
 
-                    <div
-                      className={`rounded-lg px-3 py-1.5 text-center text-[10px] font-bold uppercase leading-tight tracking-wider ${
-                        validationResult.riskLevel === "Low Risk"
-                          ? "bg-green-50 text-green-700"
-                          : validationResult.riskLevel === "High Risk"
-                            ? "bg-red-50 text-red-700"
-                            : "bg-yellow-50 text-yellow-700"
-                      }`}
-                    >
-                      {validationResult.riskLevel.replace(" Risk", "")}
-                      <br />
-                      RISK
-                    </div>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Number
+                    </th>
 
-                  </div>
-                </div>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Amount
+                    </th>
 
-                {/* Summary */}
-                <div className="border-b border-gray-200 px-5 py-5 sm:px-6">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Vendor
+                    </th>
 
-                  <div className="flex items-start gap-3">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Goods Receipt
+                    </th>
 
-                    <div
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                        validationResult.overallStatus === "Compliant"
-                          ? "bg-green-100 text-green-700"
-                          : validationResult.overallStatus === "Rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      <i
-                        className={
-                          validationResult.overallStatus === "Compliant"
-                            ? "ri-check-line"
-                            : validationResult.overallStatus === "Rejected"
-                              ? "ri-close-line"
-                              : "ri-alert-line"
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      GR Qty
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Qty
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Due Date
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Payment Ref.
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Attachment
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {invoiceData.map((item) => {
+
+                    const isHovered =
+                      hoveredInvoice === item.invoiceRef
+
+                    const isSelected =
+                      selectedInvoice?.invoiceRef === item.invoiceRef
+
+                    return (
+
+                      <tr
+                        key={item.invoiceRef}
+                        onMouseEnter={() =>
+                          setHoveredInvoice(item.invoiceRef)
                         }
-                      />
-                    </div>
-
-                    <div>
-                      <p
-                        className={`text-xs font-bold uppercase tracking-wider ${
-                          validationResult.overallStatus === "Compliant"
-                            ? "text-green-700"
-                            : validationResult.overallStatus === "Rejected"
-                              ? "text-red-700"
-                              : "text-yellow-700"
+                        onMouseLeave={() =>
+                          setHoveredInvoice(null)
+                        }
+                        className={`group border-b transition ${
+                          isSelected
+                            ? "bg-green-50"
+                            : "hover:bg-gray-50"
                         }`}
                       >
-                        {validationResult.overallStatus}
-                      </p>
 
-                      <p className="mt-1 text-sm leading-6 text-gray-700">
-                        {validationResult.summary}
-                      </p>
+                        {/* Hover Validation Action */}
+
+                        <td className="px-4 py-4">
+
+                          <div
+                            className={`transition-all duration-200 ${
+                              isHovered
+                                ? "translate-x-0 opacity-100"
+                                : "-translate-x-2 opacity-0"
+                            }`}
+                          >
+
+                            <button
+                              disabled={isValidating}
+                              onClick={() =>
+                                validateInvoice(item)
+                              }
+                              className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-700 text-white shadow-sm transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                              title="Validate Invoice"
+                            >
+                              <Sparkles size={16} />
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {item.invoiceRef}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                          {item.invoiceNumber}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.invoiceDate}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.vendorName}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.purchaseOrder || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.currency}{" "}
+                          {item.purchaseOrderAmount}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.purchaseOrderVendorName || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.goodsReceipt || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.goodsReceiptQuantity || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.invoiceQuantity || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.paymentDueDate}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm">
+
+                          {item.status === "Paid" && (
+
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-green-600" />
+                              <span className="font-medium text-green-600">
+                                Paid
+                              </span>
+                            </div>
+
+                          )}
+
+                          {item.status === "Submitted" && (
+
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                              <span className="font-medium text-yellow-600">
+                                Submitted
+                              </span>
+                            </div>
+
+                          )}
+
+                          {item.status === "Rejected" && (
+
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-red-600" />
+                              <span className="font-medium text-red-600">
+                                Rejected
+                              </span>
+                            </div>
+
+                          )}
+
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.paymentReference}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm">
+
+                          {item.attachment !==
+                          "Invoice not generated" ? (
+
+                            <div className="flex items-center gap-2">
+
+                              <div className="flex h-6 w-6 items-center justify-center rounded bg-red-600 text-xs text-white">
+                                <i className="ri-file-pdf-fill"></i>
+                              </div>
+
+                              <span>
+                                {item.attachment}
+                              </span>
+
+                            </div>
+
+                          ) : (
+
+                            <span className="text-gray-500">
+                              {item.attachment}
+                            </span>
+
+                          )}
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  })}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
+      {/* =====================================================
+          AI VALIDATION MODAL
+      ===================================================== */}
+
+      {isValidationModalOpen && (
+
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+
+          <div className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+            {/* Modal Header */}
+
+            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-5">
+
+              <div className="flex items-center gap-4">
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
+
+                  <Sparkles
+                    size={22}
+                    className="text-green-700"
+                  />
+
+                </div>
+
+                <div>
+
+                  <div className="flex items-center gap-2">
+
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      AI Invoice Validation
+                    </h2>
+
+                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                       AI Model
+                    </span>
+
+                  </div>
+
+                  {selectedInvoice && (
+
+                    <p className="mt-1 text-sm text-gray-500">
+
+                      Invoice{" "}
+                      <span className="font-medium text-gray-700">
+                        {selectedInvoice.invoiceNumber}
+                      </span>
+
+                      {" · "}
+
+                      {selectedInvoice.vendorName}
+
+                    </p>
+
+                  )}
+
+                </div>
+
+              </div>
+
+              <button
+                onClick={closeValidationModal}
+                disabled={isValidating}
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <X size={21} />
+              </button>
+
+            </div>
+
+            {/* =================================================
+                LOADING STATE
+            ================================================= */}
+
+            {isValidating && (
+
+              <div className="flex min-h-[520px] flex-col items-center justify-center px-6">
+
+                <div className="relative">
+
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-50">
+
+                    <Brain
+                      size={40}
+                      className="text-green-700"
+                    />
+
+                  </div>
+
+                  <div className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-white shadow-lg">
+
+                    <Loader2
+                      size={18}
+                      className="animate-spin"
+                    />
+
+                  </div>
+
+                </div>
+
+                <h3 className="mt-7 text-xl font-semibold text-gray-900">
+                  AI is validating the invoice
+                </h3>
+
+                <p className="mt-2 max-w-md text-center text-sm leading-6 text-gray-500">
+                  The AI model is checking the Purchase Order, vendor,
+                  Goods Receipt, quantity, amount, tax, payment terms
+                  and similar invoices.
+                </p>
+
+                <div className="mt-8 flex items-center gap-2">
+
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600 [animation-delay:300ms]" />
+
+                </div>
+
+                <div className="mt-7 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-xs font-medium text-green-700">
+
+                  <Loader2
+                    size={14}
+                    className="animate-spin"
+                  />
+
+                  AI model is running...
+
+                </div>
+
+              </div>
+
+            )}
+
+            {/* =================================================
+                VALIDATION RESULT
+            ================================================= */}
+
+            {!isValidating && validationResult && (
+
+              <div className="overflow-y-auto bg-gray-50 px-6 py-6">
+
+                {/* Invoice Summary */}
+
+                {selectedInvoice && (
+
+                  <div className="mb-5 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+                    <div className="flex items-start justify-between">
+
+                      <div>
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+
+                            <Receipt
+                              size={19}
+                              className="text-gray-600"
+                            />
+
+                          </div>
+
+                          <div>
+
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                              Invoice
+                            </p>
+
+                            <p className="text-lg font-semibold text-gray-900">
+                              {selectedInvoice.invoiceNumber}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                          selectedInvoice.status === "Paid"
+                            ? "bg-green-100 text-green-700"
+                            : selectedInvoice.status === "Rejected"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {selectedInvoice.status}
+                      </span>
+
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-4 gap-4">
+
+                      <div className="rounded-lg bg-gray-50 p-3">
+
+                        <p className="text-xs text-gray-500">
+                          Vendor
+                        </p>
+
+                        <p className="mt-1 truncate text-sm font-semibold text-gray-900">
+                          {selectedInvoice.vendorName}
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-3">
+
+                        <p className="text-xs text-gray-500">
+                          PO Number
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {selectedInvoice.purchaseOrder ||
+                            "Not available"}
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-3">
+
+                        <p className="text-xs text-gray-500">
+                          Invoice Amount
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {selectedInvoice.currency}{" "}
+                          {selectedInvoice.amount}
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-3">
+
+                        <p className="text-xs text-gray-500">
+                          Invoice Date
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {selectedInvoice.invoiceDate}
+                        </p>
+
+                      </div>
+
                     </div>
 
                   </div>
+
+                )}
+
+                {/* Result Header */}
+
+                <div className="mb-4 flex items-center justify-between">
+
+                  <div>
+
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Validation results
+                    </h3>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      AI evaluated 8 procurement validation rules
+                    </p>
+
+                  </div>
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+
+                      <ShieldCheck
+                        size={16}
+                        className="text-green-600"
+                      />
+
+                      <span className="text-xs text-gray-500">
+                        Confidence
+                      </span>
+
+                      <span className="text-sm font-bold text-gray-900">
+                        {validationResult.confidenceScore}%
+                      </span>
+
+                    </div>
+
+                    {(() => {
+
+                      const risk = getRiskConfig(
+                        validationResult.riskLevel
+                      )
+
+                      return (
+
+                        <div
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${risk.bg} ${risk.border}`}
+                        >
+
+                          <span className={risk.text}>
+                            {risk.icon}
+                          </span>
+
+                          <span
+                            className={`text-sm font-semibold ${risk.text}`}
+                          >
+                            {validationResult.riskLevel}
+                          </span>
+
+                        </div>
+
+                      )
+
+                    })()}
+
+                  </div>
+
                 </div>
 
-                {/* Validation Checks */}
-                <div className="border-b border-gray-200 px-5 py-5 sm:px-6">
+                {/* Validation Cards */}
 
-                  <h3 className="mb-5 text-xs font-bold uppercase tracking-wider text-gray-500">
-                    Validation Checks
-                  </h3>
+                <div className="space-y-3">
 
-                  <div className="space-y-5">
+                  {validationResult.validations.map(
+                    (validation, index) => {
 
-                    {validationResult.validations.map(
-                      (validation, index) => {
+                      const config = getStatusConfig(
+                        validation.status
+                      )
 
-                        const isPassed =
-                          validation.status === "passed"
+                      const isExpanded =
+                        expandedReasons[index]
 
-                        const isFailed =
-                          validation.status === "failed"
+                      return (
 
-                        return (
-                          <div
-                            key={`${validation.name}-${index}`}
-                            className="flex items-start gap-3"
-                          >
+                        <div
+                          key={index}
+                          className={`overflow-hidden rounded-xl border bg-white shadow-sm transition ${config.container}`}
+                        >
 
-                            <div
-                              className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                                isPassed
-                                  ? "bg-green-100 text-green-700"
-                                  : isFailed
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
-                              <i
-                                className={
-                                  isPassed
-                                    ? "ri-check-line"
-                                    : isFailed
-                                      ? "ri-close-line"
-                                      : "ri-alert-line"
-                                }
-                              />
-                            </div>
+                          <div className="flex items-center justify-between px-5 py-4">
 
-                            <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-3">
 
-                              <div className="flex flex-wrap items-center gap-2">
+                              <div
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg ${config.iconContainer}`}
+                              >
+                                {config.icon}
+                              </div>
 
-                                <p className="text-sm font-bold text-gray-900">
-                                  {validation.name}
+                              <div>
+
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {index + 1}.{" "}
+                                  {validation.title}
                                 </p>
 
                                 <span
-                                  className={`text-xs font-semibold ${
-                                    isPassed
-                                      ? "text-green-700"
-                                      : isFailed
-                                        ? "text-red-700"
-                                        : "text-yellow-700"
-                                  }`}
+                                  className={`text-xs font-semibold ${config.text}`}
                                 >
-                                  {validation.title}
+                                  {validation.status === "PASS"
+                                    ? "Validation passed"
+                                    : validation.status ===
+                                        "WARNING"
+                                      ? "Attention required"
+                                      : "Validation failed"}
                                 </span>
 
                               </div>
 
-                              <div className="mt-2 space-y-1.5">
+                            </div>
 
-                                {validation.details.map(
-                                  (detail, detailIndex) => (
-                                    <div
-                                      key={`${detail.label}-${detailIndex}`}
-                                      className="flex flex-wrap gap-x-3 text-sm"
-                                    >
-                                      <span className="min-w-[105px] font-medium text-gray-500">
-                                        {detail.label}
-                                      </span>
+                            <div className="flex items-center gap-3">
 
-                                      <span className="font-semibold text-gray-800">
-                                        {detail.value}
-                                      </span>
-                                    </div>
-                                  )
-                                )}
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-bold ${config.iconContainer} ${config.text}`}
+                              >
+                                {config.label}
+                              </span>
 
-                              </div>
-
-                              {validation.explanation && (
-                                <p className="mt-2 text-xs leading-5 text-gray-500">
-                                  {validation.explanation}
-                                </p>
+                              {validation.reason && (
+                                <button
+                                  onClick={() => toggleReason(index)}
+                                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
+                                >
+                                  {isExpanded ? "Hide" : "Elaborate"}
+                                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
                               )}
 
                             </div>
+
                           </div>
-                        )
-                      }
-                    )}
 
-                  </div>
+                          {isExpanded && (
+
+                            <div className="border-t border-gray-200 bg-white px-5 py-4">
+
+                              <div className="flex gap-3">
+
+                                <div className="mt-0.5 flex-shrink-0">
+
+                                  {validation.status ===
+                                    "PASS" && (
+
+                                    <CheckCircle2
+                                      size={17}
+                                      className="text-green-600"
+                                    />
+
+                                  )}
+
+                                  {validation.status ===
+                                    "WARNING" && (
+
+                                    <AlertTriangle
+                                      size={17}
+                                      className="text-amber-600"
+                                    />
+
+                                  )}
+
+                                  {validation.status ===
+                                    "FAIL" && (
+
+                                    <XCircle
+                                      size={17}
+                                      className="text-red-600"
+                                    />
+
+                                  )}
+
+                                </div>
+
+                                <div>
+
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                    AI reasoning
+                                  </p>
+
+                                  <p className="text-sm leading-6 text-gray-600">
+                                    {validation.reason}
+                                  </p>
+
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          )}
+
+                        </div>
+
+                      )
+                    }
+                  )}
+
                 </div>
 
-                {/* Recommended Action */}
-                <div className="px-5 py-5 sm:px-6 bg-green-50">
+                {/* =================================================
+                    AI RECOMMENDATION
+                ================================================= */}
 
-                  <h3 className="mb-5 text-xs font-bold uppercase tracking-wider text-gray-500">
-                    Recommended Action
-                  </h3>
+                <div className="mt-5">
 
-                  <div className="flex items-start gap-3">
+                  {(() => {
 
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700">
-                      <i className="ri-arrow-right-line" />
-                    </div>
+                    const recommendationConfig =
+                      getRecommendationConfig(
+                        validationResult.recommendation.action
+                      )
 
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">
-                        {validationResult.recommendation.action}
-                      </p>
+                    return (
 
-                      <p className="mt-2 text-sm leading-6 text-gray-600">
-                        {validationResult.recommendation.reason}
-                      </p>
-                    </div>
+                      <div
+                        className={`overflow-hidden rounded-xl border ${recommendationConfig.border} ${recommendationConfig.bg}`}
+                      >
 
-                  </div>
+                        <div className="flex items-center gap-3 border-b border-black/5 px-5 py-4">
+
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-lg bg-white ${recommendationConfig.text}`}
+                          >
+                            {recommendationConfig.icon}
+                          </div>
+
+                          <div>
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              AI Recommendation
+                            </p>
+
+                            <h3
+                              className={`text-lg font-bold ${recommendationConfig.text}`}
+                            >
+                              {
+                                validationResult
+                                  .recommendation.action
+                              }
+                            </h3>
+
+                          </div>
+
+                        </div>
+
+                        <div className="bg-white/70 px-5 py-5">
+
+                          <p className="text-sm leading-6 text-gray-700">
+                            {
+                              validationResult
+                                .recommendation.summary
+                            }
+                          </p>
+
+                          {validationResult.recommendation.why
+                            ?.length > 0 && (
+
+                            <div className="mt-4">
+
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                Why
+                              </p>
+
+                              <ul className="space-y-2">
+
+                                {validationResult.recommendation.why.map(
+                                  (reason, index) => (
+
+                                    <li
+                                      key={index}
+                                      className="flex gap-2 text-sm text-gray-600"
+                                    >
+
+                                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-400" />
+
+                                      <span>{reason}</span>
+
+                                    </li>
+
+                                  )
+                                )}
+
+                              </ul>
+
+                            </div>
+
+                          )}
+
+                        </div>
+
+                      </div>
+
+                    )
+
+                  })()}
+
                 </div>
 
-              </section>
+                {/* Footer */}
+
+                <div className="mt-5 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-5 py-3">
+
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+
+                    <Brain size={15} />
+
+                    Validation generated by AI based on the supplied
+                    invoice and reference dataset.
+
+                  </div>
+
+                  <div className="flex items-center gap-2">
+
+                    <button
+                      onClick={() => {
+                        if (!validationResult || !selectedInvoice) return
+                        const lines: string[] = []
+                        lines.push("AI INVOICE VALIDATION REPORT")
+                        lines.push("=============================")
+                        lines.push(`Invoice: ${selectedInvoice.invoiceNumber}`)
+                        lines.push(`Vendor: ${selectedInvoice.vendorName}`)
+                        lines.push(`Date: ${selectedInvoice.invoiceDate}`)
+                        lines.push(`Amount: ${selectedInvoice.currency} ${selectedInvoice.amount}`)
+                        lines.push("")
+                        lines.push(`Confidence Score: ${validationResult.confidenceScore}%`)
+                        lines.push(`Risk Level: ${validationResult.riskLevel}`)
+                        lines.push("")
+                        lines.push("VALIDATION CHECKS")
+                        lines.push("-----------------")
+                        validationResult.validations.forEach((v, i) => {
+                          lines.push(`${i + 1}. ${v.title}: ${v.status}`)
+                          if (v.reason) lines.push(`   Reason: ${v.reason}`)
+                        })
+                        lines.push("")
+                        lines.push("AI RECOMMENDATION")
+                        lines.push("-----------------")
+                        lines.push(`Action: ${validationResult.recommendation.action}`)
+                        lines.push(`Summary: ${validationResult.recommendation.summary}`)
+                        if (validationResult.recommendation.why?.length > 0) {
+                          lines.push("Why:")
+                          validationResult.recommendation.why.forEach((w) => lines.push(`  - ${w}`))
+                        }
+                        const blob = new Blob([lines.join("\n")], { type: "text/plain" })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement("a")
+                        a.href = url
+                        a.download = `AI-Validation-${selectedInvoice.invoiceNumber}.txt`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      <Download size={15} />
+                      Download Report
+                    </button>
+
+                    <button
+                      onClick={closeValidationModal}
+                      className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                    >
+                      Close
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
             )}
 
           </div>
-        )}
-      </div>
+
+        </div>
+
+      )}
+
+      {/* =====================================================
+          AMEND PO MODAL
+      ===================================================== */}
 
       <AmendPOModal
         isOpen={isAmendPOOpen}
         onClose={() => setIsAmendPOOpen(false)}
         poNumber={poNumber}
       />
+
     </div>
   )
 }
-
