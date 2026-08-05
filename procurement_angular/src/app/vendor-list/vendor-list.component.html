@@ -1,0 +1,63 @@
+<section class="main-content">
+  <div class="container">
+
+    <div class="page-header">
+      <div class="header-icon">
+        <img src="../../assets/ai-brain.png" alt="AI" />
+      </div>
+      <div class="header-text">
+        <h2>Technical Evaluation Committee</h2>
+        <p>Review AI-generated vendor evaluation results and make Approve / Reject decisions.</p>
+      </div>
+    </div>
+
+    <!-- Error / Info message -->
+    @if (errorMessage) {
+      <div class="alert-info">{{ errorMessage }}</div>
+    }
+
+    <!-- Vendor List Card -->
+    <div class="card vendor-card">
+      <div class="card-header-row">
+        <h3>Vendor List</h3>
+        <button
+          class="btn review-btn"
+          (click)="reviewEvaluation()"
+          [disabled]="isLoading"
+        >
+          @if (isLoading) {
+            <span class="spinner-sm"></span> Reviewing...
+          } @else {
+            Review
+          }
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Status</th>
+              <th>Total Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (vendor of vendors; track vendor.name) {
+              <tr>
+                <td>{{ vendor.name }}</td>
+                <td>
+                  <span [class]="'badge badge-' + vendor.status.toLowerCase()">
+                    {{ vendor.status }}
+                  </span>
+                </td>
+                <td>{{ vendor.score !== null ? vendor.score : '--' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>

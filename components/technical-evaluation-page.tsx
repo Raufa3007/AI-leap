@@ -1,11 +1,25 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, LayoutGrid } from "lucide-react"
+import { ChevronLeft, LayoutGrid, X } from "lucide-react"
 import SignatureVerificationDialog from "./signature-verification-dialog"
 import TechnicalEvaluationTable from "./technical-evaluation-table"
 import FinancialEvaluationTable from "./financial-evaluation-table"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
+
+type EvaluationRow = { [key: string]: string }
+
+const VENDOR_SCORE_MAP: { name: string; scoreKey: string; location: string; avatar: string; color: string }[] = [
+  { name: "Accenture",         scoreKey: "1_Accenture Proposal.txt Score", location: "New York",  avatar: "A", color: "#4A5568" },
+  { name: "Deloitte",          scoreKey: "2_Deloitte Proposal.txt Score",  location: "London",   avatar: "D", color: "#3B82F6" },
+  { name: "Kaar Technologies", scoreKey: "3_KaarTech Proposal.txt Score",  location: "Chennai",  avatar: "K", color: "#FF6B6B" },
+]
+
+function parseScore(raw: string | undefined): number | null {
+  if (!raw) return null
+  const n = parseInt(raw.replace(/\*/g, "").trim(), 10)
+  return isNaN(n) ? null : n
+}
 
 interface TechnicalEvaluationPageProps {
   onBack: () => void
@@ -28,6 +42,12 @@ export default function TechnicalEvaluationPage({
   const [vendorDecisions, setVendorDecisions] = useState<{ [key: number]: "approved" | "rejected" | "pending" }>(
     { 0: "pending", 1: "pending", 2: "pending" }
   )
+  const [vendorScores, setVendorScores] = useState<{ [name: string]: number | null }>({})
+  const [evalRows, setEvalRows] = useState<EvaluationRow[]>([])
+  const [evalHeaders, setEvalHeaders] = useState<string[]>([])
+  const [showEvalModal, setShowEvalModal] = useState(false)
+  const [isReviewing, setIsReviewing] = useState(false)
+  const [reviewError, setReviewError] = useState("")
 
   const rfpDetailsRef = useRef<HTMLDivElement>(null)
   const acknowledgmentRef = useRef<HTMLDivElement>(null)
@@ -68,6 +88,37 @@ export default function TechnicalEvaluationPage({
   const handleSignatureAcknowledge = () => {
     setAcknowledged(true)
     setShowSignatureDialog(false)
+  }
+
+  const handleReview = async () => {
+    setIsReviewing(true)
+    setReviewError("")
+    try {
+      const res = await fetch("http://127.0.0.1:5000/evaluate", { method: "POST" })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      const rows: EvaluationRow[] = data?.evaluation_table ?? []
+      if (!rows.length) {
+        setReviewError("Evaluation has not been completed yet.")
+        setIsReviewing(false)
+        return
+      }
+      const totalRow = rows.find(
+        (r) => r["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score"
+      )
+      const scores: { [name: string]: number | null } = {}
+      VENDOR_SCORE_MAP.forEach(({ name, scoreKey }) => {
+        scores[name] = parseScore(totalRow?.[scoreKey])
+      })
+      setVendorScores(scores)
+      setEvalRows(rows)
+      setEvalHeaders(Object.keys(rows[0]))
+      setShowEvalModal(true)
+    } catch {
+      setReviewError("Unable to load evaluation results.")
+    } finally {
+      setIsReviewing(false)
+    }
   }
 
   const handleDecideClick = () => {
@@ -244,11 +295,17 @@ export default function TechnicalEvaluationPage({
                 <h3 className="text-xl font-semibold text-green-700">Vendor list</h3>
                 {acknowledged && (
                   <div className="flex items-center gap-3">
+                    {reviewError && (
+                      <span className="text-xs text-red-500">{reviewError}</span>
+                    )}
                     <button
-                      onClick={onNavigateToVendorEvaluation}
-                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      onClick={handleReview}
+                      disabled={isReviewing}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      Review
+                      {isReviewing ? (
+                        <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Reviewing...</>
+                      ) : "Review"}
                     </button>
                     <button
                       onClick={onNavigateToVendorEvaluation}
@@ -277,17 +334,14 @@ export default function TechnicalEvaluationPage({
                 <div className="space-y-8">
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <div className="grid grid-cols-12 gap-4 bg-blue-900 text-white p-4 font-medium text-sm">
-                      <div className="col-span-3">Vendors (3)</div>
+                      <div className="col-span-3">Vendors ({VENDOR_SCORE_MAP.length})</div>
                       <div className="col-span-3">Evaluation status</div>
                       <div className="col-span-3">Total score (Out of 100)</div>
                       <div className="col-span-3">Decision</div>
                     </div>
-                    {[
-                      { name: "Kaar Technologies", location: "London", avatar: "O", color: "#FF6B6B" },
-                      { name: "Tech Solutions Limited", location: "New York", avatar: "V", color: "#4A5568" },
-                      { name: "Global IT Services", location: "Tokyo", avatar: "H", color: "#3B82F6" },
-                    ].map((vendor, index) => {
+                    {VENDOR_SCORE_MAP.map((vendor, index) => {
                       const decision = vendorDecisions[index]
+                      const score = vendorScores[vendor.name]
                       return (
                         <div key={index} className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center">
                           <div className="col-span-3 flex items-center gap-3">
@@ -309,14 +363,18 @@ export default function TechnicalEvaluationPage({
                                   ? "bg-green-100 text-green-700"
                                   : decision === "rejected"
                                   ? "bg-red-100 text-red-600"
+                                  : score !== null && score !== undefined
+                                  ? "bg-blue-100 text-blue-700"
                                   : "bg-orange-100 text-orange-600"
                               }`}
                             >
-                              {decision === "approved" ? "Approved" : decision === "rejected" ? "Rejected" : "Pending"}
+                              {decision === "approved" ? "Approved" : decision === "rejected" ? "Rejected" : score !== null && score !== undefined ? "Completed" : "Pending"}
                             </span>
                           </div>
                           <div className="col-span-3">
-                            <p className="text-sm text-gray-900">--</p>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {score !== null && score !== undefined ? score : "--"}
+                            </p>
                           </div>
                           <div className="col-span-3 flex items-center gap-2">
                             <button
@@ -374,6 +432,74 @@ export default function TechnicalEvaluationPage({
           onAcknowledge={handleSignatureAcknowledge}
         />
       </div>
+
+      {/* AI Evaluation Results Modal */}
+      {showEvalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: "90vw", maxHeight: "85vh" }}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <h2 className="text-lg font-semibold text-green-700">AI Evaluation Results</h2>
+              <button
+                onClick={() => setShowEvalModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Modal Body — scrollable table */}
+            <div className="flex-1 overflow-auto p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm" style={{ minWidth: "1100px" }}>
+                  <thead>
+                    <tr>
+                      {evalHeaders.map((h) => (
+                        <th
+                          key={h}
+                          className="bg-gray-50 text-left px-3 py-2 font-semibold text-gray-700 border border-gray-200 whitespace-nowrap"
+                          style={{ minWidth: "140px" }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evalRows.map((row, i) => {
+                      const isTotal =
+                        row["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score"
+                      return (
+                        <tr
+                          key={i}
+                          className={isTotal ? "bg-green-700 text-white font-semibold" : "border-b border-gray-100 hover:bg-gray-50"}
+                        >
+                          {evalHeaders.map((h) => (
+                            <td key={h} className="px-3 py-2 border border-gray-200 align-middle">
+                              {row[h] === "N/A" ? "" : row[h]}
+                            </td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end px-6 py-4 border-t border-gray-200 flex-shrink-0">
+              <button
+                onClick={() => setShowEvalModal(false)}
+                className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

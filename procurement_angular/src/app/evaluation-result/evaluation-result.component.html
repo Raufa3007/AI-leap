@@ -1,0 +1,46 @@
+<section class="result-content">
+  <div class="container">
+
+    <div class="result-header">
+      <button class="btn back-btn" (click)="goBack()">
+        &#8592; Back to Vendor List
+      </button>
+      <h2>AI Evaluation Results</h2>
+    </div>
+
+    <div class="custom-tab-header">
+      <span class="tab-title active">Evaluation results</span>
+      <div class="tab-underline">
+        <div class="active-line"></div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="table-wrapper">
+        <div class="table-responsive" *ngIf="evaluationRows.length > 0">
+          <table class="table table-bordered text-center align-middle">
+            <thead style="position: sticky; top: 0;">
+              <tr>
+                <th *ngFor="let header of tableHeaders">{{ header }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let row of evaluationRows"
+                [class.total-score-row]="isTotalScoreRow(row)"
+              >
+                <td *ngFor="let header of tableHeaders">
+                  {{ row[header] === 'N/A' ? '' : row[header] }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="text-center text-muted" *ngIf="evaluationRows.length === 0">
+          No data found
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
