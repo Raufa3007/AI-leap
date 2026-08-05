@@ -301,18 +301,18 @@ export default function TechnicalEvaluationPage({
                     <button
                       onClick={handleReview}
                       disabled={isReviewing}
-                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {isReviewing ? (
-                        <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Reviewing...</>
-                      ) : "Review"}
+                        <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Evaluating...</>
+                      ) : "Evaluate with AI"}
                     </button>
-                    <button
+                    {/* <button
                       onClick={onNavigateToVendorEvaluation}
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
                       Evaluate vendors
-                    </button>
+                    </button> */}
                   </div>
                 )}
               </div>
@@ -347,13 +347,13 @@ export default function TechnicalEvaluationPage({
                           <div className="col-span-3 flex items-center gap-3">
                             <div
                               className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                              style={{ backgroundColor: vendor.color }}
+                              style={{ backgroundColor: vendor.color }} onClick={onNavigateToVendorEvaluation}
                             >
                               {vendor.avatar}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{vendor.name}</p>
-                              <p className="text-xs text-gray-500">{vendor.location}</p>
+                              <p className="text-sm font-medium text-gray-900" onClick={onNavigateToVendorEvaluation}>{vendor.name}</p>
+                              <p className="text-xs text-gray-500" onClick={onNavigateToVendorEvaluation}>{vendor.location}</p>
                             </div>
                           </div>
                           <div className="col-span-3">

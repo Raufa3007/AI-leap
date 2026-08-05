@@ -10,8 +10,8 @@ interface VendorEvaluationPageProps {
 
 const vendors = [
   { id: 1, name: "Kaar Technologies", crNumber: "1010234567", status: "Preferred", statusColor: "green" },
-  { id: 2, name: "Tech Solutions Limited", crNumber: "1010234568", status: "Highest", statusColor: "red" },
-  { id: 3, name: "Global IT Services", crNumber: "1010234569", status: "New", statusColor: "blue" },
+  { id: 2, name: "Accenture", crNumber: "1010234568", status: "Highest", statusColor: "red" },
+  { id: 3, name: "Deloitte", crNumber: "1010234569", status: "New", statusColor: "blue" },
   // { id: 4, name: "Cyber Link Technologies", crNumber: "1010234570", status: "Exceeded Budget", statusColor: "red" },
   // { id: 5, name: "Next Gen IT Solutions", crNumber: "1010234611", status: "Within Budget", statusColor: "green" },
   // { id: 6, name: "Innovatech Private Limited", crNumber: "1010234612", status: "Disqualified", statusColor: "red" },

@@ -22,8 +22,8 @@ UPLOAD_FOLDER = 'uploaded_files'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Configure Generative AI - Remember to replace with your key
-genai.configure(api_key=os.environ.get(GEMINI_API_KEY, )) # Replace with your actual key
+# Configure Generative AI - set GEMINI_API_KEY in your environment
+genai.configure(api_key=os.environ.get(GEMINI_API_KEY, )))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
