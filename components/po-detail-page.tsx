@@ -47,7 +47,7 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
     useState<InvoiceValidationResult | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
 
-  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? ""
+ 
 
   // Mock PO data
   const poData = {
@@ -475,7 +475,7 @@ Use exactly this structure:
 `
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: {
