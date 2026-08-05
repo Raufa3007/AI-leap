@@ -25,7 +25,7 @@ const mockVendors = [
   },
   {
     id: "2",
-    vendor_name: "Tech Solutions Limited",
+    vendor_name: "Accenture",
     vendor_id: "1010234567",
     cr_number: "7890902345",
     overall_rating: 4,
@@ -37,7 +37,7 @@ const mockVendors = [
   },
   {
     id: "3",
-    vendor_name: "Global IT Services",
+    vendor_name: "Deloitte",
     vendor_id: "1010234567",
     cr_number: "7890902346",
     overall_rating: 3,
