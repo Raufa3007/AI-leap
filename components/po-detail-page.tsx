@@ -47,7 +47,7 @@ export default function PODetailPage({ poNumber, onBack }: PODetailPageProps) {
     useState<InvoiceValidationResult | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
 
-  const GEMINI_API_KEY = "process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? """
+  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? ""
 
   // Mock PO data
   const poData = {
