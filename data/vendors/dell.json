@@ -1,0 +1,104 @@
+{
+  "vendor_id": "VEN-1008",
+  "vendor_name": "Dell Technologies",
+  "tier": "Strategic",
+  "basic_information": {
+    "location": "Round Rock, TX / Riyadh Office",
+    "cr_number": "1010334455",
+    "address": "Digital City, Building 4, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 35000000000,
+    "total_purchase_orders": 38,
+    "total_ongoing_purchase_orders": 4,
+    "years_experience": 30,
+    "completed_projects": 350,
+    "similar_projects": 140,
+    "industry_experience": "Hardware & Enterprise Infrastructure",
+    "project_complexity_score": 93
+  },
+  "services": [
+    "Enterprise Servers",
+    "Cloud Storage",
+    "Data Center Infrastructure",
+    "AI Workstations"
+  ],
+  "about": "Dell Technologies is a leader in enterprise infrastructure, servers, cloud storage, and AI-ready client solutions.",
+  "technical_proposal": {
+    "manual_score": 36,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 350,
+    "on_time_projects": 335,
+    "delivery_compliance": 95.7,
+    "average_delay_days": 1,
+    "on_time_rating": 9.5
+  },
+  "financial": {
+    "annual_revenue": 8800000000,
+    "credit_rating": "AA",
+    "financial_health_score": 94,
+    "bank_guarantee_limit": 200000000,
+    "available_capacity": "High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Low",
+    "overall_risk_score": 3.0,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "High Performance Compute Cluster",
+      "project_id": "40000000512",
+      "department": "Infrastructure",
+      "cost_center": "INFRA-09",
+      "expected_delivery": "2026-04-10",
+      "payment_type": "Milestone",
+      "completion_percentage": 45,
+      "project_value": 32000000,
+      "amount_paid": 14400000,
+      "status": "In Progress",
+      "documents": [
+        "Hardware Spec Sheet",
+        "Signed Contract",
+        "SLA Agreement"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "Core Storage Array Upgrade",
+      "project_id": "40000000288",
+      "department": "IT Operations",
+      "completion_date": "2025-08-20",
+      "project_value": 15000000,
+      "ratings": {
+        "on_time_delivery": 5,
+        "quality": 5,
+        "value_for_money": 4,
+        "overall_experience": 5
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Telecom Saudi",
+      "project": "Data Center Refresh",
+      "rating": 4.8,
+      "feedback": "Outstanding hardware stability and flawless warranty execution."
+    }
+  ]
+}

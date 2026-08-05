@@ -1,0 +1,105 @@
+{
+  "vendor_id": "VEN-1004",
+  "vendor_name": "Palm Tree IT Services",
+  "tier": "Preferred",
+  "basic_information": {
+    "location": "Riyadh, Saudi Arabia",
+    "cr_number": "7890902344",
+    "address": "#124, Olaya Street, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 12000000000,
+    "total_purchase_orders": 10,
+    "total_ongoing_purchase_orders": 2,
+    "years_experience": 12,
+    "completed_projects": 85,
+    "similar_projects": 28,
+    "industry_experience": "Manufacturing",
+    "project_complexity_score": 88
+  },
+  "services": [
+    "Digital Transformation",
+    "SAP",
+    "Microsoft Oracle",
+    "UI/UX"
+  ],
+  "about": "Palm IT Services is a technology solutions provider specializing in innovative IT services and business support.",
+  "technical_proposal": {
+    "manual_score": 34,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 85,
+    "on_time_projects": 80,
+    "delivery_compliance": 94.1,
+    "average_delay_days": 2,
+    "on_time_rating": 9.2
+  },
+  "financial": {
+    "annual_revenue": 250000000,
+    "credit_rating": "A+",
+    "financial_health_score": 91,
+    "bank_guarantee_limit": 50000000,
+    "available_capacity": "High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Medium",
+    "overall_risk_score": 4.5,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "Productize P2P",
+      "project_id": "40000000198",
+      "department": "Procurement",
+      "cost_center": "PR09901CU",
+      "expected_delivery": "2025-12-12",
+      "payment_type": "Contract",
+      "completion_percentage": 20,
+      "project_value": 12000000,
+      "amount_paid": 100000,
+      "status": "In Progress",
+      "documents": [
+        "RFP Version 1",
+        "Signed PO",
+        "Vendor Proposal",
+        "Compliance Documents"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "Finance Mobile App",
+      "project_id": "51200000101",
+      "department": "Finance",
+      "completion_date": "2025-01-01",
+      "project_value": 100000,
+      "ratings": {
+        "on_time_delivery": 4,
+        "quality": 5,
+        "value_for_money": 4,
+        "overall_experience": 3
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": false,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Finance Department",
+      "project": "Finance Mobile App",
+      "rating": 4.2,
+      "feedback": "Delivered quality work with minor delays."
+    }
+  ]
+}
