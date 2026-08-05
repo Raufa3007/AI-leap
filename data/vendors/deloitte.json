@@ -1,0 +1,107 @@
+{
+  "vendor_id": "VEN-1006",
+  "vendor_name": "Deloitte",
+  "tier": "Strategic",
+  "basic_information": {
+    "location": "Riyadh, Saudi Arabia",
+    "cr_number": "7712345678",
+    "address": "Olaya Business Center, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 31500000000,
+    "total_purchase_orders": 34,
+    "total_ongoing_purchase_orders": 6,
+    "years_experience": 28,
+    "completed_projects": 285,
+    "similar_projects": 110,
+    "industry_experience": "Consulting & Enterprise Technology",
+    "project_complexity_score": 94
+  },
+  "services": [
+    "SAP",
+    "Oracle",
+    "Risk Advisory",
+    "Cyber Security",
+    "Data Analytics",
+    "Cloud Services"
+  ],
+  "about": "Deloitte provides consulting, audit, enterprise technology implementation, and digital transformation services worldwide.",
+  "technical_proposal": {
+    "manual_score": 38,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 285,
+    "on_time_projects": 269,
+    "delivery_compliance": 94.4,
+    "average_delay_days": 2,
+    "on_time_rating": 9.4
+  },
+  "financial": {
+    "annual_revenue": 4700000000,
+    "credit_rating": "AAA",
+    "financial_health_score": 96,
+    "bank_guarantee_limit": 250000000,
+    "available_capacity": "Very High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Low",
+    "overall_risk_score": 3.2,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "Enterprise Risk Management Platform",
+      "project_id": "40000000462",
+      "department": "Risk Management",
+      "cost_center": "RSK2201",
+      "expected_delivery": "2026-08-15",
+      "payment_type": "Contract",
+      "completion_percentage": 68,
+      "project_value": 48000000,
+      "amount_paid": 25000000,
+      "status": "In Progress",
+      "documents": [
+        "RFP",
+        "Risk Assessment",
+        "Signed Contract",
+        "Solution Design"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "Financial Planning System",
+      "project_id": "40000000387",
+      "department": "Finance",
+      "completion_date": "2025-09-15",
+      "project_value": 28000000,
+      "ratings": {
+        "on_time_delivery": 5,
+        "quality": 5,
+        "value_for_money": 5,
+        "overall_experience": 5
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Government Shared Services",
+      "project": "Digital Finance Transformation",
+      "rating": 4.8,
+      "feedback": "Highly professional team with excellent governance and communication."
+    }
+  ]
+}

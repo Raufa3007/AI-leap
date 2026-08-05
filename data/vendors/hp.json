@@ -1,0 +1,104 @@
+{
+  "vendor_id": "VEN-1009",
+  "vendor_name": "HP Enterprise",
+  "tier": "Preferred",
+  "basic_information": {
+    "location": "Palo Alto, CA / Riyadh Branch",
+    "cr_number": "1010445566",
+    "address": "Al Nakheel District, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 18000000000,
+    "total_purchase_orders": 25,
+    "total_ongoing_purchase_orders": 3,
+    "years_experience": 25,
+    "completed_projects": 210,
+    "similar_projects": 95,
+    "industry_experience": "Hybrid Cloud & Networking",
+    "project_complexity_score": 89
+  },
+  "services": [
+    "Aruba Networking",
+    "GreenLake Cloud Services",
+    "Edge Compute",
+    "Cyber Security"
+  ],
+  "about": "Hewlett Packard Enterprise specializes in edge-to-cloud solutions, high-performance networking, and hybrid cloud architecture.",
+  "technical_proposal": {
+    "manual_score": 35,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 210,
+    "on_time_projects": 195,
+    "delivery_compliance": 92.8,
+    "average_delay_days": 3,
+    "on_time_rating": 9.0
+  },
+  "financial": {
+    "annual_revenue": 5200000000,
+    "credit_rating": "AA",
+    "financial_health_score": 90,
+    "bank_guarantee_limit": 150000000,
+    "available_capacity": "High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Medium",
+    "overall_risk_score": 3.8,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "Campus Network Modernization",
+      "project_id": "40000000530",
+      "department": "IT Operations",
+      "cost_center": "NET-55",
+      "expected_delivery": "2026-07-01",
+      "payment_type": "Milestone",
+      "completion_percentage": 30,
+      "project_value": 19000000,
+      "amount_paid": 5700000,
+      "status": "In Progress",
+      "documents": [
+        "Network Topology Map",
+        "Signed PO",
+        "Security Compliance Cert"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "Wireless LAN Rollout",
+      "project_id": "40000000211",
+      "department": "Facilities",
+      "completion_date": "2025-05-14",
+      "project_value": 8500000,
+      "ratings": {
+        "on_time_delivery": 4,
+        "quality": 5,
+        "value_for_money": 4,
+        "overall_experience": 4
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "National Bank",
+      "project": "Branch Wi-Fi Infrastructure",
+      "rating": 4.5,
+      "feedback": "Reliable hardware deployment with proactive support."
+    }
+  ]
+}
