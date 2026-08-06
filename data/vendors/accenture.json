@@ -1,0 +1,107 @@
+{
+  "vendor_id": "VEN-1005",
+  "vendor_name": "Accenture",
+  "tier": "Strategic",
+  "basic_information": {
+    "location": "Riyadh, Saudi Arabia",
+    "cr_number": "8891001122",
+    "address": "King Fahd Road, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 48500000000,
+    "total_purchase_orders": 42,
+    "total_ongoing_purchase_orders": 8,
+    "years_experience": 35,
+    "completed_projects": 420,
+    "similar_projects": 156,
+    "industry_experience": "Digital Transformation & Enterprise Solutions",
+    "project_complexity_score": 97
+  },
+  "services": [
+    "SAP S/4HANA",
+    "Digital Transformation",
+    "Cloud Migration",
+    "AI & Analytics",
+    "Cyber Security",
+    "Application Development"
+  ],
+  "about": "Accenture is a global professional services company providing digital, cloud, AI and enterprise technology solutions.",
+  "technical_proposal": {
+    "manual_score": 39,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 420,
+    "on_time_projects": 402,
+    "delivery_compliance": 95.7,
+    "average_delay_days": 1,
+    "on_time_rating": 9.7
+  },
+  "financial": {
+    "annual_revenue": 6200000000,
+    "credit_rating": "AAA",
+    "financial_health_score": 98,
+    "bank_guarantee_limit": 300000000,
+    "available_capacity": "Very High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Low",
+    "overall_risk_score": 2.8,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "SAP S/4HANA Transformation",
+      "project_id": "40000000451",
+      "department": "IT",
+      "cost_center": "IT10234",
+      "expected_delivery": "2026-06-30",
+      "payment_type": "Milestone",
+      "completion_percentage": 55,
+      "project_value": 95000000,
+      "amount_paid": 42000000,
+      "status": "In Progress",
+      "documents": [
+        "RFP",
+        "Signed Contract",
+        "Project Charter",
+        "Technical Proposal"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "Enterprise Procurement Platform",
+      "project_id": "40000000332",
+      "department": "Procurement",
+      "completion_date": "2025-11-12",
+      "project_value": 58000000,
+      "ratings": {
+        "on_time_delivery": 5,
+        "quality": 5,
+        "value_for_money": 4,
+        "overall_experience": 5
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Ministry of Finance",
+      "project": "ERP Modernization",
+      "rating": 4.9,
+      "feedback": "Exceptional delivery and governance throughout the implementation."
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "vendor_id": "VEN-1007",
+  "vendor_name": "Kaar Technologies",
+  "tier": "Preferred",
+  "basic_information": {
+    "location": "Chennai, India",
+    "cr_number": "IND556789012",
+    "address": "OMR, Chennai, Tamil Nadu"
+  },
+  "summary": {
+    "total_pr_value": 14500000000,
+    "total_purchase_orders": 22,
+    "total_ongoing_purchase_orders": 5,
+    "years_experience": 18,
+    "completed_projects": 230,
+    "similar_projects": 125,
+    "industry_experience": "SAP Consulting",
+    "project_complexity_score": 91
+  },
+  "services": [
+    "SAP S/4HANA",
+    "SAP SuccessFactors",
+    "SAP Ariba",
+    "SAP BTP",
+    "SAP Fiori",
+    "Managed Services"
+  ],
+  "about": "Kaar Technologies is a global SAP consulting company specializing in SAP implementation, migration and managed services.",
+  "technical_proposal": {
+    "manual_score": 37,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 230,
+    "on_time_projects": 216,
+    "delivery_compliance": 93.9,
+    "average_delay_days": 2,
+    "on_time_rating": 9.3
+  },
+  "financial": {
+    "annual_revenue": 980000000,
+    "credit_rating": "AA+",
+    "financial_health_score": 93,
+    "bank_guarantee_limit": 120000000,
+    "available_capacity": "High"
+  },
+  "risk": {
+    "financial_risk": "Low",
+    "compliance_risk": "Low",
+    "delivery_risk": "Low",
+    "overall_risk_score": 3.6,
+    "allocated_score": 5
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "SAP Procurement Modernization",
+      "project_id": "40000000498",
+      "department": "Procurement",
+      "cost_center": "SAP8901",
+      "expected_delivery": "2026-05-20",
+      "payment_type": "Milestone",
+      "completion_percentage": 72,
+      "project_value": 22000000,
+      "amount_paid": 14500000,
+      "status": "In Progress",
+      "documents": [
+        "Business Blueprint",
+        "Signed PO",
+        "Implementation Plan",
+        "Functional Design"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "SAP Ariba Rollout",
+      "project_id": "40000000355",
+      "department": "Supply Chain",
+      "completion_date": "2025-10-10",
+      "project_value": 18000000,
+      "ratings": {
+        "on_time_delivery": 5,
+        "quality": 5,
+        "value_for_money": 4,
+        "overall_experience": 5
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Global Manufacturing Company",
+      "project": "SAP S/4HANA Migration",
+      "rating": 4.7,
+      "feedback": "Strong SAP expertise with successful delivery and excellent post-go-live support."
+    }
+  ]
+}

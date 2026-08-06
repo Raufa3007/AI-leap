@@ -1,0 +1,104 @@
+{
+  "vendor_id": "VEN-1010",
+  "vendor_name": "Wipro Technologies",
+  "tier": "Conditional",
+  "basic_information": {
+    "location": "Bengaluru, India / Riyadh Office",
+    "cr_number": "1010556677",
+    "address": "King Abdullah Financial District, Riyadh"
+  },
+  "summary": {
+    "total_pr_value": 11000000000,
+    "total_purchase_orders": 16,
+    "total_ongoing_purchase_orders": 4,
+    "years_experience": 22,
+    "completed_projects": 180,
+    "similar_projects": 60,
+    "industry_experience": "System Integration & Cloud Ops",
+    "project_complexity_score": 84
+  },
+  "services": [
+    "Application Management",
+    "Cloud Services",
+    "Cybersecurity Ops",
+    "DevOps Automation"
+  ],
+  "about": "Wipro Limited is a leading technology services and consulting company focused on building innovative solutions.",
+  "technical_proposal": {
+    "manual_score": 31,
+    "maximum_score": 40
+  },
+  "delivery_performance": {
+    "completed_projects": 180,
+    "on_time_projects": 160,
+    "delivery_compliance": 88.8,
+    "average_delay_days": 5,
+    "on_time_rating": 8.5
+  },
+  "financial": {
+    "annual_revenue": 1100000000,
+    "credit_rating": "A",
+    "financial_health_score": 86,
+    "bank_guarantee_limit": 80000000,
+    "available_capacity": "Medium"
+  },
+  "risk": {
+    "financial_risk": "Medium",
+    "compliance_risk": "Low",
+    "delivery_risk": "Medium",
+    "overall_risk_score": 4.1,
+    "allocated_score": 4
+  },
+  "ongoing_projects": [
+    {
+      "project_name": "Legacy Core App Support",
+      "project_id": "40000000540",
+      "department": "Application Support",
+      "cost_center": "SUPP-12",
+      "expected_delivery": "2026-09-30",
+      "payment_type": "Contract",
+      "completion_percentage": 40,
+      "project_value": 14000000,
+      "amount_paid": 5600000,
+      "status": "In Progress",
+      "documents": [
+        "SLA Document",
+        "Signed Contract",
+        "Team Roster"
+      ]
+    }
+  ],
+  "completed_projects_history": [
+    {
+      "project_name": "HR Portal Enhancement",
+      "project_id": "40000000199",
+      "department": "HR",
+      "completion_date": "2025-03-30",
+      "project_value": 6000000,
+      "ratings": {
+        "on_time_delivery": 3,
+        "quality": 4,
+        "value_for_money": 4,
+        "overall_experience": 3
+      }
+    }
+  ],
+  "documents": {
+    "cr_certificate": true,
+    "vat_certificate": true,
+    "iso9001": true,
+    "iso27001": true,
+    "insurance": true,
+    "nda": true,
+    "company_profile": true,
+    "business_license": true
+  },
+  "customer_references": [
+    {
+      "client": "Energy Co.",
+      "project": "App Maintenance",
+      "rating": 4.1,
+      "feedback": "Satisfactory execution with occasional resource turnover."
+    }
+  ]
+}

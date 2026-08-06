@@ -442,6 +442,7 @@ export default function ProcMainContent({ onNavigate, currentPage = "dashboard" 
           onViewDeclinedPO={() => setViewingDeclinedPO(true)}
           onViewTechnicalEvaluation={() => setViewingTechnicalEvaluation(true)}
           onViewCommercialEvaluation={() => setShowCommercialEvaluationFullPage(true)}
+          onViewVendorEvaluation={() => setViewingVendorEvaluation(true)}
           onViewEContract={handleViewEContract}
           onViewInboxRFI={handleViewInboxRFI}
           onViewInboxRFP={handleViewInboxRFP}
