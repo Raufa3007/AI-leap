@@ -379,10 +379,12 @@ export default function TechnicalEvaluationPage({
                           <div className="col-span-3 flex items-center gap-2">
                             <button
                               onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "approved" }))}
-                              disabled={decision !== "pending"}
+                              disabled={decision !== "pending" || score === null || score === undefined}
                               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                 decision === "approved"
                                   ? "bg-green-600 text-white cursor-not-allowed"
+                                  : score === null || score === undefined
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : decision !== "pending"
                                   ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : "border border-green-600 text-green-600 hover:bg-green-50"
@@ -392,10 +394,12 @@ export default function TechnicalEvaluationPage({
                             </button>
                             <button
                               onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "rejected" }))}
-                              disabled={decision !== "pending"}
+                              disabled={decision !== "pending" || score === null || score === undefined}
                               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                 decision === "rejected"
                                   ? "bg-red-600 text-white cursor-not-allowed"
+                                  : score === null || score === undefined
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : decision !== "pending"
                                   ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : "border border-red-500 text-red-500 hover:bg-red-50"
