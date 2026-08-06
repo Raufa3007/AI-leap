@@ -8,12 +8,10 @@ import FinancialEvaluationTable from "./financial-evaluation-table"
 
 interface CommercialEvaluationPageProps {
   onBack: () => void
-  onNavigateToVendorEvaluation: () => void
 }
 
 export default function CommercialEvaluationPage({
-  onBack,
-  onNavigateToVendorEvaluation,
+  onBack
 }: CommercialEvaluationPageProps) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [activeSection, setActiveSection] = useState("rfp-details")
@@ -23,6 +21,105 @@ export default function CommercialEvaluationPage({
   const rfpDetailsRef = useRef<HTMLDivElement>(null)
   const acknowledgmentRef = useRef<HTMLDivElement>(null)
   const vendorsRef = useRef<HTMLDivElement>(null)
+  const [evaluating, setEvaluating] = useState(false);
+
+  const [vendors, setVendors] = useState([
+  {
+    id: 1,
+    name: "O Vendor",
+    location: "London",
+    avatar: "O",
+    color: "#FF6B6B",
+
+    status: "Pending",
+    decision: "Pending",
+    score: "--",
+    aiInsight: "Not evaluated",
+
+    metrics: {
+      technicalProposal: 36,
+      pastExperience: 14,
+      deliveryPerformance: 9,
+      complianceDocuments: 10,
+      financialStability: 8,
+      customerReferences: 9,
+      riskScore: 4
+    },
+
+    companyProfile:
+      "O Vendor has 15 years of experience delivering enterprise procurement and digital transformation solutions.",
+
+    pastProjects:
+      "Successfully completed 24 government and private sector projects with a 96% on-time delivery rate.",
+
+    licenses:
+      "ISO 9001, ISO 27001 Certified"
+  },
+
+  {
+    id: 2,
+    name: "Voo Supplier",
+    location: "New York",
+    avatar: "V",
+    color: "#4A5568",
+
+    status: "Pending",
+    decision: "Pending",
+    score: "--",
+    aiInsight: "Not evaluated",
+
+    metrics: {
+      technicalProposal: 38,
+      pastExperience: 15,
+      deliveryPerformance: 8,
+      complianceDocuments: 10,
+      financialStability: 9,
+      customerReferences: 8,
+      riskScore: 5
+    },
+
+    companyProfile:
+      "Leading supplier with expertise in AI and cloud modernization projects.",
+
+    pastProjects:
+      "Completed over 35 enterprise implementations across banking and healthcare sectors.",
+
+    licenses:
+      "ISO 9001, ISO 20000"
+  },
+
+  {
+    id: 3,
+    name: "H Distributor",
+    location: "Tokyo",
+    avatar: "H",
+    color: "#3B82F6",
+
+    status: "Pending",
+    decision: "Pending",
+    score: "--",
+    aiInsight: "Not evaluated",
+
+    metrics: {
+      technicalProposal: 31,
+      pastExperience: 11,
+      deliveryPerformance: 7,
+      complianceDocuments: 9,
+      financialStability: 10,
+      customerReferences: 8,
+      riskScore: 4
+    },
+
+    companyProfile:
+      "Regional distributor specializing in logistics and supply chain services.",
+
+    pastProjects:
+      "Completed 18 large-scale logistics implementations for manufacturing companies.",
+
+    licenses:
+      "ISO 9001"
+  }
+]);
 
   // Scroll-based highlight
   useEffect(() => {
@@ -61,7 +158,69 @@ export default function CommercialEvaluationPage({
     setAcknowledged(true)
     setShowSignatureDialog(false)
   }
+  const handleEvaluateVendors = async () => {
+  setEvaluating(true);
 
+  try {
+    const response = await fetch("http://127.0.0.1:5000/evaluate-commercial", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        vendors,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Commercial evaluation failed");
+    }
+
+    const data = await response.json();
+    console.log("Response:", data);
+    console.log("vendors:", data.vendors);
+    console.log("Type:", typeof data.vendors);
+    console.log(Array.isArray(data.vendors));
+
+    setVendors((prev) =>
+  prev.map((vendor) => {
+    const aiVendor = data.vendors.find(
+      (v: any) => v.id === vendor.id
+    );
+
+    if (!aiVendor) return vendor;
+
+    return {
+      ...vendor,
+      status: aiVendor.status,
+      score: aiVendor.overallScore,
+      aiInsight: aiVendor.aiInsight,
+    };
+  })
+);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setEvaluating(false);
+  }
+};
+
+const handleDecision = (
+  vendorId: number,
+  decision: "Approved" | "Rejected"
+) => {
+  setVendors((prev) =>
+    prev.map((vendor) =>
+      vendor.id === vendorId
+        ? {
+            ...vendor,
+            decision,
+            status: decision,
+          }
+        : vendor
+    )
+  );
+};
   return (
     <div className="w-full h-screen flex flex-col bg-white">
       {/* Header */}
@@ -206,10 +365,11 @@ export default function CommercialEvaluationPage({
                 <h3 className="text-xl font-semibold text-green-700">Vendor list</h3>
                 {acknowledged && (
                   <button
-                    onClick={onNavigateToVendorEvaluation}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    onClick={handleEvaluateVendors}
+                    disabled={evaluating}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Evaluate vendors
+                    {evaluating ? "Evaluating..." : "Evaluate vendors"}
                   </button>
                 )}
               </div>
@@ -229,37 +389,16 @@ export default function CommercialEvaluationPage({
                 </div>
               ) : (
                 <div className="space-y-8">
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-12 gap-4 bg-blue-900 text-white p-4 font-medium text-sm">
-                      <div className="col-span-3">Vendors (3)</div>
-                      <div className="col-span-3">Evaluation status</div>
-                      <div className="col-span-3">Total score (Out of 100)</div>
-                      <div className="col-span-3">AI Insight</div>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-12 gap-4 bg-green-700 text-white p-4 font-medium text-sm">
+                      <div className="col-span-3">Vendor</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-4">AI Evaluation</div>
+                      <div className="col-span-3 text-right">Decision</div>
                     </div>
-                    {[
-                      {
-                        name: "O Vendor",
-                        location: "London",
-                        avatar: "O",
-                        color: "#FF6B6B",
-                        aiInsight: "✨ Price competitiveness",
-                      },
-                      {
-                        name: "Voo Supplier",
-                        location: "New York",
-                        avatar: "V",
-                        color: "#4A5568",
-                        aiInsight: "✨ Payment terms favorable",
-                      },
-                      {
-                        name: "H Distributor",
-                        location: "Tokyo",
-                        avatar: "H",
-                        color: "#3B82F6",
-                        aiInsight: "✨ Financial stability strong",
-                      },
-                    ].map((vendor, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center">
+
+                    {vendors.map((vendor, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 bg-white text-sm text-gray-700 items-center">
                         <div className="col-span-3 flex items-center gap-3">
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
@@ -272,24 +411,62 @@ export default function CommercialEvaluationPage({
                             <p className="text-xs text-gray-500">{vendor.location}</p>
                           </div>
                         </div>
-                        <div className="col-span-3">
-                          <span className="inline-block px-3 py-1 bg-orange-100 text-orange-600 text-xs font-medium rounded">
-                            Pending
+                        <div className="col-span-2">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs font-medium rounded ${
+                              vendor.status === "Approved"
+                                ? "bg-green-100 text-green-700"
+                                : vendor.status === "Rejected"
+                                ? "bg-red-100 text-red-700"
+                                : vendor.status === "Completed"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-orange-100 text-orange-600"
+                            }`}
+                          >
+                            {vendor.status}
                           </span>
                         </div>
-                        <div className="col-span-3">
-                          <p className="text-sm text-gray-900">--</p>
+                        <div className="col-span-4">
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div className="text-lg font-semibold text-green-700">
+                              {vendor.score === "--" ? "" : vendor.score}
+                            </div>
+                            <div className="text-sm text-gray-600 mt-2 leading-6">{vendor.aiInsight}</div>
+                          </div>
                         </div>
-                        <div className="col-span-3">
-                          <div className="bg-blue-50 p-3 rounded">
-                            <p className="text-xs text-blue-900 font-medium">{vendor.aiInsight}</p>
+                        <div className="col-span-3 flex justify-end">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDecision(vendor.id, "Approved")}
+                              disabled={vendor.status !== "Completed"}
+                              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                vendor.status === "Approved"
+                                  ? "bg-green-600 text-white cursor-not-allowed"
+                                  : vendor.status !== "Completed"
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                  : "border border-green-600 text-green-600 hover:bg-green-50"
+                              }`}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleDecision(vendor.id, "Rejected")}
+                              disabled={vendor.status !== "Completed"}
+                              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                vendor.status === "Rejected"
+                                  ? "bg-red-600 text-white cursor-not-allowed"
+                                  : vendor.status !== "Completed"
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                  : "border border-red-500 text-red-500 hover:bg-red-50"
+                              }`}
+                            >
+                              Reject
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-
-                 
                 </div>
               )}
             </div>

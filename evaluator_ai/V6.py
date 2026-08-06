@@ -23,7 +23,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Configure Generative AI - set GEMINI_API_KEY in your environment
-genai.configure(api_key=os.environ.get(GEMINI_API_KEY, )))
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY","" ))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
@@ -52,6 +52,87 @@ def parse_markdown_table_to_json(markdown_table_text):
     except Exception as e:
         print("Error parsing markdown to JSON:", e)
         return []
+    
+    
+def evaluate_commercial_vendors(vendors):
+
+    prompt = generate_commercial_prompt(vendors)
+
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "temperature":0
+        }
+    )
+
+    print(response.text)
+    text = response.text.strip()
+    # Remove markdown fences
+    text = text.replace("```json", "")
+    text = text.replace("```", "")
+    text = text.strip()
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        print("Gemini returned invalid JSON:")
+        print(text)
+        raise
+    return result
+        
+
+def generate_commercial_prompt(vendors):
+
+    prompt = []
+
+    prompt.append(
+        """
+You are an expert Procurement Commercial Evaluation Officer.
+
+Evaluate every vendor independently.
+
+Use the following weights.
+
+Technical Proposal Score : 40%
+
+Past Project Experience : 15%
+
+On-Time Delivery : 10%
+
+Compliance : 10%
+
+Financial Stability : 10%
+
+Customer References : 10%
+
+Risk Score : 5%
+
+Return ONLY valid JSON.
+"""
+    )
+
+    prompt.append(json.dumps(vendors, indent=2))
+
+    prompt.append(
+        """
+Return JSON only.
+
+Example
+
+{
+   "vendors":[
+      {
+         "id":1,
+         "overallScore":89,
+         "status":"Completed",
+         "recommendation":"Recommended",
+         "aiInsight":"Excellent financial capability with low commercial risk."
+      }
+   ]
+}
+"""
+    )
+
+    return "\n".join(prompt)
 
 
 
@@ -328,6 +409,18 @@ def clear_all_files():
         return jsonify({"message": "All uploaded files cleared"}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to clear files: {str(e)}"}), 500
+    
+    
+@app.route("/evaluate-commercial", methods=["POST"])
+def evaluate_commercial():
+
+    request_data = request.get_json()
+
+    vendors = request_data.get("vendors", [])
+
+    result = evaluate_commercial_vendors(vendors)
+
+    return jsonify(result)
 
 # CORRECTED AND CLEANED evaluate_files function
 @app.route('/evaluate', methods=['POST'])
