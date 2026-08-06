@@ -1031,39 +1031,31 @@ Rules:
 
 The selected invoice is already present in the Reference Invoice Dataset.
 
-Use ONLY the Reference Invoice Dataset for this validation.
+Use ONLY the Reference Invoice Dataset.
 
 Do NOT count the selected invoice separately.
 
-Find all invoices where:
+Find every invoice having the same purchaseOrder as the selected invoice.
 
-purchaseOrder == selectedInvoice.purchaseOrder
+Read ONLY these fields from every matching invoice:
 
-For every matching invoice:
-
-Read ONLY the field:
-
+invoiceNumber
+purchaseOrder
 invoiceamount
 
 Ignore every other monetary field including:
 
 purchaseOrderAmount
-amount
-netAmount
 taxAmount
+netAmount
+amount
 
-Calculate:
+Convert invoiceamount and purchaseOrderAmount to numeric values before calculations.
+
+Calculate
 
 Total Invoice Amount =
 Sum(invoiceamount of all matching invoices)
-
-Do NOT sum purchaseOrderAmount.
-
-Do NOT multiply purchaseOrderAmount by the number of invoices.
-
-purchaseOrderAmount is the Purchase Order limit and must NOT be included in the calculation.
-
-After calculating:
 
 Compare
 
@@ -1071,24 +1063,34 @@ Total Invoice Amount
 
 with
 
-purchaseOrderAmount
+purchaseOrderAmount.
 
 Rules
 
-Total Invoice Amount <= purchaseOrderAmount
-PASS
+- Total Invoice Amount <= Purchase Order Amount
+    PASS
 
-Total Invoice Amount > purchaseOrderAmount
-FAIL
+- Total Invoice Amount > Purchase Order Amount
+    FAIL
 
-For FAIL return
+If FAIL, return:
 
 Reason:
 "The cumulative invoice amount exceeds the Purchase Order amount."
 
-Also display
+Also display:
+
+Purchase Order Number
 
 Purchase Order Amount
+
+A table containing EVERY invoice under that Purchase Order:
+
+Invoice Number
+
+Invoice Amount
+
+Then display
 
 Total Invoice Amount
 
@@ -1097,23 +1099,58 @@ Difference
 State which fields matched and their corresponding values.
 
 ==========================================================
-OVERALL CONFIDENCE SCORE
+CONFIDENCE SCORE
 ==========================================================
 
-Based ONLY on the validation results above, provide:
+Determine the confidence score ONLY using these rules.
 
-Confidence Score:
-0-100%
+Rule 1
 
-Risk Level:
+If ANY validation except Similar Invoice Validation returns FAIL
 
-Low Risk
+Confidence Score must be between
 
-Medium Risk
+0% and 35%
+
+Risk Level
 
 High Risk
 
-Do not use external assumptions.
+----------------------------------------------------------
+
+Rule 2
+
+If there are NO FAIL validations
+
+but one or more WARNING validations
+
+Confidence Score must be between
+
+36% and 79%
+
+Risk Level
+
+Medium Risk
+
+----------------------------------------------------------
+
+Rule 3
+
+If ALL validations return PASS
+
+Confidence Score must be between
+
+80% and 100%
+
+Risk Level
+
+Low Risk
+
+----------------------------------------------------------
+
+The Similar Invoice Validation alone must NEVER reduce the confidence score below 35%.
+
+If Similar Invoice Validation is the ONLY failed validation, treat it as Medium Risk.
 
 ==========================================================
 AI RECOMMENDATION
