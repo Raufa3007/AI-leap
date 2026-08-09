@@ -39,12 +39,18 @@ export default function TechnicalEvaluationPage({
   const [showDecisionDialog, setShowDecisionDialog] = useState(false)
   const [selectedDecision, setSelectedDecision] = useState("")
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [vendorDecisions, setVendorDecisions] = useState<{ [key: number]: "approved" | "rejected" | "pending" }>(
-    { 0: "pending", 1: "pending", 2: "pending" }
+  const [vendorDecisions, setVendorDecisions] = useState<{ [name: string]: "approved" | "rejected" | "pending" }>(
+    Object.fromEntries(VENDOR_SCORE_MAP.map((v) => [v.name, "pending"]))
   )
-  const [vendorScores, setVendorScores] = useState<{ [name: string]: number | null }>({})
-  const [evalRows, setEvalRows] = useState<EvaluationRow[]>([])
-  const [evalHeaders, setEvalHeaders] = useState<string[]>([])
+  const [vendorScores, setVendorScores] = useState<{ [name: string]: number | null }>(() => {
+    try { return JSON.parse(localStorage.getItem("evalVendorScores") || "null") ?? {} } catch { return {} }
+  })
+  const [evalRows, setEvalRows] = useState<EvaluationRow[]>(() => {
+    try { return JSON.parse(localStorage.getItem("evalRows") || "null") ?? [] } catch { return [] }
+  })
+  const [evalHeaders, setEvalHeaders] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("evalHeaders") || "null") ?? [] } catch { return [] }
+  })
   const [showEvalModal, setShowEvalModal] = useState(false)
   const [isReviewing, setIsReviewing] = useState(false)
   const [reviewError, setReviewError] = useState("")
@@ -113,6 +119,9 @@ export default function TechnicalEvaluationPage({
       setVendorScores(scores)
       setEvalRows(rows)
       setEvalHeaders(Object.keys(rows[0]))
+      localStorage.setItem("evalVendorScores", JSON.stringify(scores))
+      localStorage.setItem("evalRows", JSON.stringify(rows))
+      localStorage.setItem("evalHeaders", JSON.stringify(Object.keys(rows[0])))
       setShowEvalModal(true)
     } catch {
       setReviewError("Unable to load evaluation results.")
@@ -281,7 +290,7 @@ export default function TechnicalEvaluationPage({
                 ) : (
                   <button
                     disabled
-                    className="px-6 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
+                    className="px-6 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
                   >
                     <i className="ri-check-line" />
                     You have acknowledged
@@ -298,6 +307,14 @@ export default function TechnicalEvaluationPage({
                     {reviewError && (
                       <span className="text-xs text-red-500">{reviewError}</span>
                     )}
+                    {evalRows.length > 0 && (
+                      <button
+                        onClick={() => setShowEvalModal(true)}
+                        className="px-6 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 flex items-center gap-2"
+                      >
+                        View Results
+                      </button>
+                    )}
                     <button
                       onClick={handleReview}
                       disabled={isReviewing}
@@ -305,7 +322,7 @@ export default function TechnicalEvaluationPage({
                     >
                       {isReviewing ? (
                         <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Evaluating...</>
-                      ) : "Evaluate with AI"}
+                      ) : evalRows.length > 0 ? "Re-evaluate with AI" : "Evaluate with AI"}
                     </button>
                     {/* <button
                       onClick={onNavigateToVendorEvaluation}
@@ -333,17 +350,23 @@ export default function TechnicalEvaluationPage({
               ) : (
                 <div className="space-y-8">
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-12 gap-4 bg-blue-900 text-white p-4 font-medium text-sm">
-                      <div className="col-span-3">Vendors ({VENDOR_SCORE_MAP.length})</div>
-                      <div className="col-span-3">Evaluation status</div>
-                      <div className="col-span-3">Total score (Out of 100)</div>
-                      <div className="col-span-3">Decision</div>
-                    </div>
-                    {VENDOR_SCORE_MAP.map((vendor, index) => {
-                      const decision = vendorDecisions[index]
+                    <div className="grid grid-cols-12 gap-4 bg-[rgb(27,115,61)] p-4 text-sm font-medium text-white">
+  <div className="col-span-3">Vendors ({VENDOR_SCORE_MAP.length})</div>
+  <div className="col-span-3">Evaluation status</div>
+  <div className="col-span-3">Total score (Out of 100)</div>
+  <div className="col-span-3">Decision</div>
+</div>
+                    {[...VENDOR_SCORE_MAP]
+                      .sort((a, b) => {
+                        const sa = vendorScores[a.name] ?? -1
+                        const sb = vendorScores[b.name] ?? -1
+                        return sb - sa
+                      })
+                      .map((vendor) => {
+                      const decision = vendorDecisions[vendor.name]
                       const score = vendorScores[vendor.name]
                       return (
-                        <div key={index} className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center">
+                        <div key={vendor.name} className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center">
                           <div className="col-span-3 flex items-center gap-3">
                             <div
                               className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
@@ -378,11 +401,13 @@ export default function TechnicalEvaluationPage({
                           </div>
                           <div className="col-span-3 flex items-center gap-2">
                             <button
-                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "approved" }))}
-                              disabled={decision !== "pending"}
+                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [vendor.name]: "approved" }))}
+                              disabled={decision !== "pending" || score === null || score === undefined}
                               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                 decision === "approved"
                                   ? "bg-green-600 text-white cursor-not-allowed"
+                                  : score === null || score === undefined
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : decision !== "pending"
                                   ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : "border border-green-600 text-green-600 hover:bg-green-50"
@@ -391,11 +416,13 @@ export default function TechnicalEvaluationPage({
                               Approve
                             </button>
                             <button
-                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "rejected" }))}
-                              disabled={decision !== "pending"}
+                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [vendor.name]: "rejected" }))}
+                              disabled={decision !== "pending" || score === null || score === undefined}
                               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                 decision === "rejected"
                                   ? "bg-red-600 text-white cursor-not-allowed"
+                                  : score === null || score === undefined
+                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : decision !== "pending"
                                   ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                   : "border border-red-500 text-red-500 hover:bg-red-50"
