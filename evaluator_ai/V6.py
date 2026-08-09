@@ -1,6 +1,7 @@
 # Initial setup for the proposal evaluation project
 from dotenv import load_dotenv
 load_dotenv()
+import google.generativeai as genai
 
 from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
@@ -138,6 +139,14 @@ Example
 
     return "\n".join(prompt)
 
+
+
+def call_gemini(prompt, temperature=0.0):
+    response = model.generate_content(
+        prompt,
+        generation_config={"temperature": temperature}
+    )
+    return response.text.strip()
 
 
 # --- File Reading and AI Interaction Functions ---

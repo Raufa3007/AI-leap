@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, LayoutGrid, X } from "lucide-react"
+import { ChevronLeft, LayoutGrid, X, Sparkles, Loader2 } from "lucide-react"
 import SignatureVerificationDialog from "./signature-verification-dialog"
 import TechnicalEvaluationTable from "./technical-evaluation-table"
 import FinancialEvaluationTable from "./financial-evaluation-table"
@@ -150,6 +150,22 @@ export default function TechnicalEvaluationPage({
 
   return (
     <div className="w-full h-screen flex flex-col bg-white">
+
+      {/* Popup Loader Modal */}
+      {isReviewing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl px-16 py-12 gap-4">
+            <Loader2 size={48} className="animate-spin text-green-700" />
+            <p className="text-lg font-semibold text-gray-900">Evaluating vendors...</p>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSuccessMessage && (
         <div
           className="fixed top-4 left-4 z-50 bg-white rounded-md shadow-lg flex items-center gap-3 pr-4"
@@ -322,7 +338,7 @@ export default function TechnicalEvaluationPage({
                     >
                       {isReviewing ? (
                         <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Evaluating...</>
-                      ) : evalRows.length > 0 ? "Re-evaluate with AI" : "Evaluate with AI"}
+                      ) : (<><Sparkles size={16} />{evalRows.length > 0 ? "Re-evaluate with AI" : "Evaluate with AI"}</>)}
                     </button>
                     {/* <button
                       onClick={onNavigateToVendorEvaluation}
