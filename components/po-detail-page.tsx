@@ -3069,14 +3069,14 @@ Return exactly this JSON structure:
 
                   </div>
 
-                  <div className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-white shadow-lg">
+                  {/* <div className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-white shadow-lg">
 
                     <Loader2
                       size={18}
                       className="animate-spin"
                     />
 
-                  </div>
+                  </div> */}
 
                 </div>
 
