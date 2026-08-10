@@ -200,7 +200,7 @@ export default function CommercialEvaluationPage({
                     I acknowledge
                   </button>
                 ) : (
-                  <button disabled className="px-6 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed">
+                  <button disabled className="px-6 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed">
                     <i className="ri-check-line" /> You have acknowledged
                   </button>
                 )}
