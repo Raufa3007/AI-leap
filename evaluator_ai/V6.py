@@ -1,4 +1,7 @@
 # Initial setup for the proposal evaluation project
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -11,8 +14,10 @@ import re
 import math
 
 import fitz  # PyMuPDF
-import google.generativeai as genai
+import requests
 import pandas as pd
+import google.generativeai as genai
+
 
 app = Flask(__name__)
 CORS(app)
@@ -35,6 +40,13 @@ def sanitize_filename(filename):
     filename = filename.strip().replace("/", "_").replace("\\", "_")
     filename = re.sub(r'[<>:"|?*]', '_', filename)
     return filename
+def call_gemini(prompt, temperature=0.0):
+    response = model.generate_content(
+        prompt,
+        generation_config={"temperature": temperature}
+    )
+    return response.text.strip()
+
 
 def clean_text(text):
     """Remove duplicate empty lines, trailing spaces, and tabs."""
@@ -188,12 +200,7 @@ def extract_table_from_gemini(text):
         generation_config = {"temperature": 0.0}
         safety_settings = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
         
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
-        return response.text
+        return call_gemini(prompt, temperature=0.0)
     except Exception as e:
         print(f"Gemini error during table extraction: {e}")
         return None
@@ -475,27 +482,20 @@ def evaluate_files():
         # FIX: Use the correct variable 'rfp_page_text'
         evaluation_prompt = generate_evaluation_prompt(parameter_table, proposal_texts, clean_text(rfp_page_text), human_eval_text)
         
-        generation_config = {"temperature": 0.0}
-        safety_settings = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
-        
-        gemini_output = model.generate_content(
-            evaluation_prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
+        gemini_output_text = call_gemini(evaluation_prompt, temperature=0.0)
         
         print("\n--- RAW GEMINI OUTPUT ---\n")
-        print(gemini_output.text)
+        print(gemini_output_text)
         print("\n--- END RAW GEMINI OUTPUT ---\n")
         
         # Step 5: Parse and return the result
-        parsed_table_json = parse_markdown_table_to_json(gemini_output.text)
+        parsed_table_json = parse_markdown_table_to_json(gemini_output_text)
         cleaned_output = clean_evaluation_json(parsed_table_json)
         evaluation_table = sanitize_nan(cleaned_output)
         print(evaluation_table)
         
         if not evaluation_table:
-             return jsonify({"error": "Parsing the AI evaluation response failed.", "raw_output": gemini_output.text}), 500
+             return jsonify({"error": "Parsing the AI evaluation response failed.", "raw_output": gemini_output_text}), 500
 
         return Response(
             json.dumps(

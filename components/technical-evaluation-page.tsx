@@ -1,32 +1,32 @@
 "use client"
-
+ 
 import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, LayoutGrid, X } from "lucide-react"
+import { ChevronLeft, LayoutGrid, X, Sparkles, Loader2 } from "lucide-react"
 import SignatureVerificationDialog from "./signature-verification-dialog"
 import TechnicalEvaluationTable from "./technical-evaluation-table"
 import FinancialEvaluationTable from "./financial-evaluation-table"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
-
+ 
 type EvaluationRow = { [key: string]: string }
-
+ 
 const VENDOR_SCORE_MAP: { name: string; scoreKey: string; location: string; avatar: string; color: string }[] = [
   { name: "Accenture",         scoreKey: "1_Accenture Proposal.txt Score", location: "New York",  avatar: "A", color: "#4A5568" },
   { name: "Deloitte",          scoreKey: "2_Deloitte Proposal.txt Score",  location: "London",   avatar: "D", color: "#3B82F6" },
   { name: "Kaar Technologies", scoreKey: "3_KaarTech Proposal.txt Score",  location: "Chennai",  avatar: "K", color: "#FF6B6B" },
 ]
-
+ 
 function parseScore(raw: string | undefined): number | null {
   if (!raw) return null
   const n = parseInt(raw.replace(/\*/g, "").trim(), 10)
   return isNaN(n) ? null : n
 }
-
+ 
 interface TechnicalEvaluationPageProps {
   onBack: () => void
   onNavigateToVendorEvaluation: () => void
   onCommercialCompleted?: () => void
 }
-
+ 
 export default function TechnicalEvaluationPage({
   onBack,
   onNavigateToVendorEvaluation,
@@ -54,11 +54,11 @@ export default function TechnicalEvaluationPage({
   const [showEvalModal, setShowEvalModal] = useState(false)
   const [isReviewing, setIsReviewing] = useState(false)
   const [reviewError, setReviewError] = useState("")
-
+ 
   const rfpDetailsRef = useRef<HTMLDivElement>(null)
   const acknowledgmentRef = useRef<HTMLDivElement>(null)
   const vendorsRef = useRef<HTMLDivElement>(null)
-
+ 
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 200
@@ -70,11 +70,11 @@ export default function TechnicalEvaluationPage({
         setActiveSection("rfp-details")
       }
     }
-
+ 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
+ 
   const scrollToSection = (sectionId: string) => {
     const refs = {
       "rfp-details": rfpDetailsRef,
@@ -86,16 +86,16 @@ export default function TechnicalEvaluationPage({
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }
-
+ 
   const handleAcknowledgeClick = () => {
     setShowSignatureDialog(true)
   }
-
+ 
   const handleSignatureAcknowledge = () => {
     setAcknowledged(true)
     setShowSignatureDialog(false)
   }
-
+ 
   const handleReview = async () => {
     setIsReviewing(true)
     setReviewError("")
@@ -129,27 +129,43 @@ export default function TechnicalEvaluationPage({
       setIsReviewing(false)
     }
   }
-
+ 
   const handleDecideClick = () => {
     setShowDecisionDialog(true)
   }
-
+ 
   const handleCompleteDecision = () => {
     setShowDecisionDialog(false)
     setShowSuccessMessage(true)
-
+ 
     if (selectedDecision === "completed" && onCommercialCompleted) {
       console.log("[v0] Technical evaluation completed, triggering commercial evaluation visibility")
       onCommercialCompleted()
     }
-
+ 
     setTimeout(() => {
       setShowSuccessMessage(false)
     }, 3000)
   }
-
+ 
   return (
     <div className="w-full h-screen flex flex-col bg-white">
+ 
+      {/* Popup Loader Modal */}
+      {isReviewing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl px-16 py-12 gap-4">
+            <Loader2 size={48} className="animate-spin text-green-700" />
+            <p className="text-lg font-semibold text-gray-900">Evaluating vendors...</p>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
+            </div>
+          </div>
+        </div>
+      )}
+ 
       {showSuccessMessage && (
         <div
           className="fixed top-4 left-4 z-50 bg-white rounded-md shadow-lg flex items-center gap-3 pr-4"
@@ -169,7 +185,7 @@ export default function TechnicalEvaluationPage({
           </button>
         </div>
       )}
-
+ 
       <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-white">
         <div className="flex items-center gap-3">
           <button
@@ -190,10 +206,10 @@ export default function TechnicalEvaluationPage({
             <i className="ri-check-line" />
             Save
           </button>
-          
+         
         </div>
       </div>
-
+ 
       <div className="flex-1 flex overflow-hidden">
         <div
           className={`transition-all duration-300 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0 ${
@@ -211,7 +227,7 @@ export default function TechnicalEvaluationPage({
                 <LayoutGrid className="text-gray-600 w-5 h-5" />
               </button>
             </div>
-
+ 
             <nav className="space-y-1">
               {[
                 { id: "rfp-details", label: "RFP details" },
@@ -233,7 +249,7 @@ export default function TechnicalEvaluationPage({
             </nav>
           </div>
         </div>
-
+ 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto p-8 space-y-8">
             <div className="flex items-center justify-between">
@@ -242,7 +258,7 @@ export default function TechnicalEvaluationPage({
                 Evaluation Inprogress
               </span>
             </div>
-
+ 
             <div ref={rfpDetailsRef} className="space-y-6">
               <div className="grid grid-cols-3 gap-6">
                 <div>
@@ -269,7 +285,7 @@ export default function TechnicalEvaluationPage({
                 </div>
               </div>
             </div>
-
+ 
             <div ref={acknowledgmentRef} className="space-y-4">
               <h3 className="text-xl font-semibold text-green-700">Acknowledgment</h3>
               <div className="border border-gray-200 rounded-lg p-6 space-y-4">
@@ -298,7 +314,7 @@ export default function TechnicalEvaluationPage({
                 )}
               </div>
             </div>
-
+ 
             <div ref={vendorsRef} className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-green-700">Vendor list</h3>
@@ -322,7 +338,7 @@ export default function TechnicalEvaluationPage({
                     >
                       {isReviewing ? (
                         <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Evaluating...</>
-                      ) : evalRows.length > 0 ? "Re-evaluate with AI" : "Evaluate with AI"}
+                      ) : (<><Sparkles size={16} />{evalRows.length > 0 ? "Re-evaluate with AI" : "Evaluate with AI"}</>)}
                     </button>
                     {/* <button
                       onClick={onNavigateToVendorEvaluation}
@@ -333,7 +349,7 @@ export default function TechnicalEvaluationPage({
                   </div>
                 )}
               </div>
-
+ 
               {!acknowledged ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
                   <div className="relative">
@@ -435,14 +451,14 @@ export default function TechnicalEvaluationPage({
                       )
                     })}
                   </div>
-
+ 
                  
                 </div>
               )}
             </div>
           </div>
         </div>
-
+ 
         {showDecisionDialog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <AssessmentDecisionDialog
@@ -452,14 +468,14 @@ export default function TechnicalEvaluationPage({
             />
           </div>
         )}
-
+ 
         <SignatureVerificationDialog
           isOpen={showSignatureDialog}
           onClose={() => setShowSignatureDialog(false)}
           onAcknowledge={handleSignatureAcknowledge}
         />
       </div>
-
+ 
       {/* AI Evaluation Results Modal */}
       {showEvalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -475,7 +491,7 @@ export default function TechnicalEvaluationPage({
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-
+ 
             {/* Modal Body — scrollable table */}
             <div className="flex-1 overflow-auto p-6">
               <div className="overflow-x-auto">
@@ -514,7 +530,7 @@ export default function TechnicalEvaluationPage({
                 </table>
               </div>
             </div>
-
+ 
             {/* Modal Footer */}
             <div className="flex justify-end px-6 py-4 border-t border-gray-200 flex-shrink-0">
               <button
@@ -530,3 +546,5 @@ export default function TechnicalEvaluationPage({
     </div>
   )
 }
+ 
+ 
