@@ -1,9 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, Plus, Trash2, Upload } from "lucide-react"
+import { ChevronLeft, Plus, Trash2, Upload, Sparkles } from "lucide-react"
 import { savePRDraft, submitPR, loadPRDraft } from "@/app/actions/save-pr-draft"
 import { useToast } from "@/hooks/use-toast"
+import { BUDGET_CODE_OPTIONS, MATERIAL_GROUP_OPTIONS, UNIT_OF_MEASURE_OPTIONS } from "@/lib/pr-constants"
+import PRAIChatbot from "./pr-ai-chatbot"
+import { FullPRState } from "@/app/actions/ai-pr-assistant"
 
 interface Vendor {
   id: number
@@ -27,38 +30,6 @@ interface BillItem {
   description: string
 }
 
-const BUDGET_CODE_OPTIONS = [
-  { value: "BC001", label: "BC001 - Operations" },
-  { value: "BC002", label: "BC002 - Marketing" },
-  { value: "BC003", label: "BC003 - IT Infrastructure" },
-  { value: "BC004", label: "BC004 - HR & Training" },
-  { value: "BC005", label: "BC005 - Facilities" },
-  { value: "BC006", label: "BC006 - Research & Development" },
-]
-
-const MATERIAL_GROUP_OPTIONS = [
-  { value: "MG001", label: "Raw Materials" },
-  { value: "MG002", label: "Office Supplies" },
-  { value: "MG003", label: "IT Equipment" },
-  { value: "MG004", label: "Machinery & Tools" },
-  { value: "MG005", label: "Packaging Materials" },
-  { value: "MG006", label: "Services" },
-  { value: "MG007", label: "Consumables" },
-  { value: "MG008", label: "Safety Equipment" },
-]
-
-const UNIT_OF_MEASURE_OPTIONS = [
-  { value: "PCS", label: "Pieces" },
-  { value: "KG", label: "Kilogram" },
-  { value: "LTR", label: "Liter" },
-  { value: "MTR", label: "Meter" },
-  { value: "BOX", label: "Box" },
-  { value: "PACK", label: "Pack" },
-  { value: "SET", label: "Set" },
-  { value: "ROLL", label: "Roll" },
-  { value: "HOUR", label: "Hour" },
-  { value: "DAY", label: "Day" },
-]
 
 function generatePRNumber() {
   const now = new Date()
@@ -134,6 +105,8 @@ export default function CreatePRForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showAIChat, setShowAIChat] = useState(true)
+
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -388,6 +361,17 @@ export default function CreatePRForm({
           )}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAIChat(!showAIChat)}
+            className={`px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
+              showAIChat
+                ? "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+                : "bg-green-600 text-white hover:bg-green-700 shadow-sm"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            {showAIChat ? "Fill manually" : "Fill with AI"}
+          </button>
           {!isReadOnly && (
             <>
               <button
@@ -847,6 +831,29 @@ export default function CreatePRForm({
             <div className="h-8" />
           </div>
         </div>
+
+        {showAIChat && (
+          <div className="w-[420px] h-full flex-shrink-0">
+            <PRAIChatbot
+              prState={{
+                formData,
+                vendors,
+                billItems,
+                checklist,
+              }}
+              onUpdateState={(newState: FullPRState) => {
+                setFormData(newState.formData)
+                setVendors(newState.vendors)
+                setBillItems(newState.billItems)
+                setChecklist(newState.checklist)
+              }}
+              onSaveDraft={handleSaveAsDraft}
+              onSubmitPR={handleSubmitPR}
+              onSwitchToManualForm={() => setShowAIChat(false)}
+              isReadOnly={isReadOnly}
+            />
+          </div>
+        )}
       </div>
 
       {showVendorModal && (

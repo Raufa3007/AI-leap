@@ -1,7 +1,7 @@
 # Initial setup for the proposal evaluation project
 from dotenv import load_dotenv
 load_dotenv()
-import google.generativeai as genai
+from google import genai
 
 from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
@@ -27,9 +27,18 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Configure Generative AI - set GEMINI_API_KEY in your environment
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY","" ))
-model = genai.GenerativeModel("gemini-2.5-flash")
+# Configure Gemini Generative AI
+# Set GEMINI_API_KEY in your .env file
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise ValueError(
+        "GEMINI_API_KEY is not set. Please add it to your .env file."
+    )
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+GEMINI_MODEL = "gemini-2.5-flash"
 
 
 # --- Helper Functions ---
@@ -59,31 +68,38 @@ def parse_markdown_table_to_json(markdown_table_text):
         return []
     
     
+
 def evaluate_commercial_vendors(vendors):
 
     prompt = generate_commercial_prompt(vendors)
 
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature":0
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
+            "temperature": 0
         }
     )
 
     print(response.text)
+
     text = response.text.strip()
+
     # Remove markdown fences
     text = text.replace("```json", "")
     text = text.replace("```", "")
     text = text.strip()
+
     try:
         result = json.loads(text)
     except json.JSONDecodeError:
         print("Gemini returned invalid JSON:")
         print(text)
         raise
+
     return result
-        
+
+
 
 def generate_commercial_prompt(vendors):
 
@@ -141,11 +157,16 @@ Example
 
 
 
+
 def call_gemini(prompt, temperature=0.0):
-    response = model.generate_content(
-        prompt,
-        generation_config={"temperature": temperature}
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
+            "temperature": temperature
+        }
     )
+
     return response.text.strip()
 
 
