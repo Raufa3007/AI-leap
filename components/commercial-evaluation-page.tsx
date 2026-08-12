@@ -136,15 +136,12 @@ export default function CommercialAssessmentPage({
   // STATE
   // ==========================================================
 
-  // Overall vendor selected for the overall evaluation popup
   const [selectedVendor, setSelectedVendor] =
     useState<CommercialVendor | null>(null)
 
-  // Selected criterion for criterion-specific popup
   const [selectedCriterion, setSelectedCriterion] =
     useState<CommercialEvaluation | null>(null)
 
-  // Vendor associated with selected criterion
   const [selectedCriterionVendor, setSelectedCriterionVendor] =
     useState<CommercialVendor | null>(null)
 
@@ -211,9 +208,7 @@ export default function CommercialAssessmentPage({
 
         if (
           parsed &&
-          Array.isArray(
-            parsed.vendors
-          )
+          Array.isArray(parsed.vendors)
         ) {
           const normalizedSavedVendors: CommercialVendor[] =
             parsed.vendors.map(
@@ -650,10 +645,6 @@ export default function CommercialAssessmentPage({
         return
       }
 
-      // ======================================================
-      // NORMALIZE AI RESPONSE
-      // ======================================================
-
       const normalizedVendors: CommercialVendor[] =
         data.vendors.map(
           (
@@ -725,24 +716,6 @@ export default function CommercialAssessmentPage({
           })
         )
 
-      console.log(
-        "NORMALIZED COMMERCIAL VENDORS:",
-        normalizedVendors
-      )
-
-      normalizedVendors.forEach(
-        (vendor) => {
-          console.log(
-            `${vendor.name} evaluations:`,
-            vendor.evaluations
-          )
-        }
-      )
-
-      // ======================================================
-      // SAVE
-      // ======================================================
-
       setVendors(
         normalizedVendors
       )
@@ -754,10 +727,6 @@ export default function CommercialAssessmentPage({
             normalizedVendors,
         })
       )
-
-      // ======================================================
-      // SHOW RESULTS
-      // ======================================================
 
       setShowEvalModal(true)
     } catch (error) {
@@ -830,7 +799,6 @@ export default function CommercialAssessmentPage({
 
       {isReviewing && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-
           <div className="flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl px-16 py-12 gap-4">
 
             <Loader2
@@ -843,17 +811,12 @@ export default function CommercialAssessmentPage({
             </p>
 
             <div className="flex items-center gap-2">
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
-
             </div>
 
           </div>
-
         </div>
       )}
 
@@ -869,9 +832,7 @@ export default function CommercialAssessmentPage({
               "4px solid #1B733D",
           }}
         >
-
           <div className="flex items-center gap-3 px-4 py-3">
-
             <i
               className="ri-checkbox-circle-line text-2xl"
               style={{
@@ -887,7 +848,6 @@ export default function CommercialAssessmentPage({
             >
               Commercial evaluation completed successfully
             </span>
-
           </div>
 
           <button
@@ -900,7 +860,6 @@ export default function CommercialAssessmentPage({
           >
             <i className="ri-close-line text-xl text-gray-600" />
           </button>
-
         </div>
       )}
 
@@ -1048,9 +1007,7 @@ export default function CommercialAssessmentPage({
 
           <div className="max-w-6xl mx-auto p-8 space-y-8">
 
-            {/* =================================================
-                PAGE TITLE
-            ================================================= */}
+            {/* PAGE TITLE */}
 
             <div className="flex items-center justify-between">
 
@@ -1064,9 +1021,7 @@ export default function CommercialAssessmentPage({
 
             </div>
 
-            {/* =================================================
-                RFP DETAILS
-            ================================================= */}
+            {/* RFP DETAILS */}
 
             <div
               ref={rfpDetailsRef}
@@ -1076,7 +1031,6 @@ export default function CommercialAssessmentPage({
               <div className="grid grid-cols-3 gap-6">
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     RFP ID
                   </p>
@@ -1084,11 +1038,9 @@ export default function CommercialAssessmentPage({
                   <p className="text-sm font-semibold text-blue-600">
                     RFP2131424
                   </p>
-
                 </div>
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     PR Reference
                   </p>
@@ -1096,11 +1048,9 @@ export default function CommercialAssessmentPage({
                   <p className="text-sm font-semibold text-blue-600">
                     PR524252
                   </p>
-
                 </div>
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Bid closing date/time
                   </p>
@@ -1108,7 +1058,6 @@ export default function CommercialAssessmentPage({
                   <p className="text-sm font-medium text-gray-900">
                     29th Oct 2025, 5:00 PM
                   </p>
-
                 </div>
 
               </div>
@@ -1116,7 +1065,6 @@ export default function CommercialAssessmentPage({
               <div className="grid grid-cols-2 gap-6">
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Deadline
                   </p>
@@ -1124,11 +1072,9 @@ export default function CommercialAssessmentPage({
                   <p className="text-sm text-gray-900">
                     24-Oct-2025 6:00 PM
                   </p>
-
                 </div>
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Evaluator
                   </p>
@@ -1136,16 +1082,13 @@ export default function CommercialAssessmentPage({
                   <p className="text-sm text-gray-900">
                     Eng. Ahmed Saleh (CEC Member)
                   </p>
-
                 </div>
 
               </div>
 
             </div>
 
-            {/* =================================================
-                ACKNOWLEDGMENT
-            ================================================= */}
+            {/* ACKNOWLEDGMENT */}
 
             <div
               ref={acknowledgmentRef}
@@ -1183,11 +1126,8 @@ export default function CommercialAssessmentPage({
                     disabled
                     className="px-6 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
                   >
-
                     <i className="ri-check-line" />
-
                     You have acknowledged
-
                   </button>
 
                 )}
@@ -1196,9 +1136,7 @@ export default function CommercialAssessmentPage({
 
             </div>
 
-            {/* =================================================
-                VENDORS
-            ================================================= */}
+            {/* VENDORS */}
 
             <div
               ref={vendorsRef}
@@ -1217,13 +1155,12 @@ export default function CommercialAssessmentPage({
 
                     {reviewError && (
                       <span className="text-xs text-red-500">
-                        {
-                          reviewError
-                        }
+                        {reviewError}
                       </span>
                     )}
 
                     {vendors.length > 0 && (
+
                       <button
                         onClick={() =>
                           setShowEvalModal(
@@ -1234,6 +1171,7 @@ export default function CommercialAssessmentPage({
                       >
                         View Results
                       </button>
+
                     )}
 
                     <button
@@ -1276,10 +1214,6 @@ export default function CommercialAssessmentPage({
 
               </div>
 
-              {/* =================================================
-                  LOCKED VIEW
-              ================================================= */}
-
               {!acknowledged ? (
 
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
@@ -1317,10 +1251,6 @@ export default function CommercialAssessmentPage({
               ) : (
 
                 <div className="space-y-8">
-
-                  {/* =================================================
-                      VENDOR TABLE
-                  ================================================= */}
 
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
 
@@ -1364,8 +1294,6 @@ export default function CommercialAssessmentPage({
                             className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center"
                           >
 
-                            {/* VENDOR */}
-
                             <div className="col-span-3 flex items-center gap-3">
 
                               <div
@@ -1398,8 +1326,6 @@ export default function CommercialAssessmentPage({
 
                             </div>
 
-                            {/* STATUS */}
-
                             <div className="col-span-3">
 
                               <span
@@ -1422,8 +1348,6 @@ export default function CommercialAssessmentPage({
                               </span>
 
                             </div>
-
-                            {/* SCORE */}
 
                             <div className="col-span-3">
 
@@ -1455,8 +1379,6 @@ export default function CommercialAssessmentPage({
                               )}
 
                             </div>
-
-                            {/* RECOMMENDATION */}
 
                             <div className="col-span-3">
 
@@ -1555,19 +1477,19 @@ export default function CommercialAssessmentPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
           <div
-            className="bg-white rounded-2xl shadow-2xl flex flex-col"
+            className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{
               width: "92vw",
               maxWidth: "1400px",
-              maxHeight: "88vh",
+              height: "88vh",
             }}
           >
 
             {/* ==================================================
-                MODAL HEADER
+                MODAL HEADER - FIXED
             ================================================== */}
 
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0 bg-white">
 
               <div>
 
@@ -1596,12 +1518,13 @@ export default function CommercialAssessmentPage({
             </div>
 
             {/* ==================================================
-                VENDOR SUMMARY CARDS
+                VENDOR SUMMARY CARDS - FIXED
+                EXACT SAME HORIZONTAL WIDTH AS TABLE
             ================================================== */}
 
-            <div className="px-6 pt-6 flex-shrink-0">
+            <div className="flex-shrink-0 bg-white px-6 py-6">
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="w-full grid grid-cols-3 gap-4">
 
                 {sortedVendors.map(
                   (
@@ -1621,30 +1544,63 @@ export default function CommercialAssessmentPage({
 
                       <div
                         key={vendor.id}
-                        className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between"
+                        className="min-w-0 w-full border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between"
                       >
-                        <div className="flex items-center gap-2">
+
+                        <div className="flex items-center gap-2 min-w-0">
+
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                            style={{ backgroundColor: actualConfig.color }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                            style={{
+                              backgroundColor:
+                                actualConfig.color,
+                            }}
                           >
-                            {actualConfig.avatar}
+                            {
+                              actualConfig.avatar
+                            }
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">{actualConfig.name}</p>
-                            <p className="text-xs text-gray-500">Commercial Proposal</p>
+
+                          <div className="min-w-0">
+
+                            <p className="font-semibold text-gray-900 text-sm truncate">
+                              {
+                                actualConfig.name
+                              }
+                            </p>
+
+                            <p className="text-xs text-gray-500">
+                              Commercial Proposal
+                            </p>
+
                           </div>
+
                         </div>
-                        <div className="text-right">
+
+                        <div className="text-right flex-shrink-0 ml-2">
+
                           {index === 0 && (
+
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium block mb-1">
                               Highest
                             </span>
+
                           )}
+
                           <p className="text-2xl font-bold text-gray-900">
-                            {vendor.overallScore}<span className="text-xs font-normal text-gray-400">/100</span>
+
+                            {
+                              vendor.overallScore
+                            }
+
+                            <span className="text-xs font-normal text-gray-400">
+                              /100
+                            </span>
+
                           </p>
+
                         </div>
+
                       </div>
 
                     )
@@ -1656,268 +1612,318 @@ export default function CommercialAssessmentPage({
             </div>
 
             {/* ==================================================
-                TABLE
+                TABLE SCROLL AREA
+
+                IMPORTANT:
+                pr-0 is intentional.
+
+                The vertical scrollbar consumes width.
+                Keeping right padding here makes the table
+                shorter than the cards.
+
+                Removing right padding makes the table
+                and cards end at EXACTLY the same x-position.
             ================================================== */}
 
-            <div className="flex-1 overflow-auto px-6 py-6">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
 
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="w-full pl-6 pr-0 py-6">
 
-                <table className="w-full border-collapse">
+                <div className="w-full border border-gray-200 rounded-xl overflow-hidden">
 
-                  <thead className="sticky top-0 z-10">
-
-                    <tr className="bg-[#1B733D] text-white">
-
-                      <th className="px-4 py-4 text-left min-w-[400px]">
-                        Evaluation Criteria
-                      </th>
-
-                      <th className="px-4 py-4 text-center w-[100px] border-r-2 ">
-                        Weight
-                      </th>
-
-                      {sortedVendors.map(
-                        (vendor) => {
-
-                          const config =
-                            getVendorConfig(
-                              vendor.name ||
-                                getVendorNameById(
-                                  vendor.id
-                                )
-                            )
-
-                          return (
-
-                            <th
-                              key={
-                                vendor.id
-                              }
-                              className="px-4 py-4 text-center min-w-[170px]"
-                            >
-                              {
-                                config.name
-                              }
-                            </th>
-
-                          )
-                        }
-                      )}
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody>
+                  <table className="w-full table-fixed border-collapse">
 
                     {/* ==================================================
-                        CRITERIA ROWS
+                        STICKY TABLE HEADER
                     ================================================== */}
 
-                    {COMMERCIAL_CRITERIA.map(
-                      (
-                        criterion
-                      ) => (
+                    <thead className="sticky top-0 z-30">
 
-                        <tr
-                          key={
-                            criterion.name
-                          }
-                          className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
-                        >
+                      <tr className="bg-[#1B733D] text-white">
 
-                          {/* CRITERIA */}
+                        <th className="px-4 py-4 text-left w-[34%] bg-[#1B733D]">
+                          Evaluation Criteria
+                        </th>
 
-                          <td className="px-4 py-4 align-top">
+                        <th className="px-4 py-4 text-center w-[8%] border-r-2 border-green-700 bg-[#1B733D]">
+                          Weight
+                        </th>
 
-                            <div className="font-semibold text-gray-900">
-                              {
-                                criterion.name
-                              }
-                            </div>
+                        {sortedVendors.map(
+                          (vendor) => {
 
-                            <div className="mt-1 text-sm text-gray-500 leading-5">
-                              {
-                                criterion.description
-                              }
-                            </div>
-
-                          </td>
-
-                          {/* WEIGHT */}
-
-                          <td className="px-4 py-4 text-center align-top border-r-2 border-gray-300">
-
-                            <span className="inline-flex items-center justify-center  text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
-                              {
-                                criterion.weight
-                              }
-                              %
-                            </span>
-
-                          </td>
-
-                          {/* ==================================================
-                              VENDOR CRITERION SCORES
-                          ================================================== */}
-
-                          {sortedVendors.map(
-                            (
-                              vendor
-                            ) => {
-
-                              const evaluation =
-                                getVendorEvaluation(
-                                  vendor,
-                                  criterion.name
-                                )
-
-                              const score =
-                                evaluation?.score ??
-                                null
-
-                              const maximum =
-                                evaluation?.weight ??
-                                criterion.weight
-
-                              return (
-
-                                <td
-                                  key={
+                            const config =
+                              getVendorConfig(
+                                vendor.name ||
+                                  getVendorNameById(
                                     vendor.id
-                                  }
-                                  className="px-4 py-4 text-center align-top"
-                                >
-
-                                  {score !==
-                                  null ? (
-
-                                    <button
-                                      onClick={() => {
-                                        if (
-                                          evaluation
-                                        ) {
-                                          openCriterionEvaluation(
-                                            vendor,
-                                            evaluation
-                                          )
-                                        }
-                                      }}
-                                      title="Click for more detail"
-                                      className="inline-flex items-center justify-center min-w-[75px] px-3 py-2 rounded-lg font-bold text-sm text-gray-800 transition   hover:scale-105 cursor-pointer"
-                                    >
-
-                                      {
-                                        score
-                                      }
-                                      /
-                                      {
-                                        maximum
-                                      }
-
-                                    </button>
-
-                                  ) : (
-
-                                    <span className="text-gray-400">
-                                      --
-                                    </span>
-
-                                  )}
-
-                                </td>
-
+                                  )
                               )
-                            }
-                          )}
 
-                        </tr>
+                            return (
 
-                      )
-                    )}
+                              <th
+                                key={
+                                  vendor.id
+                                }
+                                className="px-4 py-4 text-center bg-[#1B733D]"
+                                style={{
+                                  width: `${
+                                    58 /
+                                    Math.max(
+                                      sortedVendors.length,
+                                      1
+                                    )
+                                  }%`,
+                                }}
+                              >
+                                {
+                                  config.name
+                                }
+                              </th>
+
+                            )
+                          }
+                        )}
+
+                      </tr>
+
+                    </thead>
 
                     {/* ==================================================
-                        INSIGHTS ROW
+                        TABLE BODY
                     ================================================== */}
-                    <tr className="border-t border-gray-200 bg-blue-50/40">
-                      <td className="px-4 py-3 align-top">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">AI Insights</p>
-                      </td>
-                      <td className="px-4 py-3 border-r-2 border-gray-300" />
-                      {sortedVendors.map((vendor) => (
-                        <td key={vendor.id} className="px-4 py-3 align-top">
-                          <p className="text-xs text-gray-600 leading-5">{vendor.aiInsight || "--"}</p>
-                        </td>
-                      ))}
-                    </tr>
 
-                  </tbody>
+                    <tbody>
 
-                  {/* ==================================================
-                      TOTAL SCORE
-                  ================================================== */}
-
-                  <tfoot>
-
-                    <tr className="bg-gray-50 border-t-2 border-gray-300">
-
-                      <td className="px-4 py-5 font-bold text-gray-900">
-                        TOTAL SCORE
-                      </td>
-
-                      <td className="px-4 py-5 text-center font-bold border-r-2 border-gray-300">
-                        100
-                      </td>
-
-                      {sortedVendors.map(
+                      {COMMERCIAL_CRITERIA.map(
                         (
-                          vendor
+                          criterion
                         ) => (
 
-                          <td
+                          <tr
                             key={
-                              vendor.id
+                              criterion.name
                             }
-                            className="px-4 py-5 text-center"
+                            className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
                           >
 
-                            <button
-                              onClick={() =>
-                                openOverallEvaluation(
-                                  vendor
+                            <td className="px-4 py-4 align-top">
+
+                              <div className="font-semibold text-gray-900">
+                                {
+                                  criterion.name
+                                }
+                              </div>
+
+                              <div className="mt-1 text-sm text-gray-500 leading-5">
+                                {
+                                  criterion.description
+                                }
+                              </div>
+
+                            </td>
+
+                            <td className="px-4 py-4 text-center align-top border-r-2 border-gray-300">
+
+                              <span className="inline-flex items-center justify-center text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
+                                {
+                                  criterion.weight
+                                }
+                                %
+                              </span>
+
+                            </td>
+
+                            {sortedVendors.map(
+                              (
+                                vendor
+                              ) => {
+
+                                const evaluation =
+                                  getVendorEvaluation(
+                                    vendor,
+                                    criterion.name
+                                  )
+
+                                const score =
+                                  evaluation?.score ??
+                                  null
+
+                                const maximum =
+                                  evaluation?.weight ??
+                                  criterion.weight
+
+                                return (
+
+                                  <td
+                                    key={
+                                      vendor.id
+                                    }
+                                    className="px-4 py-4 text-center align-top"
+                                  >
+
+                                    {score !==
+                                    null ? (
+
+                                      <button
+                                        onClick={() => {
+
+                                          if (
+                                            evaluation
+                                          ) {
+
+                                            openCriterionEvaluation(
+                                              vendor,
+                                              evaluation
+                                            )
+
+                                          }
+
+                                        }}
+                                        title="Click for more detail"
+                                        className={`inline-flex items-center justify-center min-w-[75px] px-3 py-2 rounded-lg font-bold text-sm ${getScoreClass(
+                                          score,
+                                          maximum
+                                        )} transition hover:scale-105 cursor-pointer`}
+                                      >
+                                        {
+                                          score
+                                        }
+                                        /
+                                        {
+                                          maximum
+                                        }
+                                      </button>
+
+                                    ) : (
+
+                                      <span className="text-gray-400">
+                                        --
+                                      </span>
+
+                                    )}
+
+                                  </td>
+
                                 )
                               }
-                              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold text-lg text-gray-900 hover:ring-2 hover:ring-green-300 transition"
-                            >
+                            )}
 
-                              {
-                                vendor.overallScore
-                              }
-                              /100
-
-                            </button>
-
-                          </td>
+                          </tr>
 
                         )
                       )}
 
-                    </tr>
+                      {/* ==================================================
+                          AI INSIGHTS ROW
+                      ================================================== */}
 
-                  </tfoot>
+                      <tr className="border-t border-gray-200 bg-blue-50/40">
 
-                </table>
+                        <td className="px-4 py-3 align-top">
+
+                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                            AI Insights
+                          </p>
+
+                        </td>
+
+                        <td className="px-4 py-3 border-r-2 border-gray-300" />
+
+                        {sortedVendors.map(
+                          (vendor) => (
+
+                            <td
+                              key={
+                                vendor.id
+                              }
+                              className="px-4 py-3 align-top"
+                            >
+
+                              <p className="text-xs text-gray-600 leading-5">
+                                {
+                                  vendor.aiInsight ||
+                                  "--"
+                                }
+                              </p>
+
+                            </td>
+
+                          )
+                        )}
+
+                      </tr>
+
+                    </tbody>
+
+                    {/* ==================================================
+                        TOTAL SCORE
+                    ================================================== */}
+
+                    <tfoot>
+
+                      <tr className="bg-gray-50 border-t-2 border-gray-300">
+
+                        <td className="px-4 py-5 font-bold text-gray-900">
+                          TOTAL SCORE
+                        </td>
+
+                        <td className="px-4 py-5 text-center font-bold border-r-2 border-gray-300">
+                          100
+                        </td>
+
+                        {sortedVendors.map(
+                          (
+                            vendor
+                          ) => (
+
+                            <td
+                              key={
+                                vendor.id
+                              }
+                              className="px-4 py-5 text-center"
+                            >
+
+                              <button
+                                onClick={() =>
+                                  openOverallEvaluation(
+                                    vendor
+                                  )
+                                }
+                                className={`inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold text-lg ${getScoreClass(
+                                  vendor.overallScore,
+                                  100
+                                )} hover:ring-2 hover:ring-green-300 transition`}
+                              >
+                                {
+                                  vendor.overallScore
+                                }
+                                /100
+                              </button>
+
+                            </td>
+
+                          )
+                        )}
+
+                      </tr>
+
+                    </tfoot>
+
+                  </table>
+
+                </div>
 
               </div>
 
             </div>
 
             {/* ==================================================
-                FOOTER
+                FOOTER - FIXED
             ================================================== */}
 
-            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0">
+            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-white">
 
               <p className="text-xs text-gray-500">
                 Click any criterion score to view its AI reasoning and proposal reference.
@@ -1944,19 +1950,6 @@ export default function CommercialAssessmentPage({
 
       {/* ========================================================
           CRITERION-SPECIFIC AI EVALUATION POPUP
-          
-          THIS IS THE IMPORTANT NEW POPUP.
-          
-          Clicking:
-          Accenture -> Past Project Experience -> 6/15
-          
-          will show ONLY:
-          - Accenture
-          - 6/15
-          - Weight 15
-          - Past Project Experience
-          - AI Reasoning
-          - Proposal Reference
       ======================================================== */}
 
       {selectedCriterion &&
@@ -1965,10 +1958,6 @@ export default function CommercialAssessmentPage({
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
 
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-
-              {/* ==================================================
-                  HEADER
-              ================================================== */}
 
               <div className="flex items-center justify-between px-8 py-6 border-b border-gray-200 flex-shrink-0">
 
@@ -2003,15 +1992,7 @@ export default function CommercialAssessmentPage({
 
               </div>
 
-              {/* ==================================================
-                  BODY
-              ================================================== */}
-
               <div className="p-8 space-y-8 overflow-y-auto">
-
-                {/* ==================================================
-                    SCORE + WEIGHT
-                ================================================== */}
 
                 <div className="flex items-center justify-between">
 
@@ -2054,10 +2035,6 @@ export default function CommercialAssessmentPage({
 
                 </div>
 
-                {/* ==================================================
-                    EVALUATION CRITERIA
-                ================================================== */}
-
                 <div>
 
                   <p className="text-base uppercase tracking-wide text-gray-400 font-semibold">
@@ -2069,8 +2046,6 @@ export default function CommercialAssessmentPage({
                       selectedCriterion.criterion
                     }
                   </p>
-
-                  {/* Criterion description */}
 
                   <p className="text-sm text-gray-500 mt-2 leading-6">
                     {
@@ -2087,10 +2062,6 @@ export default function CommercialAssessmentPage({
                   </p>
 
                 </div>
-
-                {/* ==================================================
-                    AI REASONING
-                ================================================== */}
 
                 <div>
 
@@ -2110,10 +2081,6 @@ export default function CommercialAssessmentPage({
                   </div>
 
                 </div>
-
-                {/* ==================================================
-                    PROPOSAL REFERENCE
-                ================================================== */}
 
                 <div>
 
@@ -2144,10 +2111,6 @@ export default function CommercialAssessmentPage({
 
               </div>
 
-              {/* ==================================================
-                  FOOTER
-              ================================================== */}
-
               <div className="flex justify-end px-8 py-5 border-t border-gray-200 flex-shrink-0">
 
                 <button
@@ -2169,8 +2132,6 @@ export default function CommercialAssessmentPage({
 
       {/* ========================================================
           OVERALL VENDOR AI EVALUATION POPUP
-          
-          This opens ONLY when the TOTAL SCORE is clicked.
       ======================================================== */}
 
       {selectedVendor && (
@@ -2178,10 +2139,6 @@ export default function CommercialAssessmentPage({
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
 
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-
-            {/* ==================================================
-                HEADER
-            ================================================== */}
 
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-200 flex-shrink-0">
 
@@ -2218,15 +2175,7 @@ export default function CommercialAssessmentPage({
 
             </div>
 
-            {/* ==================================================
-                BODY
-            ================================================== */}
-
             <div className="p-8 space-y-6 overflow-y-auto">
-
-              {/* ==================================================
-                  SCORE
-              ================================================== */}
 
               <div className="flex items-center justify-between">
 
@@ -2266,10 +2215,6 @@ export default function CommercialAssessmentPage({
 
               </div>
 
-              {/* ==================================================
-                  OVERALL AI INSIGHT
-              ================================================== */}
-
               <div>
 
                 <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
@@ -2288,10 +2233,6 @@ export default function CommercialAssessmentPage({
                 </div>
 
               </div>
-
-              {/* ==================================================
-                  RECOMMENDATION
-              ================================================== */}
 
               <div>
 
@@ -2342,10 +2283,6 @@ export default function CommercialAssessmentPage({
               </div>
 
             </div>
-
-            {/* ==================================================
-                FOOTER
-            ================================================== */}
 
             <div className="flex justify-end px-8 py-4 border-t border-gray-200 flex-shrink-0">
 

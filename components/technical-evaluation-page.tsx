@@ -14,7 +14,6 @@ import TechnicalEvaluationTable from "./technical-evaluation-table"
 import FinancialEvaluationTable from "./financial-evaluation-table"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
 
-
 // ============================================================
 // TYPES
 // ============================================================
@@ -22,7 +21,6 @@ import AssessmentDecisionDialog from "./assessment-decision-dialog"
 type EvaluationRow = {
   [key: string]: string
 }
-
 
 // ============================================================
 // VENDOR CONFIGURATION
@@ -58,7 +56,6 @@ const VENDOR_SCORE_MAP: {
   },
 ]
 
-
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================
@@ -74,16 +71,9 @@ function parseScore(raw: string | undefined): number | null {
   return isNaN(n) ? null : n
 }
 
-
 /**
  * Gets the score, reason and reference for a particular vendor
  * from one evaluation row.
- *
- * Example:
- *
- * 1_Accenture Proposal.txt Score
- * 1_Accenture Proposal.txt Reason
- * 1_Accenture Proposal.txt Reference
  */
 function getVendorEvaluation(
   row: EvaluationRow,
@@ -111,6 +101,71 @@ function getVendorEvaluation(
   }
 }
 
+function normalizeInsightMap(insights: {
+  [key: string]: string
+}): { [key: string]: string } {
+  return Object.fromEntries(
+    Object.entries(insights).map(([key, value]) => [
+      key.trim().toLowerCase(),
+      String(value).trim(),
+    ])
+  )
+}
+
+function getInsightForVendor(
+  insights: { [vendor: string]: string },
+  vendorName: string,
+  scoreKey?: string
+): string {
+  const normalizedVendorName =
+    vendorName.trim().toLowerCase()
+
+  if (insights[normalizedVendorName]) {
+    return insights[normalizedVendorName]
+  }
+
+  if (scoreKey) {
+    const normalizedScoreKey = scoreKey
+      .replace(/\s*Score$/i, "")
+      .trim()
+      .toLowerCase()
+
+    if (insights[normalizedScoreKey]) {
+      return insights[normalizedScoreKey]
+    }
+  }
+
+  const match = Object.entries(insights).find(
+    ([key]) => {
+      const normalizedKey =
+        key.trim().toLowerCase()
+
+      return (
+        normalizedKey === normalizedVendorName ||
+        normalizedKey ===
+          scoreKey?.trim().toLowerCase() ||
+        normalizedKey.includes(
+          normalizedVendorName
+        ) ||
+        normalizedVendorName.includes(
+          normalizedKey
+        ) ||
+        (scoreKey &&
+          normalizedKey.includes(
+            scoreKey.trim().toLowerCase()
+          )) ||
+        normalizedKey.startsWith(
+          normalizedVendorName
+        ) ||
+        normalizedVendorName.startsWith(
+          normalizedKey
+        )
+      )
+    }
+  )
+
+  return match?.[1] || ""
+}
 
 // ============================================================
 // PROPS
@@ -121,7 +176,6 @@ interface TechnicalEvaluationPageProps {
   onNavigateToVendorEvaluation: () => void
   onCommercialCompleted?: () => void
 }
-
 
 // ============================================================
 // MAIN COMPONENT
@@ -205,6 +259,23 @@ export default function TechnicalEvaluationPage({
       }
     })
 
+  const [overallInsights, setOverallInsights] =
+    useState<{
+      [vendor: string]: string
+    }>(() => {
+      try {
+        return normalizeInsightMap(
+          JSON.parse(
+            localStorage.getItem(
+              "overallInsights"
+            ) || "null"
+          ) ?? {}
+        )
+      } catch {
+        return {}
+      }
+    })
+
   const [showEvalModal, setShowEvalModal] =
     useState(false)
 
@@ -214,10 +285,8 @@ export default function TechnicalEvaluationPage({
   const [reviewError, setReviewError] =
     useState("")
 
-
   // ==========================================================
-  // NEW STATE
-  // Used when clicking a score to show AI reasoning
+  // SELECTED SCORE / AI REASONING
   // ==========================================================
 
   const [selectedEvaluation, setSelectedEvaluation] =
@@ -229,7 +298,6 @@ export default function TechnicalEvaluationPage({
       subCriterion: string
       weight: string
     } | null>(null)
-
 
   // ==========================================================
   // REFS
@@ -244,15 +312,12 @@ export default function TechnicalEvaluationPage({
   const vendorsRef =
     useRef<HTMLDivElement>(null)
 
-
   // ==========================================================
   // SCROLL HANDLER
   // ==========================================================
 
   useEffect(() => {
-
     const handleScroll = () => {
-
       const scrollPosition =
         window.scrollY + 200
 
@@ -262,7 +327,6 @@ export default function TechnicalEvaluationPage({
           vendorsRef.current.offsetTop
       ) {
         setActiveSection("vendors")
-
       } else if (
         acknowledgmentRef.current &&
         scrollPosition >=
@@ -271,7 +335,6 @@ export default function TechnicalEvaluationPage({
         setActiveSection(
           "acknowledgment"
         )
-
       } else {
         setActiveSection("rfp-details")
       }
@@ -287,9 +350,7 @@ export default function TechnicalEvaluationPage({
         "scroll",
         handleScroll
       )
-
   }, [])
-
 
   // ==========================================================
   // SCROLL TO SECTION
@@ -298,7 +359,6 @@ export default function TechnicalEvaluationPage({
   const scrollToSection = (
     sectionId: string
   ) => {
-
     const refs = {
       "rfp-details": rfpDetailsRef,
       acknowledgment: acknowledgmentRef,
@@ -318,7 +378,6 @@ export default function TechnicalEvaluationPage({
     }
   }
 
-
   // ==========================================================
   // ACKNOWLEDGEMENT
   // ==========================================================
@@ -327,24 +386,20 @@ export default function TechnicalEvaluationPage({
     setShowSignatureDialog(true)
   }
 
-
   const handleSignatureAcknowledge = () => {
     setAcknowledged(true)
     setShowSignatureDialog(false)
   }
-
 
   // ==========================================================
   // AI TECHNICAL EVALUATION
   // ==========================================================
 
   const handleReview = async () => {
-
     setIsReviewing(true)
     setReviewError("")
 
     try {
-
       const res = await fetch(
         "http://127.0.0.1:5000/evaluate",
         {
@@ -361,13 +416,16 @@ export default function TechnicalEvaluationPage({
       const rows: EvaluationRow[] =
         data?.evaluation_table ?? []
 
+      const insights: {
+        [name: string]: string
+      } =
+        data?.technical_overall_insights ?? {}
 
       // ------------------------------------------------------
       // CHECK RESULT
       // ------------------------------------------------------
 
       if (!rows.length) {
-
         setReviewError(
           "Evaluation has not been completed yet."
         )
@@ -376,7 +434,6 @@ export default function TechnicalEvaluationPage({
 
         return
       }
-
 
       // ------------------------------------------------------
       // FIND TOTAL SCORE ROW
@@ -391,7 +448,6 @@ export default function TechnicalEvaluationPage({
           "total score"
       )
 
-
       // ------------------------------------------------------
       // EXTRACT VENDOR SCORES
       // ------------------------------------------------------
@@ -400,13 +456,11 @@ export default function TechnicalEvaluationPage({
         [name: string]: number | null
       } = {}
 
-
       VENDOR_SCORE_MAP.forEach(
         ({
           name,
           scoreKey,
         }) => {
-
           scores[name] =
             parseScore(
               totalRow?.[scoreKey]
@@ -414,13 +468,14 @@ export default function TechnicalEvaluationPage({
         }
       )
 
-
       // ------------------------------------------------------
       // SAVE RESULTS
       // ------------------------------------------------------
 
       setVendorScores(scores)
-
+      setOverallInsights(
+        normalizeInsightMap(insights)
+      )
       setEvalRows(rows)
 
       localStorage.setItem(
@@ -429,10 +484,14 @@ export default function TechnicalEvaluationPage({
       )
 
       localStorage.setItem(
+        "overallInsights",
+        JSON.stringify(insights)
+      )
+
+      localStorage.setItem(
         "evalRows",
         JSON.stringify(rows)
       )
-
 
       // ------------------------------------------------------
       // SHOW RESULT MODAL
@@ -441,17 +500,13 @@ export default function TechnicalEvaluationPage({
       setShowEvalModal(true)
 
     } catch {
-
       setReviewError(
         "Unable to load evaluation results."
       )
-
     } finally {
-
       setIsReviewing(false)
     }
   }
-
 
   // ==========================================================
   // DECISION
@@ -461,19 +516,14 @@ export default function TechnicalEvaluationPage({
     setShowDecisionDialog(true)
   }
 
-
   const handleCompleteDecision = () => {
-
     setShowDecisionDialog(false)
-
     setShowSuccessMessage(true)
-
 
     if (
       selectedDecision === "completed" &&
       onCommercialCompleted
     ) {
-
       console.log(
         "[v0] Technical evaluation completed, triggering commercial evaluation visibility"
       )
@@ -481,30 +531,40 @@ export default function TechnicalEvaluationPage({
       onCommercialCompleted()
     }
 
-
     setTimeout(() => {
       setShowSuccessMessage(false)
     }, 3000)
   }
 
+  // ==========================================================
+  // SORTED VENDORS
+  // ==========================================================
+
+  const sortedVendors = [...VENDOR_SCORE_MAP].sort(
+    (a, b) => {
+      const scoreA =
+        vendorScores[a.name] ?? -1
+
+      const scoreB =
+        vendorScores[b.name] ?? -1
+
+      return scoreB - scoreA
+    }
+  )
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <div className="w-full h-screen flex flex-col bg-white">
-
 
       {/* ======================================================
           AI LOADER
       ====================================================== */}
 
       {isReviewing && (
-
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-
           <div className="flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl px-16 py-12 gap-4">
 
             <Loader2
@@ -517,27 +577,20 @@ export default function TechnicalEvaluationPage({
             </p>
 
             <div className="flex items-center gap-2">
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
-
               <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
-
             </div>
 
           </div>
-
         </div>
       )}
-
 
       {/* ======================================================
           SUCCESS MESSAGE
       ====================================================== */}
 
       {showSuccessMessage && (
-
         <div
           className="fixed top-4 left-4 z-50 bg-white rounded-md shadow-lg flex items-center gap-3 pr-4"
           style={{
@@ -545,7 +598,6 @@ export default function TechnicalEvaluationPage({
               "4px solid #1B733D",
           }}
         >
-
           <div className="flex items-center gap-3 px-4 py-3">
 
             <i
@@ -572,14 +624,10 @@ export default function TechnicalEvaluationPage({
             }
             className="p-1 hover:bg-gray-100 rounded transition-colors"
           >
-
             <i className="ri-close-line text-xl text-gray-600" />
-
           </button>
-
         </div>
       )}
-
 
       {/* ======================================================
           TOP HEADER
@@ -594,9 +642,7 @@ export default function TechnicalEvaluationPage({
             className="w-10 h-10 rounded-full bg-[#1B733D] text-white flex items-center justify-center hover:bg-[#155a30] transition-colors"
             aria-label="Go back"
           >
-
             <ChevronLeft size={20} />
-
           </button>
 
           <h1 className="text-2xl font-semibold text-green-700">
@@ -605,41 +651,30 @@ export default function TechnicalEvaluationPage({
 
         </div>
 
-
         <div className="flex items-center gap-3">
 
           <button
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2"
           >
-
             <i className="ri-save-line" />
-
             Save As Draft
-
           </button>
-
 
           <button
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
           >
-
             <i className="ri-check-line" />
-
             Save
-
           </button>
 
         </div>
-
       </div>
-
 
       {/* ======================================================
           MAIN CONTENT
       ====================================================== */}
 
       <div className="flex-1 flex overflow-hidden">
-
 
         {/* ====================================================
             LEFT SIDEBAR
@@ -670,13 +705,10 @@ export default function TechnicalEvaluationPage({
                 className="p-1 hover:bg-gray-200 rounded transition"
                 aria-label="Toggle collapse"
               >
-
                 <LayoutGrid className="text-gray-600 w-5 h-5" />
-
               </button>
 
             </div>
-
 
             <nav className="space-y-1">
 
@@ -725,7 +757,6 @@ export default function TechnicalEvaluationPage({
 
         </div>
 
-
         {/* ====================================================
             PAGE CONTENT
         ==================================================== */}
@@ -734,10 +765,7 @@ export default function TechnicalEvaluationPage({
 
           <div className="max-w-6xl mx-auto p-8 space-y-8">
 
-
-            {/* =================================================
-                PAGE TITLE
-            ================================================= */}
+            {/* PAGE TITLE */}
 
             <div className="flex items-center justify-between">
 
@@ -751,7 +779,6 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-
             {/* =================================================
                 RFP DETAILS
             ================================================= */}
@@ -764,7 +791,6 @@ export default function TechnicalEvaluationPage({
               <div className="grid grid-cols-3 gap-6">
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     RFP ID
                   </p>
@@ -772,12 +798,9 @@ export default function TechnicalEvaluationPage({
                   <p className="text-sm font-semibold text-blue-600">
                     RFP2131424
                   </p>
-
                 </div>
 
-
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     PR Reference
                   </p>
@@ -785,12 +808,9 @@ export default function TechnicalEvaluationPage({
                   <p className="text-sm font-semibold text-blue-600">
                     PR524252
                   </p>
-
                 </div>
 
-
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Bid closing date/time
                   </p>
@@ -798,16 +818,13 @@ export default function TechnicalEvaluationPage({
                   <p className="text-sm font-medium text-gray-900">
                     29th Oct 2025, 5:00 PM
                   </p>
-
                 </div>
 
               </div>
 
-
               <div className="grid grid-cols-2 gap-6">
 
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Deadline
                   </p>
@@ -815,12 +832,9 @@ export default function TechnicalEvaluationPage({
                   <p className="text-sm text-gray-900">
                     24-Oct-2025 6:00 PM
                   </p>
-
                 </div>
 
-
                 <div>
-
                   <p className="text-xs text-gray-500 mb-2">
                     Evaluator
                   </p>
@@ -828,13 +842,11 @@ export default function TechnicalEvaluationPage({
                   <p className="text-sm text-gray-900">
                     Eng. Ahmed Saleh (TEC Member)
                   </p>
-
                 </div>
 
               </div>
 
             </div>
-
 
             {/* =================================================
                 ACKNOWLEDGMENT
@@ -849,22 +861,15 @@ export default function TechnicalEvaluationPage({
                 Acknowledgment
               </h3>
 
-
               <div className="border border-gray-200 rounded-lg p-6 space-y-4">
 
                 <p className="text-sm text-gray-700 leading-relaxed">
-
                   By confirming below, I acknowledge that I am an authorized member of the Technical Evaluation Committee for RFP-1003 and that I am present for the official opening of the Technical Proposals.
-
                 </p>
-
 
                 <p className="text-sm text-gray-700">
-
                   You will receive a confirmation code on your registered mobile number.
-
                 </p>
-
 
                 {!acknowledged ? (
 
@@ -872,9 +877,7 @@ export default function TechnicalEvaluationPage({
                     onClick={handleAcknowledgeClick}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
-
                     I acknowledge
-
                   </button>
 
                 ) : (
@@ -883,11 +886,8 @@ export default function TechnicalEvaluationPage({
                     disabled
                     className="px-6 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
                   >
-
                     <i className="ri-check-line" />
-
                     You have acknowledged
-
                   </button>
 
                 )}
@@ -895,7 +895,6 @@ export default function TechnicalEvaluationPage({
               </div>
 
             </div>
-
 
             {/* =================================================
                 VENDORS
@@ -912,24 +911,15 @@ export default function TechnicalEvaluationPage({
                   Vendor list
                 </h3>
 
-
                 {acknowledged && (
 
                   <div className="flex items-center gap-3">
 
-
-                    {/* REVIEW ERROR */}
-
                     {reviewError && (
-
                       <span className="text-xs text-red-500">
                         {reviewError}
                       </span>
-
                     )}
-
-
-                    {/* VIEW RESULTS */}
 
                     {evalRows.length > 0 && (
 
@@ -939,15 +929,10 @@ export default function TechnicalEvaluationPage({
                         }
                         className="px-6 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 flex items-center gap-2"
                       >
-
                         View Results
-
                       </button>
 
                     )}
-
-
-                    {/* AI EVALUATION */}
 
                     <button
                       onClick={handleReview}
@@ -959,7 +944,6 @@ export default function TechnicalEvaluationPage({
 
                         <>
                           <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" />
-
                           Evaluating...
                         </>
 
@@ -971,7 +955,6 @@ export default function TechnicalEvaluationPage({
                           {evalRows.length > 0
                             ? "Re-evaluate with AI"
                             : "Evaluate with AI"}
-
                         </>
 
                       )}
@@ -984,10 +967,7 @@ export default function TechnicalEvaluationPage({
 
               </div>
 
-
-              {/* =================================================
-                  LOCKED VENDOR VIEW
-              ================================================= */}
+              {/* LOCKED VENDOR VIEW */}
 
               {!acknowledged ? (
 
@@ -1004,15 +984,12 @@ export default function TechnicalEvaluationPage({
                     <div className="absolute inset-0 flex items-center justify-center">
 
                       <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
-
                         <i className="ri-lock-fill text-3xl text-white" />
-
                       </div>
 
                     </div>
 
                   </div>
-
 
                   <p className="text-lg font-medium text-gray-700">
                     Vendors list & submissions are locked
@@ -1028,15 +1005,11 @@ export default function TechnicalEvaluationPage({
 
                 <div className="space-y-8">
 
-
                   {/* =================================================
                       VENDOR SCORE TABLE
                   ================================================= */}
 
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-
-
-                    {/* HEADER */}
 
                     <div className="grid grid-cols-12 gap-4 bg-[rgb(27,115,61)] p-4 text-sm font-medium text-white">
 
@@ -1058,9 +1031,6 @@ export default function TechnicalEvaluationPage({
 
                     </div>
 
-
-                    {/* VENDOR ROWS */}
-
                     {[...VENDOR_SCORE_MAP]
                       .sort((a, b) => {
 
@@ -1073,7 +1043,6 @@ export default function TechnicalEvaluationPage({
                           -1
 
                         return sb - sa
-
                       })
                       .map((vendor) => {
 
@@ -1087,16 +1056,12 @@ export default function TechnicalEvaluationPage({
                             vendor.name
                           ]
 
-
                         return (
 
                           <div
                             key={vendor.name}
                             className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center"
                           >
-
-
-                            {/* VENDOR */}
 
                             <div className="col-span-3 flex items-center gap-3">
 
@@ -1110,11 +1075,8 @@ export default function TechnicalEvaluationPage({
                                   onNavigateToVendorEvaluation
                                 }
                               >
-
                                 {vendor.avatar}
-
                               </div>
-
 
                               <div>
 
@@ -1139,9 +1101,6 @@ export default function TechnicalEvaluationPage({
                               </div>
 
                             </div>
-
-
-                            {/* STATUS */}
 
                             <div className="col-span-3">
 
@@ -1173,24 +1132,16 @@ export default function TechnicalEvaluationPage({
 
                             </div>
 
-
-                            {/* SCORE */}
-
                             <div className="col-span-3">
 
                               <p className="text-sm font-semibold text-gray-900">
-
                                 {score !== null &&
                                 score !== undefined
                                   ? score
                                   : "--"}
-
                               </p>
 
                             </div>
-
-
-                            {/* DECISION */}
 
                             <div className="col-span-3 flex items-center gap-2">
 
@@ -1223,11 +1174,8 @@ export default function TechnicalEvaluationPage({
                                     : "border border-green-600 text-green-600 hover:bg-green-50"
                                 }`}
                               >
-
                                 Approve
-
                               </button>
-
 
                               <button
                                 onClick={() =>
@@ -1258,9 +1206,7 @@ export default function TechnicalEvaluationPage({
                                     : "border border-red-500 text-red-500 hover:bg-red-50"
                                 }`}
                               >
-
                                 Reject
-
                               </button>
 
                             </div>
@@ -1268,7 +1214,6 @@ export default function TechnicalEvaluationPage({
                           </div>
 
                         )
-
                       })}
 
                   </div>
@@ -1282,7 +1227,6 @@ export default function TechnicalEvaluationPage({
           </div>
 
         </div>
-
 
         {/* ======================================================
             DECISION DIALOG
@@ -1308,7 +1252,6 @@ export default function TechnicalEvaluationPage({
 
         )}
 
-
         {/* ======================================================
             SIGNATURE DIALOG
         ====================================================== */}
@@ -1327,7 +1270,6 @@ export default function TechnicalEvaluationPage({
 
       </div>
 
-
       {/* ========================================================
           AI EVALUATION RESULTS MODAL
       ======================================================== */}
@@ -1337,7 +1279,7 @@ export default function TechnicalEvaluationPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
           <div
-            className="bg-white rounded-2xl shadow-2xl flex flex-col"
+            className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{
               width: "92vw",
               maxWidth: "1400px",
@@ -1345,12 +1287,11 @@ export default function TechnicalEvaluationPage({
             }}
           >
 
-
             {/* ==================================================
                 MODAL HEADER
             ================================================== */}
 
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0 bg-white">
 
               <div>
 
@@ -1364,7 +1305,6 @@ export default function TechnicalEvaluationPage({
 
               </div>
 
-
               <button
                 onClick={() =>
                   setShowEvalModal(false)
@@ -1372,95 +1312,141 @@ export default function TechnicalEvaluationPage({
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Close"
               >
-
                 <X className="w-5 h-5 text-gray-600" />
-
               </button>
 
             </div>
 
-
             {/* ==================================================
-                SCROLLABLE BODY (cards + table together)
+                MODAL BODY
+
+                IMPORTANT UI CHANGE:
+                - This remains the ONLY scroll container.
+                - Scrollbar stays on the right side of the popup.
+                - Cards are sticky.
+                - Table header is sticky.
+                - Rows scroll underneath them.
             ================================================== */}
 
-            <div className="flex-1 overflow-auto px-6 py-6">
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6"
+            >
 
-              {/* VENDOR SUMMARY CARDS */}
+              {/* ==================================================
+                  STICKY VENDOR SUMMARY CARDS
 
-              <div className="grid grid-cols-3 gap-4 mb-6">
+                  Cards remain visible while the evaluation
+                  rows are being scrolled.
+              ================================================== */}
 
-                {[...VENDOR_SCORE_MAP]
-                  .sort((a, b) => {
+              <div
+                className="sticky top-0 z-30 bg-white pt-6 pb-4"
+              >
 
-                    const scoreA =
-                      vendorScores[a.name] ??
-                      -1
+                <div className="grid grid-cols-3 gap-4">
 
-                    const scoreB =
-                      vendorScores[b.name] ??
-                      -1
+                  {sortedVendors.map(
+                    (vendor, index) => {
 
-                    return scoreB - scoreA
+                      const score =
+                        vendorScores[
+                          vendor.name
+                        ]
 
-                  })
-                  .map((vendor, index) => {
+                      return (
 
-                    const score =
-                      vendorScores[
-                        vendor.name
-                      ]
+                        <div
+                          key={vendor.name}
+                          className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between shadow-sm"
+                        >
 
+                          <div className="flex items-center gap-2">
 
-                    return (
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                              style={{
+                                backgroundColor:
+                                  vendor.color,
+                              }}
+                            >
+                              {vendor.avatar}
+                            </div>
 
-                      <div
-                        key={vendor.name}
-                        className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                            style={{ backgroundColor: vendor.color }}
-                          >
-                            {vendor.avatar}
+                            <div className="min-w-0">
+
+                              <p className="font-semibold text-gray-900 text-sm truncate">
+                                {vendor.name}
+                              </p>
+
+                              <p className="text-xs text-gray-500">
+                                Technical Proposal
+                              </p>
+
+                            </div>
+
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">{vendor.name}</p>
-                            <p className="text-xs text-gray-500">Technical Proposal</p>
+
+                          <div className="text-right flex-shrink-0">
+
+                            {index === 0 &&
+                              score !== null &&
+                              score !== undefined && (
+
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium block mb-1">
+                                  Highest
+                                </span>
+
+                              )}
+
+                            <p className="text-2xl font-bold text-gray-900">
+
+                              {score ?? "--"}
+
+                              <span className="text-xs font-normal text-gray-400">
+                                /100
+                              </span>
+
+                            </p>
+
                           </div>
-                        </div>
-                        <div className="text-right">
-                          {index === 0 && score !== null && score !== undefined && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium block mb-1">
-                              Highest
-                            </span>
-                          )}
-                          <p className="text-2xl font-bold text-gray-900">
-                            {score ?? "--"}<span className="text-xs font-normal text-gray-400">/100</span>
-                          </p>
-                        </div>
-                      </div>
 
-                    )
+                        </div>
 
-                  })}
+                      )
+                    }
+                  )}
+
+                </div>
 
               </div>
 
-              {/* TABLE */}
+              {/* ==================================================
+                  TABLE
 
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  The table itself does NOT have overflow-auto.
+                  Therefore there is no second scrollbar.
+
+                  The parent modal body controls scrolling.
+              ================================================== */}
+
+              <div className="border border-gray-200 rounded-xl overflow-visible mb-6">
 
                 <table className="w-full border-collapse">
 
                   {/* =================================================
-                      TABLE HEADER
+                      FIXED TABLE HEADER
+
+                      The header sticks below the vendor cards.
+
+                      Vendor cards approximately occupy 100px,
+                      so the header starts at 112px.
                   ================================================= */}
 
-                  <thead className="sticky top-0 z-10">
+                  <thead
+                    className="sticky top-[112px] z-20"
+                  >
 
-                    <tr className="bg-[#1B733D] text-white">
+                    <tr className="bg-[#1B733D] text-white shadow-sm">
 
                       <th className="px-4 py-4 text-left min-w-[420px]">
                         Evaluation Criteria
@@ -1486,7 +1472,6 @@ export default function TechnicalEvaluationPage({
                     </tr>
 
                   </thead>
-
 
                   {/* =================================================
                       TABLE BODY
@@ -1525,7 +1510,6 @@ export default function TechnicalEvaluationPage({
                               .trim() ||
                             ""
 
-
                           const subCriterion =
                             row[
                               "Sub-Criterion"
@@ -1537,7 +1521,6 @@ export default function TechnicalEvaluationPage({
                               .trim() ||
                             ""
 
-
                           const weight =
                             row[
                               "Sub Weight"
@@ -1547,7 +1530,6 @@ export default function TechnicalEvaluationPage({
                             ] ||
                             ""
 
-
                           return (
 
                             <tr
@@ -1555,16 +1537,13 @@ export default function TechnicalEvaluationPage({
                               className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
                             >
 
-                              {/* ===================================
-                                  CRITERIA
-                              =================================== */}
+                              {/* CRITERIA */}
 
                               <td className="px-4 py-4 align-top">
 
                                 <div className="font-semibold text-gray-900">
                                   {mainCriterion}
                                 </div>
-
 
                                 {subCriterion && (
 
@@ -1576,26 +1555,18 @@ export default function TechnicalEvaluationPage({
 
                               </td>
 
-
-                              {/* ===================================
-                                  WEIGHT
-                              =================================== */}
+                              {/* WEIGHT */}
 
                               <td className="px-4 py-4 text-center align-top border-r-2 border-gray-300">
 
-                                <span className="inline-flex items-center justify-center  text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
-
+                                <span className="inline-flex items-center justify-center text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
                                   {weight ||
                                     "--"}
-
                                 </span>
 
                               </td>
 
-
-                              {/* ===================================
-                                  VENDOR SCORES
-                              =================================== */}
+                              {/* VENDOR SCORES */}
 
                               {VENDOR_SCORE_MAP.map(
                                 (vendor) => {
@@ -1606,10 +1577,8 @@ export default function TechnicalEvaluationPage({
                                       vendor
                                     )
 
-
                                   const score =
                                     evaluation.score
-
 
                                   return (
 
@@ -1643,14 +1612,12 @@ export default function TechnicalEvaluationPage({
                                             )
                                           }
                                           title="Click for more detail"
-                                          className="inline-flex items-center justify-center min-w-[65px] px-3 py-2 rounded-lg font-bold text-sm text-gray-800  transition  hover:scale-105 cursor-pointer"
+                                          className="inline-flex items-center justify-center min-w-[65px] px-3 py-2 rounded-lg font-bold text-sm text-gray-800 transition hover:scale-105 cursor-pointer"
                                         >
-
                                           {score}
                                           /
                                           {weight ||
                                             "?"}
-
                                         </button>
 
                                       ) : (
@@ -1664,43 +1631,108 @@ export default function TechnicalEvaluationPage({
                                     </td>
 
                                   )
-
                                 }
                               )}
 
                             </tr>
 
                           )
-
                         }
                       )}
 
                     {/* =================================================
                         INSIGHTS ROW
                     ================================================= */}
+
                     <tr className="border-t border-gray-200 bg-blue-50/40">
+
                       <td className="px-4 py-3 align-top">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">AI Insights</p>
+
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                          AI Insights
+                        </p>
+
                       </td>
+
                       <td className="px-4 py-3 border-r-2 border-gray-300" />
-                      {VENDOR_SCORE_MAP.map((vendor) => {
-                        const totalRow = evalRows.find((r) => r["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score")
-                        const prefix = vendor.scoreKey.replace(" Score", "").toLowerCase()
-                        const insight = totalRow
-                          ? Object.entries(totalRow).find(
-                              ([k]) => k.toLowerCase().startsWith(prefix) && k.toLowerCase().includes("reason")
-                            )?.[1] || "--"
-                          : "--"
-                        return (
-                          <td key={vendor.name} className="px-4 py-3 align-top">
-                            <p className="text-xs text-gray-600 leading-5">{insight}</p>
-                          </td>
-                        )
-                      })}
+
+                      {VENDOR_SCORE_MAP.map(
+                        (vendor) => {
+
+                          const insight =
+                            getInsightForVendor(
+                              overallInsights,
+                              vendor.name,
+                              vendor.scoreKey
+                            ) ||
+                            ((): string => {
+
+                              const totalRow =
+                                evalRows.find(
+                                  (r) =>
+                                    r[
+                                      "Main Criterion"
+                                    ]
+                                      ?.replace(
+                                        /\*/g,
+                                        ""
+                                      )
+                                      .trim()
+                                      .toLowerCase() ===
+                                    "total score"
+                                )
+
+                              const prefix =
+                                vendor.scoreKey
+                                  .replace(
+                                    " Score",
+                                    ""
+                                  )
+                                  .toLowerCase()
+
+                              return totalRow
+                                ? Object.entries(
+                                    totalRow
+                                  ).find(
+                                    ([k]) =>
+                                      k
+                                        .toLowerCase()
+                                        .startsWith(
+                                          prefix
+                                        ) &&
+                                      k
+                                        .toLowerCase()
+                                        .includes(
+                                          "reason"
+                                        )
+                                  )?.[1] ||
+                                    "--"
+                                : "--"
+                            })()
+
+                          return (
+
+                            <td
+                              key={
+                                vendor.name
+                              }
+                              className="px-4 py-3 align-top"
+                            >
+
+                              <p className="text-xs text-gray-600 leading-5">
+                                {insight ||
+                                  "--"}
+                              </p>
+
+                            </td>
+
+                          )
+                        }
+                      )}
+
                     </tr>
 
                   </tbody>
-
 
                   {/* =================================================
                       TOTAL SCORE
@@ -1714,11 +1746,9 @@ export default function TechnicalEvaluationPage({
                         TOTAL SCORE
                       </td>
 
-
                       <td className="px-4 py-5 text-center font-bold border-r-2 border-gray-300">
                         100
                       </td>
-
 
                       {VENDOR_SCORE_MAP.map(
                         (vendor) => {
@@ -1727,7 +1757,6 @@ export default function TechnicalEvaluationPage({
                             vendorScores[
                               vendor.name
                             ]
-
 
                           return (
 
@@ -1750,7 +1779,6 @@ export default function TechnicalEvaluationPage({
                             </td>
 
                           )
-
                         }
                       )}
 
@@ -1768,14 +1796,11 @@ export default function TechnicalEvaluationPage({
                 MODAL FOOTER
             ================================================== */}
 
-            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0">
+            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-white">
 
               <p className="text-xs text-gray-500">
-
                 Click any vendor score to view AI reasoning and proposal reference.
-
               </p>
-
 
               <button
                 onClick={() =>
@@ -1783,9 +1808,7 @@ export default function TechnicalEvaluationPage({
                 }
                 className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
-
                 Close
-
               </button>
 
             </div>
@@ -1795,7 +1818,6 @@ export default function TechnicalEvaluationPage({
         </div>
 
       )}
-
 
       {/* ========================================================
           AI REASONING POPUP
@@ -1807,10 +1829,7 @@ export default function TechnicalEvaluationPage({
 
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
 
-
-            {/* ==================================================
-                REASONING HEADER
-            ================================================== */}
+            {/* REASONING HEADER */}
 
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
 
@@ -1826,7 +1845,6 @@ export default function TechnicalEvaluationPage({
 
               </div>
 
-
               <button
                 onClick={() =>
                   setSelectedEvaluation(null)
@@ -1834,20 +1852,14 @@ export default function TechnicalEvaluationPage({
                 className="p-2 hover:bg-gray-100 rounded-lg"
                 aria-label="Close AI reasoning"
               >
-
                 <X className="w-5 h-5 text-gray-600" />
-
               </button>
 
             </div>
 
-
-            {/* ==================================================
-                REASONING BODY
-            ================================================== */}
+            {/* REASONING BODY */}
 
             <div className="p-6 space-y-6">
-
 
               {/* SCORE */}
 
@@ -1871,7 +1883,6 @@ export default function TechnicalEvaluationPage({
 
                 </div>
 
-
                 <div className="bg-green-50 rounded-xl px-4 py-3">
 
                   <p className="text-xs text-green-600 font-semibold text-center">
@@ -1885,7 +1896,6 @@ export default function TechnicalEvaluationPage({
                 </div>
 
               </div>
-
 
               {/* EVALUATION CRITERIA */}
 
@@ -1901,7 +1911,6 @@ export default function TechnicalEvaluationPage({
                 </p>
 
               </div>
-
 
               {/* AI REASONING */}
 
@@ -1921,7 +1930,6 @@ export default function TechnicalEvaluationPage({
                 </div>
 
               </div>
-
 
               {/* PROPOSAL REFERENCE */}
 
@@ -1948,10 +1956,7 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-
-            {/* ==================================================
-                REASONING FOOTER
-            ================================================== */}
+            {/* REASONING FOOTER */}
 
             <div className="flex justify-end px-6 py-4 border-t border-gray-200">
 
@@ -1961,9 +1966,7 @@ export default function TechnicalEvaluationPage({
                 }
                 className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
-
                 Close
-
               </button>
 
             </div>

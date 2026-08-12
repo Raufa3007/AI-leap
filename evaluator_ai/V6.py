@@ -1695,6 +1695,12 @@ def evaluate_commercial():
 # ============================================================
 
 def generate_technical_overall_insights(evaluation_table, proposal_names):
+    print("\n=== AI INSIGHT DEBUG START ===")
+    print("[1] Vendors:", proposal_names)
+    print("[1] Evaluation table exists:", bool(evaluation_table))
+    if not evaluation_table or not proposal_names:
+        print("[ERROR] Missing evaluation data or vendor names")
+        return{}
     """
     Generate one overall AI insight for each vendor from the completed
     technical criterion scores/reasons. The insight is returned separately
@@ -1711,22 +1717,34 @@ The technical evaluation below contains criterion/sub-criterion scores,
 reasoning, and references for multiple vendor proposals.
 
 Your task is to produce ONE concise overall AI insight for EACH vendor.
-The insight must summarize the vendor's overall technical strength, key
-strengths, important weaknesses/gaps, and the main evidence pattern that
-led to the score. Do not simply repeat the total score. Do not invent
-evidence. Use only the supplied evaluation data.
 
-Keep each vendor insight to 2-4 professional sentences.
+The insight must:
+- Be highly concise: maximum 2 sentences.
+- Highlight the most important technical strengths and weaknesses.
+- Use specific, high-value technical keywords from the evaluation.
+- Mention the most significant evidence or gap only when relevant.
+- Focus on what matters for the procurement decision.
+- Avoid repeating individual criterion scores or the total score.
+- Avoid generic statements.
+- Do not invent or assume information.
+- Do not use bullet points.
 
 Return ONLY valid JSON in exactly this structure:
+
 {{
-  "vendors": [
-    {{
-      "name": "Vendor Name",
-      "aiInsight": "Overall technical assessment..."
-    }}
-  ]
+    "vendors": [
+        {{
+            "name": "Vendor Name",
+            "aiInsight": "Concise, evidence-based technical assessment."
+        }}
+    ]
 }}
+
+IMPORTANT:
+- Return exactly ONE insight for every vendor.
+- Use the vendor names EXACTLY as provided.
+- Keep each insight between 20-40 words.
+- Focus on the 1-2 most decision-relevant technical findings.
 
 VENDOR NAMES:
 {json.dumps(proposal_names, ensure_ascii=False, indent=2)}
@@ -1734,15 +1752,19 @@ VENDOR NAMES:
 TECHNICAL EVALUATION DATA:
 {json.dumps(evaluation_table, ensure_ascii=False, indent=2)}
 """
+    print("[2] Calling Gemini...")
 
     raw = call_gemini(prompt, temperature=0.0)
+    print(raw)
     cleaned = clean_gemini_json(raw)
+    print(cleaned)
 
     try:
         result = json.loads(cleaned)
     except json.JSONDecodeError as e:
         print("Technical overall insight JSON parse error:", e)
         print(cleaned)
+        print(result)
         return {name: "Overall technical insight could not be generated." for name in proposal_names}
 
     insights = {}
@@ -1751,6 +1773,8 @@ TECHNICAL EVALUATION DATA:
             continue
         name = str(item.get("name", "")).strip()
         insight = str(item.get("aiInsight", "")).strip()
+        print(f"\n[DEBUG] Vendor: {name}")
+        print(f"[DEBUG] Insight: {insight}")
         if name and insight:
             insights[name] = insight
 
@@ -1759,7 +1783,12 @@ TECHNICAL EVALUATION DATA:
     for vendor_name in proposal_names:
         matched = next((v for k, v in insights.items() if k.lower() == vendor_name.lower()), None)
         normalized[vendor_name] = matched or "Overall technical insight was not provided."
-
+        print(f"[DEBUG] Matching {vendor_name} -> {matched}")
+        normalized[vendor_name] = (
+            matched
+            or "Overall technical insight was not provided.")
+    print("\n[DEBUG] FINAL INSIGHTS:")
+    print(normalized)
     return normalized
 
 
