@@ -232,427 +232,1062 @@ export default function PODetailPage({
   // INVOICE DATA
   // ---------------------------------------------------------
 
+  // const invoiceData = [
+  //   {
+  //     invoiceRef: "0005000069",
+  //     invoiceNumber: "5100001236",
+  //     invoiceDate: "16 Aug 2025",
+  //     paymentDueDate: "15 Sep 2025",
+  //     vendorName: "Global Engineering Ltd.",
+  //     purchaseOrder: "4500001567",
+  //     purchaseOrderAmount: "10000.00",
+  //     purchaseOrderVendorName: "Global Engineering Ltd.",
+  //     goodsReceipt: "5000012890",
+  //     goodsReceiptQuantity: "10",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "10",
+  //     amount: "10000.00",
+  //     taxAmount: "1500.00",
+  //     netAmount: "8500.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Net 30",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000123",
+  //     status: "Submitted",
+  //     postingDate: "17 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000070",
+  //     invoiceNumber: "5100001237",
+  //     invoiceDate: "18 Aug 2025",
+  //     paymentDueDate: "17 Sep 2025",
+  //     vendorName: "ABC Trading Co.",
+  //     purchaseOrder: "4500001234",
+  //     purchaseOrderAmount: "15000.00",
+  //     purchaseOrderVendorName: "ABC Trading Co.",
+  //     goodsReceipt: "5000012345",
+  //     goodsReceiptQuantity: "20",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "18",
+  //     amount: "15000.00",
+  //     taxAmount: "2250.00",
+  //     netAmount: "12750.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Net 30",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000124",
+  //     status: "Paid",
+  //     postingDate: "19 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000071",
+  //     invoiceNumber: "5100001238",
+  //     invoiceDate: "20 Aug 2025",
+  //     paymentDueDate: "19 Sep 2025",
+  //     vendorName: "XYZ Industrial Supplies",
+  //     purchaseOrder: "",
+  //     purchaseOrderAmount: "20000.00",
+  //     purchaseOrderVendorName: "XYZ Industrial Supplies",
+  //     goodsReceipt: "5000012678",
+  //     goodsReceiptQuantity: "25",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "20",
+  //     amount: "22000.00",
+  //     taxAmount: "",
+  //     netAmount: "22000.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000125",
+  //     status: "Submitted",
+  //     postingDate: "21 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000072",
+  //     invoiceNumber: "5100001239",
+  //     invoiceDate: "22 Aug 2025",
+  //     paymentDueDate: "21 Sep 2025",
+  //     vendorName: "ABC Trading Co.",
+  //     purchaseOrder: "4500001456",
+  //     purchaseOrderAmount: "12000.00",
+  //     purchaseOrderVendorName: "XYZ Industrial Supplies",
+  //     goodsReceipt: "5000012678",
+  //     goodsReceiptQuantity: "15",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "10",
+  //     amount: "12000.00",
+  //     taxAmount: "1800.00",
+  //     netAmount: "10200.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Immediate",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000126",
+  //     status: "Rejected",
+  //     postingDate: "23 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000073",
+  //     invoiceNumber: "5100001240",
+  //     invoiceDate: "24 Aug 2025",
+  //     paymentDueDate: "23 Sep 2025",
+  //     vendorName: "National Steel Works",
+  //     purchaseOrder: "4500001789",
+  //     purchaseOrderAmount: "25000.00",
+  //     purchaseOrderVendorName: "National Steel Works",
+  //     goodsReceipt: "",
+  //     goodsReceiptQuantity: "",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "15",
+  //     amount: "24000.00",
+  //     taxAmount: "0",
+  //     netAmount: "24000.00",
+  //     paymentTerms: "Net 45",
+  //     vendorPaymentTerms: "Net 45",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000127",
+  //     status: "Submitted",
+  //     postingDate: "25 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000074",
+  //     invoiceNumber: "5100001241",
+  //     invoiceDate: "26 Aug 2025",
+  //     paymentDueDate: "25 Sep 2025",
+  //     vendorName: "Global Engineering Ltd.",
+  //     purchaseOrder: "4500001890",
+  //     purchaseOrderAmount: "18000.00",
+  //     purchaseOrderVendorName: "Global Engineering Ltd.",
+  //     goodsReceipt: "5000013001",
+  //     goodsReceiptQuantity: "10",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "15",
+  //     amount: "20000.00",
+  //     taxAmount: "3000.00",
+  //     netAmount: "17000.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Immediate",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000128",
+  //     status: "Submitted",
+  //     postingDate: "27 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000075",
+  //     invoiceNumber: "5100001242",
+  //     invoiceDate: "28 Aug 2025",
+  //     paymentDueDate: "27 Sep 2025",
+  //     vendorName: "ABC Trading Co.",
+  //     purchaseOrder: "",
+  //     purchaseOrderAmount: "25000.00",
+  //     purchaseOrderVendorName: "XYZ Industrial Supplies",
+  //     goodsReceipt: "",
+  //     goodsReceiptQuantity: "",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "20",
+  //     amount: "28000.00",
+  //     taxAmount: "",
+  //     netAmount: "28000.00",
+  //     paymentTerms: "",
+  //     vendorPaymentTerms: "Immediate",
+  //     paymentMethod: "-",
+  //     paymentReference: "-",
+  //     status: "Rejected",
+  //     postingDate: "29 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice not generated",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000076",
+  //     invoiceNumber: "5100001243",
+  //     invoiceDate: "30 Aug 2025",
+  //     paymentDueDate: "29 Sep 2025",
+  //     vendorName: "Eastern Electricals",
+  //     purchaseOrder: "4500001991",
+  //     purchaseOrderAmount: "30000.00",
+  //     purchaseOrderVendorName: "Eastern Electricals",
+  //     goodsReceipt: "5000013200",
+  //     goodsReceiptQuantity: "30",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "25",
+  //     amount: "28000.00",
+  //     taxAmount: "0",
+  //     netAmount: "28000.00",
+  //     paymentTerms: "Net 60",
+  //     vendorPaymentTerms: "Net 60",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000129",
+  //     status: "Submitted",
+  //     postingDate: "31 Aug 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000077",
+  //     invoiceNumber: "5100001244",
+  //     invoiceDate: "01 Sep 2025",
+  //     paymentDueDate: "01 Oct 2025",
+  //     vendorName: "Prime Industrial Services",
+  //     purchaseOrder: "4500002050",
+  //     purchaseOrderAmount: "12000.00",
+  //     purchaseOrderVendorName: "Prime Industrial Services",
+  //     goodsReceipt: "5000013300",
+  //     goodsReceiptQuantity: "12",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "12",
+  //     amount: "12000.00",
+  //     taxAmount: "-100",
+  //     netAmount: "12100.00",
+  //     paymentTerms: "Net 45",
+  //     vendorPaymentTerms: "",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000130",
+  //     status: "Submitted",
+  //     postingDate: "02 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000078",
+  //     invoiceNumber: "5100001245",
+  //     invoiceDate: "03 Sep 2025",
+  //     paymentDueDate: "03 Oct 2025",
+  //     vendorName: "ABC Trading Co.",
+  //     purchaseOrder: "4500001234",
+  //     purchaseOrderAmount: "15000.00",
+  //     purchaseOrderVendorName: "ABC Trading Co.",
+  //     goodsReceipt: "5000012345",
+  //     goodsReceiptQuantity: "20",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "18",
+  //     amount: "15000.00",
+  //     taxAmount: "2250.00",
+  //     netAmount: "12750.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Net 30",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000131",
+  //     status: "Paid",
+  //     postingDate: "04 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000079",
+  //     invoiceNumber: "5100001246",
+  //     invoiceDate: "05 Sep 2025",
+  //     paymentDueDate: "05 Oct 2025",
+  //     vendorName: "Modern Industrial Co.",
+  //     purchaseOrder: "4500002100",
+  //     purchaseOrderAmount: "18000.00",
+  //     purchaseOrderVendorName: "National Steel Works",
+  //     goodsReceipt: "",
+  //     goodsReceiptQuantity: "",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "12",
+  //     amount: "17000.00",
+  //     taxAmount: "0",
+  //     netAmount: "17000.00",
+  //     paymentTerms: "Immediate",
+  //     vendorPaymentTerms: "Net 30",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000132",
+  //     status: "Submitted",
+  //     postingDate: "06 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000080",
+  //     invoiceNumber: "5100001247",
+  //     invoiceDate: "07 Sep 2025",
+  //     paymentDueDate: "07 Oct 2025",
+  //     vendorName: "Prime Industrial Services",
+  //     purchaseOrder: "4500002150",
+  //     purchaseOrderAmount: "10000.00",
+  //     purchaseOrderVendorName: "Prime Industrial Services",
+  //     goodsReceipt: "5000013400",
+  //     goodsReceiptQuantity: "10",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "10",
+  //     amount: "12000.00",
+  //     taxAmount: "-500",
+  //     netAmount: "12500.00",
+  //     paymentTerms: "Net 30",
+  //     vendorPaymentTerms: "Net 30",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000133",
+  //     status: "Rejected",
+  //     postingDate: "08 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000081",
+  //     invoiceNumber: "5100001248",
+  //     invoiceDate: "09 Sep 2025",
+  //     paymentDueDate: "09 Oct 2025",
+  //     vendorName: "Eastern Electricals",
+  //     purchaseOrder: "",
+  //     purchaseOrderAmount: "22000.00",
+  //     purchaseOrderVendorName: "Eastern Electricals",
+  //     goodsReceipt: "5000013500",
+  //     goodsReceiptQuantity: "10",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "15",
+  //     amount: "22000.00",
+  //     taxAmount: "3300.00",
+  //     netAmount: "18700.00",
+  //     paymentTerms: "",
+  //     vendorPaymentTerms: "Net 45",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "-",
+  //     status: "Submitted",
+  //     postingDate: "10 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000082",
+  //     invoiceNumber: "5100001249",
+  //     invoiceDate: "11 Sep 2025",
+  //     paymentDueDate: "11 Oct 2025",
+  //     vendorName: "ABC Trading Co.",
+  //     purchaseOrder: "4500002200",
+  //     purchaseOrderAmount: "16000.00",
+  //     purchaseOrderVendorName: "Global Engineering Ltd.",
+  //     goodsReceipt: "5000013600",
+  //     goodsReceiptQuantity: "10",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "14",
+  //     amount: "18000.00",
+  //     taxAmount: "0",
+  //     netAmount: "18000.00",
+  //     paymentTerms: "Net 60",
+  //     vendorPaymentTerms: "Immediate",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000134",
+  //     status: "Submitted",
+  //     postingDate: "12 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+
+  //   {
+  //     invoiceRef: "0005000083",
+  //     invoiceNumber: "5100001250",
+  //     invoiceDate: "13 Sep 2025",
+  //     paymentDueDate: "13 Oct 2025",
+  //     vendorName: "National Steel Works",
+  //     purchaseOrder: "4500002250",
+  //     purchaseOrderAmount: "50000.00",
+  //     purchaseOrderVendorName: "National Steel Works",
+  //     goodsReceipt: "5000013700",
+  //     goodsReceiptQuantity: "50",
+  //     fiscalYear: "2025",
+  //     currency: "SAR",
+  //     invoiceQuantity: "50",
+  //     amount: "50000.00",
+  //     taxAmount: "7500.00",
+  //     netAmount: "42500.00",
+  //     paymentTerms: "Net 45",
+  //     vendorPaymentTerms: "Net 45",
+  //     paymentMethod: "Bank Transfer",
+  //     paymentReference: "1900000135",
+  //     status: "Paid",
+  //     postingDate: "14 Sep 2025",
+  //     documentType: "Vendor Invoice",
+  //     companyCode: "1000",
+  //     attachment: "Invoice.pdf",
+  //   },
+  // ]
   const invoiceData = [
-    {
-      invoiceRef: "0005000069",
-      invoiceNumber: "5100001236",
-      invoiceDate: "16 Aug 2025",
-      paymentDueDate: "15 Sep 2025",
-      vendorName: "Global Engineering Ltd.",
-      purchaseOrder: "4500001567",
-      purchaseOrderAmount: "10000.00",
-      purchaseOrderVendorName: "Global Engineering Ltd.",
-      goodsReceipt: "5000012890",
-      goodsReceiptQuantity: "10",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "10",
-      amount: "10000.00",
-      taxAmount: "1500.00",
-      netAmount: "8500.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Net 30",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000123",
-      status: "Submitted",
-      postingDate: "17 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000070",
-      invoiceNumber: "5100001237",
-      invoiceDate: "18 Aug 2025",
-      paymentDueDate: "17 Sep 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "4500001234",
-      purchaseOrderAmount: "15000.00",
-      purchaseOrderVendorName: "ABC Trading Co.",
-      goodsReceipt: "5000012345",
-      goodsReceiptQuantity: "20",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "18",
-      amount: "15000.00",
-      taxAmount: "2250.00",
-      netAmount: "12750.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Net 30",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000124",
-      status: "Paid",
-      postingDate: "19 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000071",
-      invoiceNumber: "5100001238",
-      invoiceDate: "20 Aug 2025",
-      paymentDueDate: "19 Sep 2025",
-      vendorName: "XYZ Industrial Supplies",
-      purchaseOrder: "",
-      purchaseOrderAmount: "20000.00",
-      purchaseOrderVendorName: "XYZ Industrial Supplies",
-      goodsReceipt: "5000012678",
-      goodsReceiptQuantity: "25",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "20",
-      amount: "22000.00",
-      taxAmount: "",
-      netAmount: "22000.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000125",
-      status: "Submitted",
-      postingDate: "21 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000072",
-      invoiceNumber: "5100001239",
-      invoiceDate: "22 Aug 2025",
-      paymentDueDate: "21 Sep 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "4500001456",
-      purchaseOrderAmount: "12000.00",
-      purchaseOrderVendorName: "XYZ Industrial Supplies",
-      goodsReceipt: "5000012678",
-      goodsReceiptQuantity: "15",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "10",
-      amount: "12000.00",
-      taxAmount: "1800.00",
-      netAmount: "10200.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Immediate",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000126",
-      status: "Rejected",
-      postingDate: "23 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000073",
-      invoiceNumber: "5100001240",
-      invoiceDate: "24 Aug 2025",
-      paymentDueDate: "23 Sep 2025",
-      vendorName: "National Steel Works",
-      purchaseOrder: "4500001789",
-      purchaseOrderAmount: "25000.00",
-      purchaseOrderVendorName: "National Steel Works",
-      goodsReceipt: "",
-      goodsReceiptQuantity: "",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "15",
-      amount: "24000.00",
-      taxAmount: "0",
-      netAmount: "24000.00",
-      paymentTerms: "Net 45",
-      vendorPaymentTerms: "Net 45",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000127",
-      status: "Submitted",
-      postingDate: "25 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000074",
-      invoiceNumber: "5100001241",
-      invoiceDate: "26 Aug 2025",
-      paymentDueDate: "25 Sep 2025",
-      vendorName: "Global Engineering Ltd.",
-      purchaseOrder: "4500001890",
-      purchaseOrderAmount: "18000.00",
-      purchaseOrderVendorName: "Global Engineering Ltd.",
-      goodsReceipt: "5000013001",
-      goodsReceiptQuantity: "10",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "15",
-      amount: "20000.00",
-      taxAmount: "3000.00",
-      netAmount: "17000.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Immediate",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000128",
-      status: "Submitted",
-      postingDate: "27 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000075",
-      invoiceNumber: "5100001242",
-      invoiceDate: "28 Aug 2025",
-      paymentDueDate: "27 Sep 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "",
-      purchaseOrderAmount: "25000.00",
-      purchaseOrderVendorName: "XYZ Industrial Supplies",
-      goodsReceipt: "",
-      goodsReceiptQuantity: "",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "20",
-      amount: "28000.00",
-      taxAmount: "",
-      netAmount: "28000.00",
-      paymentTerms: "",
-      vendorPaymentTerms: "Immediate",
-      paymentMethod: "-",
-      paymentReference: "-",
-      status: "Rejected",
-      postingDate: "29 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice not generated",
-    },
-
-    {
-      invoiceRef: "0005000076",
-      invoiceNumber: "5100001243",
-      invoiceDate: "30 Aug 2025",
-      paymentDueDate: "29 Sep 2025",
-      vendorName: "Eastern Electricals",
-      purchaseOrder: "4500001991",
-      purchaseOrderAmount: "30000.00",
-      purchaseOrderVendorName: "Eastern Electricals",
-      goodsReceipt: "5000013200",
-      goodsReceiptQuantity: "30",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "25",
-      amount: "28000.00",
-      taxAmount: "0",
-      netAmount: "28000.00",
-      paymentTerms: "Net 60",
-      vendorPaymentTerms: "Net 60",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000129",
-      status: "Submitted",
-      postingDate: "31 Aug 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000077",
-      invoiceNumber: "5100001244",
-      invoiceDate: "01 Sep 2025",
-      paymentDueDate: "01 Oct 2025",
-      vendorName: "Prime Industrial Services",
-      purchaseOrder: "4500002050",
-      purchaseOrderAmount: "12000.00",
-      purchaseOrderVendorName: "Prime Industrial Services",
-      goodsReceipt: "5000013300",
-      goodsReceiptQuantity: "12",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "12",
-      amount: "12000.00",
-      taxAmount: "-100",
-      netAmount: "12100.00",
-      paymentTerms: "Net 45",
-      vendorPaymentTerms: "",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000130",
-      status: "Submitted",
-      postingDate: "02 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000078",
-      invoiceNumber: "5100001245",
-      invoiceDate: "03 Sep 2025",
-      paymentDueDate: "03 Oct 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "4500001234",
-      purchaseOrderAmount: "15000.00",
-      purchaseOrderVendorName: "ABC Trading Co.",
-      goodsReceipt: "5000012345",
-      goodsReceiptQuantity: "20",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "18",
-      amount: "15000.00",
-      taxAmount: "2250.00",
-      netAmount: "12750.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Net 30",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000131",
-      status: "Paid",
-      postingDate: "04 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000079",
-      invoiceNumber: "5100001246",
-      invoiceDate: "05 Sep 2025",
-      paymentDueDate: "05 Oct 2025",
-      vendorName: "Modern Industrial Co.",
-      purchaseOrder: "4500002100",
-      purchaseOrderAmount: "18000.00",
-      purchaseOrderVendorName: "National Steel Works",
-      goodsReceipt: "",
-      goodsReceiptQuantity: "",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "12",
-      amount: "17000.00",
-      taxAmount: "0",
-      netAmount: "17000.00",
-      paymentTerms: "Immediate",
-      vendorPaymentTerms: "Net 30",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000132",
-      status: "Submitted",
-      postingDate: "06 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000080",
-      invoiceNumber: "5100001247",
-      invoiceDate: "07 Sep 2025",
-      paymentDueDate: "07 Oct 2025",
-      vendorName: "Prime Industrial Services",
-      purchaseOrder: "4500002150",
-      purchaseOrderAmount: "10000.00",
-      purchaseOrderVendorName: "Prime Industrial Services",
-      goodsReceipt: "5000013400",
-      goodsReceiptQuantity: "10",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "10",
-      amount: "12000.00",
-      taxAmount: "-500",
-      netAmount: "12500.00",
-      paymentTerms: "Net 30",
-      vendorPaymentTerms: "Net 30",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000133",
-      status: "Rejected",
-      postingDate: "08 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000081",
-      invoiceNumber: "5100001248",
-      invoiceDate: "09 Sep 2025",
-      paymentDueDate: "09 Oct 2025",
-      vendorName: "Eastern Electricals",
-      purchaseOrder: "",
-      purchaseOrderAmount: "22000.00",
-      purchaseOrderVendorName: "Eastern Electricals",
-      goodsReceipt: "5000013500",
-      goodsReceiptQuantity: "10",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "15",
-      amount: "22000.00",
-      taxAmount: "3300.00",
-      netAmount: "18700.00",
-      paymentTerms: "",
-      vendorPaymentTerms: "Net 45",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "-",
-      status: "Submitted",
-      postingDate: "10 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000082",
-      invoiceNumber: "5100001249",
-      invoiceDate: "11 Sep 2025",
-      paymentDueDate: "11 Oct 2025",
-      vendorName: "ABC Trading Co.",
-      purchaseOrder: "4500002200",
-      purchaseOrderAmount: "16000.00",
-      purchaseOrderVendorName: "Global Engineering Ltd.",
-      goodsReceipt: "5000013600",
-      goodsReceiptQuantity: "10",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "14",
-      amount: "18000.00",
-      taxAmount: "0",
-      netAmount: "18000.00",
-      paymentTerms: "Net 60",
-      vendorPaymentTerms: "Immediate",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000134",
-      status: "Submitted",
-      postingDate: "12 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-
-    {
-      invoiceRef: "0005000083",
-      invoiceNumber: "5100001250",
-      invoiceDate: "13 Sep 2025",
-      paymentDueDate: "13 Oct 2025",
-      vendorName: "National Steel Works",
-      purchaseOrder: "4500002250",
-      purchaseOrderAmount: "50000.00",
-      purchaseOrderVendorName: "National Steel Works",
-      goodsReceipt: "5000013700",
-      goodsReceiptQuantity: "50",
-      fiscalYear: "2025",
-      currency: "SAR",
-      invoiceQuantity: "50",
-      amount: "50000.00",
-      taxAmount: "7500.00",
-      netAmount: "42500.00",
-      paymentTerms: "Net 45",
-      vendorPaymentTerms: "Net 45",
-      paymentMethod: "Bank Transfer",
-      paymentReference: "1900000135",
-      status: "Paid",
-      postingDate: "14 Sep 2025",
-      documentType: "Vendor Invoice",
-      companyCode: "1000",
-      attachment: "Invoice.pdf",
-    },
-  ]
+  {
+    invoiceRef: "0005000069",
+    invoiceNumber: "5100001236",
+    contract: "4600001001",
+    invoiceDate: "16 Aug 2025",
+    paymentDueDate: "15 Sep 2025",
+    vendorName: "Global Engineering Ltd.",
+    purchaseOrder: "4500001567",
+    purchaseOrderAmount: "10000.00",
+    purchaseOrderVendorName: "Global Engineering Ltd.",
+    goodsReceipt: "5000012890",
+    goodsReceiptQuantity: "10",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "10",
+    invoiceamount: "10000.00",
+    taxAmount: "1500.00",
+    netAmount: "8500.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000123",
+    status: "Submitted",
+    postingDate: "17 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000070",
+    invoiceNumber: "5100001237",
+    contract: "4600001002",
+    invoiceDate: "18 Aug 2025",
+    paymentDueDate: "17 Sep 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500001234",
+    purchaseOrderAmount: "15000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000012345",
+    goodsReceiptQuantity: "20",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "18",
+    invoiceamount: "15000.00",
+    taxAmount: "2250.00",
+    netAmount: "12750.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000124",
+    status: "Paid",
+    postingDate: "19 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000071",
+    invoiceNumber: "5100001238",
+    contract: "",
+    invoiceDate: "20 Aug 2025",
+    paymentDueDate: "19 Sep 2025",
+    vendorName: "XYZ Industrial Supplies",
+    purchaseOrder: "",
+    purchaseOrderAmount: "",
+    purchaseOrderVendorName: "",
+    goodsReceipt: "5000012678",
+    goodsReceiptQuantity: "25",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "20",
+    invoiceamount: "22000.00",
+    taxAmount: "",
+    netAmount: "22000.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000125",
+    status: "Submitted",
+    postingDate: "21 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000072",
+    invoiceNumber: "5100001239",
+    contract: "",
+    invoiceDate: "22 Aug 2025",
+    paymentDueDate: "21 Sep 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500001456",
+    purchaseOrderAmount: "12000.00",
+    purchaseOrderVendorName: "XYZ Industrial Supplies",
+    goodsReceipt: "5000012678",
+    goodsReceiptQuantity: "15",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "10",
+    invoiceamount: "12000.00",
+    taxAmount: "1800.00",
+    netAmount: "10200.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Immediate",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000126",
+    status: "Rejected",
+    postingDate: "23 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000073",
+    invoiceNumber: "5100001240",
+    contract: "4600001005",
+    invoiceDate: "24 Aug 2025",
+    paymentDueDate: "23 Sep 2025",
+    vendorName: "National Steel Works",
+    purchaseOrder: "4500001789",
+    purchaseOrderAmount: "25000.00",
+    purchaseOrderVendorName: "National Steel Works",
+    goodsReceipt: "",
+    goodsReceiptQuantity: "",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "15",
+    invoiceamount: "24000.00",
+    taxAmount: "0",
+    netAmount: "24000.00",
+    paymentTerms: "Net 45",
+    vendorPaymentTerms: "Net 45",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000127",
+    status: "Submitted",
+    postingDate: "25 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+  {
+    invoiceRef: "0005000074",
+    invoiceNumber: "5100001241",
+    contract: "4600001006",
+    invoiceDate: "26 Aug 2025",
+    paymentDueDate: "25 Sep 2025",
+    vendorName: "Global Engineering Ltd.",
+    purchaseOrder: "4500001890",
+    purchaseOrderAmount: "18000.00",
+    purchaseOrderVendorName: "Global Engineering Ltd.",
+    goodsReceipt: "5000013001",
+    goodsReceiptQuantity: "10",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "15",
+    invoiceamount: "20000.00",
+    taxAmount: "3000.00",
+    netAmount: "17000.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Immediate",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000128",
+    status: "Submitted",
+    postingDate: "27 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000075",
+    invoiceNumber: "5100001242",
+    contract: "4600001007",
+    invoiceDate: "28 Aug 2025",
+    paymentDueDate: "27 Sep 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500002890",
+    purchaseOrderAmount: "25000.00",
+    purchaseOrderVendorName: "XYZ Industrial Supplies",
+    goodsReceipt: "",
+    goodsReceiptQuantity: "",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "20",
+    invoiceamount: "28000.00",
+    taxAmount: "",
+    netAmount: "28000.00",
+    paymentTerms: "",
+    vendorPaymentTerms: "Immediate",
+    paymentMethod: "-",
+    paymentReference: "-",
+    status: "Rejected",
+    postingDate: "29 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice not generated",
+  },
+ 
+  {
+    invoiceRef: "0005000076",
+    invoiceNumber: "5100001243",
+    contract: "4600001008",
+    invoiceDate: "30 Aug 2025",
+    paymentDueDate: "29 Sep 2025",
+    vendorName: "Eastern Electricals",
+    purchaseOrder: "4500001991",
+    purchaseOrderAmount: "30000.00",
+    purchaseOrderVendorName: "Eastern Electricals",
+    goodsReceipt: "5000013200",
+    goodsReceiptQuantity: "30",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "25",
+    invoiceamount: "28000.00",
+    taxAmount: "0",
+    netAmount: "28000.00",
+    paymentTerms: "Net 60",
+    vendorPaymentTerms: "Net 60",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000129",
+    status: "Submitted",
+    postingDate: "31 Aug 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000077",
+    invoiceNumber: "5100001244",
+    contract: "4600001009",
+    invoiceDate: "01 Sep 2025",
+    paymentDueDate: "01 Oct 2025",
+    vendorName: "Prime Industrial Services",
+    purchaseOrder: "4500002050",
+    purchaseOrderAmount: "12000.00",
+    purchaseOrderVendorName: "Prime Industrial Services",
+    goodsReceipt: "5000013300",
+    goodsReceiptQuantity: "12",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "12",
+    invoiceamount: "12000.00",
+    taxAmount: "-100",
+    netAmount: "12100.00",
+    paymentTerms: "Net 45",
+    vendorPaymentTerms: "",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000130",
+    status: "Submitted",
+    postingDate: "02 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000078",
+    invoiceNumber: "5100001245",
+    contract: "4600001010",
+    invoiceDate: "03 Sep 2025",
+    paymentDueDate: "03 Oct 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500001234",
+    purchaseOrderAmount: "15000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000012345",
+    goodsReceiptQuantity: "20",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "18",
+    invoiceamount: "15000.00",
+    taxAmount: "2250.00",
+    netAmount: "12750.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000131",
+    status: "Paid",
+    postingDate: "04 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+  {
+    invoiceRef: "0005000079",
+    invoiceNumber: "5100001246",
+    contract: "4600001011",
+    invoiceDate: "05 Sep 2025",
+    paymentDueDate: "05 Oct 2025",
+    vendorName: "Modern Industrial Co.",
+    purchaseOrder: "4500002100",
+    purchaseOrderAmount: "18000.00",
+    purchaseOrderVendorName: "National Steel Works",
+    goodsReceipt: "",
+    goodsReceiptQuantity: "",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "12",
+    invoiceamount: "17000.00",
+    taxAmount: "0",
+    netAmount: "17000.00",
+    paymentTerms: "Immediate",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000132",
+    status: "Submitted",
+    postingDate: "06 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000080",
+    invoiceNumber: "5100001247",
+    contract: "4600001012",
+    invoiceDate: "07 Sep 2025",
+    paymentDueDate: "07 Oct 2025",
+    vendorName: "Prime Industrial Services",
+    purchaseOrder: "4500002150",
+    purchaseOrderAmount: "10000.00",
+    purchaseOrderVendorName: "Prime Industrial Services",
+    goodsReceipt: "5000013400",
+    goodsReceiptQuantity: "10",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "10",
+    invoiceamount: "12000.00",
+    taxAmount: "-500",
+    netAmount: "12500.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000133",
+    status: "Rejected",
+    postingDate: "08 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000081",
+    invoiceNumber: "5100001248",
+    contract: "4600001013",
+    invoiceDate: "09 Sep 2025",
+    paymentDueDate: "09 Oct 2025",
+    vendorName: "Eastern Electricals",
+    purchaseOrder: "4500003200",
+    purchaseOrderAmount: "22000.00",
+    purchaseOrderVendorName: "Eastern Electricals",
+    goodsReceipt: "5000013500",
+    goodsReceiptQuantity: "10",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "15",
+    invoiceamount: "22000.00",
+    taxAmount: "3300.00",
+    netAmount: "18700.00",
+    paymentTerms: "",
+    vendorPaymentTerms: "Net 45",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "-",
+    status: "Submitted",
+    postingDate: "10 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000082",
+    invoiceNumber: "5100001249",
+    contract: "4600001014",
+    invoiceDate: "11 Sep 2025",
+    paymentDueDate: "11 Oct 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500002200",
+    purchaseOrderAmount: "16000.00",
+    purchaseOrderVendorName: "Global Engineering Ltd.",
+    goodsReceipt: "5000013600",
+    goodsReceiptQuantity: "10",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "14",
+    invoiceamount: "18000.00",
+    taxAmount: "0",
+    netAmount: "18000.00",
+    paymentTerms: "Net 60",
+    vendorPaymentTerms: "Immediate",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000134",
+    status: "Submitted",
+    postingDate: "12 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000083",
+    invoiceNumber: "5100001250",
+    contract: "4600001015",
+    invoiceDate: "13 Sep 2025",
+    paymentDueDate: "13 Oct 2025",
+    vendorName: "National Steel Works",
+    purchaseOrder: "4500002250",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "National Steel Works",
+    goodsReceipt: "5000013700",
+    goodsReceiptQuantity: "50",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "50",
+    invoiceamount: "50000.00",
+    taxAmount: "7500.00",
+    netAmount: "42500.00",
+    paymentTerms: "Net 45",
+    vendorPaymentTerms: "Net 45",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900000135",
+    status: "Paid",
+    postingDate: "14 Sep 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+  {
+    invoiceRef: "0005000201",
+    invoiceNumber: "5100002201",
+    contract: "4600001016",
+    invoiceDate: "01 Oct 2025",
+    paymentDueDate: "31 Oct 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500005000",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000090001",
+    goodsReceiptQuantity: "100",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "20",
+    invoiceamount: "10000.00",
+    taxAmount: "1500.00",
+    netAmount: "8500.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900001001",
+    status: "Paid",
+    postingDate: "02 Oct 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000202",
+    invoiceNumber: "5100002202",
+    contract: "4600001017",
+    invoiceDate: "05 Oct 2025",
+    paymentDueDate: "04 Nov 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500005000",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000090002",
+    goodsReceiptQuantity: "100",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "25",
+    invoiceamount: "12000.00",
+    taxAmount: "1800.00",
+    netAmount: "10200.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900001002",
+    status: "Paid",
+    postingDate: "06 Oct 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000203",
+    invoiceNumber: "5100002203",
+    contract: "4600001018",
+    invoiceDate: "10 Oct 2025",
+    paymentDueDate: "09 Nov 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500005000",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000090003",
+    goodsReceiptQuantity: "100",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "15",
+    invoiceamount: "8000.00",
+    taxAmount: "1200.00",
+    netAmount: "6800.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900001003",
+    status: "Submitted",
+    postingDate: "11 Oct 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000204",
+    invoiceNumber: "5100002204",
+    contract: "4600001019",
+    invoiceDate: "15 Oct 2025",
+    paymentDueDate: "14 Nov 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500005000",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000090004",
+    goodsReceiptQuantity: "100",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "20",
+    invoiceamount: "9000.00",
+    taxAmount: "1350.00",
+    netAmount: "7650.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900001004",
+    status: "Submitted",
+    postingDate: "16 Oct 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+ 
+  {
+    invoiceRef: "0005000205",
+    invoiceNumber: "5100002205",
+    contract: "4600001020",
+    invoiceDate: "20 Oct 2025",
+    paymentDueDate: "19 Nov 2025",
+    vendorName: "ABC Trading Co.",
+    purchaseOrder: "4500005000",
+    purchaseOrderAmount: "50000.00",
+    purchaseOrderVendorName: "ABC Trading Co.",
+    goodsReceipt: "5000090005",
+    goodsReceiptQuantity: "100",
+    fiscalYear: "2025",
+    currency: "SAR",
+    invoiceQuantity: "20",
+    invoiceamount: "15000.00",
+    taxAmount: "2250.00",
+    netAmount: "12750.00",
+    paymentTerms: "Net 30",
+    vendorPaymentTerms: "Net 30",
+    paymentMethod: "Bank Transfer",
+    paymentReference: "1900001005",
+    status: "Submitted",
+    postingDate: "21 Oct 2025",
+    documentType: "Vendor Invoice",
+    companyCode: "1000",
+    attachment: "Invoice.pdf",
+  },
+  {
+  invoiceRef: "0005000084",
+  invoiceNumber: "5100001236",
+  contract: "4600001021",
+  invoiceDate: "16 Aug 2025",
+  paymentDueDate: "15 Sep 2025",
+  vendorName: "Global Engineering Ltd.",
+  purchaseOrder: "4500001567",
+  purchaseOrderAmount: "100000.00",
+  purchaseOrderVendorName: "Global Engineering Ltd.",
+  goodsReceipt: "5000012890",
+  goodsReceiptQuantity: "10",
+  fiscalYear: "2025",
+  currency: "SAR",
+  invoiceQuantity: "5",
+  invoiceamount: "2000.00",
+  taxAmount: "600.00",
+  netAmount: "3400.00",
+  paymentTerms: "Net 30",
+  vendorPaymentTerms: "Net 30",
+  paymentMethod: "Bank Transfer",
+  paymentReference: "1900000123",
+  status: "Submitted",
+  postingDate: "17 Aug 2025",
+  documentType: "Vendor Invoice",
+  companyCode: "1000",
+  attachment: "Invoice.pdf",
+},
+ 
+{
+  invoiceRef: "0005000085",
+  invoiceNumber: "5100001237",
+  contract: "4600001022",
+  invoiceDate: "18 Aug 2025",
+  paymentDueDate: "17 Sep 2025",
+  vendorName: "Global Engineering Ltd.",
+  purchaseOrder: "4500001567",
+  purchaseOrderAmount: "100000.00",
+  purchaseOrderVendorName: "Global Engineering Ltd.",
+  goodsReceipt: "5000012891",
+  goodsReceiptQuantity: "10",
+  fiscalYear: "2025",
+  currency: "SAR",
+  invoiceQuantity: "5",
+  invoiceamount: "4000.00",
+  taxAmount: "900.00",
+  netAmount: "5100.00",
+  paymentTerms: "Net 30",
+  vendorPaymentTerms: "Net 30",
+  paymentMethod: "Bank Transfer",
+  paymentReference: "1900000124",
+  status: "Paid",
+  postingDate: "19 Aug 2025",
+  documentType: "Vendor Invoice",
+  companyCode: "1000",
+  attachment: "Invoice.pdf",
+},
+];
 
   // ---------------------------------------------------------
   // VALIDATION
@@ -685,7 +1320,21 @@ ${JSON.stringify(invoiceData, null, 2)}
 
 VALIDATION RULES:
 
-1. Purchase Order Exists Validation
+1. Contract Exists Validation
+
+Field:
+contract
+
+If contract is not empty:
+PASS
+
+If contract is empty:
+FAIL
+
+Reason:
+Contract does not exist.
+
+2. Purchase Order Exists Validation
 
 Field:
 purchaseOrder
@@ -699,7 +1348,7 @@ FAIL
 Reason:
 Purchase Order does not exist.
 
-2. Vendor Match Validation
+3. Vendor Match Validation
 
 Compare:
 vendorName
@@ -714,7 +1363,7 @@ FAIL
 Reason:
 Invoice vendor does not match the Purchase Order vendor.
 
-3. Goods Receipt Exists Validation
+4. Goods Receipt Exists Validation
 
 Field:
 goodsReceipt
@@ -728,7 +1377,7 @@ FAIL
 Reason:
 Goods Receipt document not found.
 
-4. Invoice Quantity Validation
+5. Invoice Quantity Validation
 
 Compare:
 invoiceQuantity
@@ -745,7 +1394,7 @@ FAIL
 Reason:
 Invoice quantity exceeds the Goods Receipt quantity.
 
-5. Invoice Amount Validation
+6. Invoice Amount Validation
 
 Compare:
 purchaseOrderAmount
@@ -764,7 +1413,7 @@ FAIL
 
 If the invoice amount exceeds the PO amount, calculate the percentage by which it exceeds the PO amount.
 
-6. Tax Validation
+7. Tax Validation
 
 Field:
 taxAmount
@@ -778,7 +1427,7 @@ WARNING
 If taxAmount is empty or missing:
 FAIL
 
-7. Payment Terms Validation
+8. Payment Terms Validation
 
 Compare:
 paymentTerms
@@ -793,7 +1442,7 @@ WARNING
 If both exist but do not match:
 FAIL
 
-8. Similar Invoice Validation
+9. Similar Invoice Validation
 
 Compare selected invoice against ALL OTHER invoices.
 
@@ -816,9 +1465,39 @@ FAIL
 
 State which fields matched and their values.
 
+10. Cumulative Purchase Order Amount Validation
+
+Look at ALL invoices in the REFERENCE INVOICE DATASET that share the same purchaseOrder as the selected invoice.
+
+Sum the invoiceamount of all those invoices (including the selected invoice).
+
+Compare the cumulative sum against the purchaseOrderAmount of the selected invoice.
+
+If cumulative sum <= purchaseOrderAmount:
+PASS
+
+If cumulative sum > purchaseOrderAmount but selected invoice alone does not exceed it:
+WARNING
+
+If cumulative sum > purchaseOrderAmount:
+FAIL
+
+Reason:
+Cumulative invoice amount for this Purchase Order exceeds the Purchase Order amount.
+
+State the cumulative total, the PO amount, and the excess amount.
+
 CONFIDENCE SCORE:
 
-Provide a confidence score from 0 to 100.
+Determine the confidence score using ONLY these rules:
+
+Rule 1: If ANY validation except Similar Invoice Validation returns FAIL, confidence score must be between 0% and 35% (High Risk).
+
+Rule 2: If there are NO FAIL validations but one or more WARNING validations, confidence score must be between 36% and 79% (Medium Risk).
+
+Rule 3: If ALL validations return PASS, confidence score must be between 80% and 100% (Low Risk).
+
+The Similar Invoice Validation alone must NEVER reduce the confidence score below 35%. If Similar Invoice Validation is the ONLY failed validation, treat it as Medium Risk.
 
 RISK LEVEL:
 
@@ -852,6 +1531,11 @@ Return exactly this JSON structure:
 
 {
   "validations": [
+    {
+      "title": "Contract Exists",
+      "status": "PASS",
+      "reason": "..."
+    },
     {
       "title": "Purchase Order Exists",
       "status": "PASS",
@@ -891,6 +1575,11 @@ Return exactly this JSON structure:
       "title": "Similar Invoice Validation",
       "status": "PASS",
       "reason": "..."
+    },
+    {
+      "title": "Cumulative Purchase Order Amount",
+      "status": "PASS",
+      "reason": "..."
     }
   ],
   "confidenceScore": 95,
@@ -905,30 +1594,13 @@ Return exactly this JSON structure:
 }
 `
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: "application/json",
-            },
-          }),
-        }
-      )
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      })
 
       if (!response.ok) {
         throw new Error(`AI API error: ${response.status}`)
@@ -1115,6 +1787,7 @@ Return exactly this JSON structure:
 
   return (
     <div className="min-h-screen bg-gray-50">
+      
 
       {/* =====================================================
           HEADER
@@ -1866,63 +2539,196 @@ Return exactly this JSON structure:
 
             {/* Invoice Table */}
 
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
 
-<div className="max-h-[600px] overflow-auto rounded-lg border border-gray-200">
-  <table className="w-full table-fixed border-collapse">
-    {/* Applied sticky top-0 z-10 to the header row container */}
-    <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
-      <tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-700">
-        <th className="w-16 bg-gray-50 px-4 py-3"></th>
-        <th className="w-32 bg-gray-50 px-6 py-3">Invoice Ref.</th>
-        <th className="w-32 bg-gray-50 px-6 py-3">Invoice No.</th>
-        <th className="w-32 bg-gray-50 px-6 py-3">Invoice Date</th>
-        <th className="w-48 bg-gray-50 px-6 py-3">Vendor</th>
-        <th className="w-36 bg-gray-50 px-6 py-3">PO Number</th>
-        <th className="w-32 bg-gray-50 px-6 py-3">PO Amount</th>
-        <th className="w-48 bg-gray-50 px-6 py-3">PO Vendor</th>
-        <th className="w-36 bg-gray-50 px-6 py-3">Goods Receipt</th>
-        <th className="w-28 bg-gray-50 px-6 py-3">GR Qty</th>
-        <th className="w-28 bg-gray-50 px-6 py-3">Invoice Qty</th>
-        <th className="w-32 bg-gray-50 px-6 py-3">Due Date</th>
-        <th className="w-32 bg-gray-50 px-6 py-3">Status</th>
-        <th className="w-40 bg-gray-50 px-6 py-3">Payment Ref.</th>
-        <th className="w-48 bg-gray-50 px-6 py-3">Attachment</th>
-      </tr>
-    </thead>
+              <table className="w-full">
+
+                {/* <thead>
+
+                  <tr className="border-b border-gray-200 bg-gray-50">
+
+                    <th className="w-12 px-4 py-3"></th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Ref.
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice No.
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Date
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Vendor
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Number
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Amount
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      PO Vendor
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Goods Receipt
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      GR Qty
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Invoice Qty
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Due Date
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Payment Ref.
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                      Attachment
+                    </th>
+
+                  </tr>
+
+                </thead> */}
+                <thead>
+                <tr className="border-b border-gray-200">
+                  
+                 
+                  <th className="w-12"></th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Invoice Ref.
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Invoice No.
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Contract No.
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Invoice Date
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Vendor
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    PO Number
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    PO Amount
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    PO Vendor
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Goods Receipt
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    GR Qty
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Invoice Qty
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Invoice Amount
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Due Date
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Status
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Payment Ref.
+                  </th>
+ 
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Attachment
+                  </th>
+                </tr>
+              </thead>
+ 
 
     <tbody className="divide-y divide-gray-200">
       {invoiceData.map((item) => {
         const isHovered = hoveredInvoice === item.invoiceRef;
         const isSelected = selectedInvoice?.invoiceRef === item.invoiceRef;
 
-        return (
-          <tr
-            key={item.invoiceRef}
-            onMouseEnter={() => setHoveredInvoice(item.invoiceRef)}
-            onMouseLeave={() => setHoveredInvoice(null)}
-            className={`group transition ${
-              isSelected ? "bg-green-50" : "hover:bg-gray-50"
-            }`}
-          >
-            {/* Hover Validation Action */}
-            <td className="px-4 py-4">
-              <div
-                className={`transition-all duration-200 ${
-                  isHovered
-                    ? "translate-x-0 opacity-100"
-                    : "-translate-x-2 opacity-0"
-                }`}
-              >
-                <button
-                  disabled={isValidating}
-                  onClick={() => validateInvoice(item)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-700 text-white shadow-sm transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-                  title="Validate Invoice"
-                >
-                  <Sparkles size={16} />
-                </button>
-              </div>
-            </td>
+                    return (
+
+                      <tr
+                        key={item.invoiceRef}
+                        onMouseEnter={() =>
+                          setHoveredInvoice(item.invoiceRef)
+                        }
+                        onMouseLeave={() =>
+                          setHoveredInvoice(null)
+                        }
+                        className={`group border-b transition ${
+                          isSelected
+                            ? "bg-green-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+
+                        {/* Hover Validation Action */}
+
+                        {/* <td className="px-4 py-4">
+
+                          <div
+                            className={`transition-all duration-200 ${
+                              isHovered
+                                ? "translate-x-0 opacity-100"
+                                : "-translate-x-2 opacity-0"
+                            }`}
+                          >
+
+                            <button
+                              disabled={isValidating}
+                              onClick={() =>
+                                validateInvoice(item)
+                              }
+                              className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-700 text-white shadow-sm transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                              title="Validate Invoice"
+                            >
+                              <Sparkles size={16} />
+                            </button>
+
+                          </div>
+
+                        </td>
 
             <td className="truncate px-6 py-4 text-sm font-medium text-gray-900">
               {item.invoiceRef}
@@ -1993,24 +2799,165 @@ Return exactly this JSON structure:
               {item.paymentReference}
             </td>
 
-            <td className="truncate px-6 py-4 text-sm" title={item.attachment}>
-              {item.attachment !== "Invoice not generated" ? (
-                <div className="flex items-center gap-2 truncate">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-red-600 text-xs text-white">
-                    <i className="ri-file-pdf-fill"></i>
-                  </div>
-                  <span className="truncate">{item.attachment}</span>
-                </div>
-              ) : (
-                <span className="text-gray-500">{item.attachment}</span>
-              )}
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-</div>
+                        <td className="px-6 py-4 text-sm">
+
+                          {item.attachment !==
+                          "Invoice not generated" ? (
+
+                            <div className="flex items-center gap-2">
+
+                              <div className="flex h-6 w-6 items-center justify-center rounded bg-red-600 text-xs text-white">
+                                <i className="ri-file-pdf-fill"></i>
+                              </div>
+
+                              <span>
+                                {item.attachment}
+                              </span>
+
+                            </div>
+
+                          ) : (
+
+                            <span className="text-gray-500">
+                              {item.attachment}
+                            </span>
+
+                          )}
+
+                        </td> */}
+                        
+                    <td className="px-4 py-4">
+
+                          <div
+                            className={`transition-all duration-200 ${
+                              isHovered
+                                ? "translate-x-0 opacity-100"
+                                : "-translate-x-2 opacity-0"
+                            }`}
+                          >
+
+                            <button
+                              disabled={isValidating}
+                              onClick={() =>
+                                validateInvoice(item)
+                              }
+                              className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-700 text-white shadow-sm transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                              title="Validate Invoice"
+                            >
+                              <Sparkles size={16} />
+                            </button>
+
+                          </div>
+
+                        </td>
+                     <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.invoiceRef}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.invoiceNumber}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.contract}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.invoiceDate}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.vendorName}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.purchaseOrder}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.currency} {item.purchaseOrderAmount}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.purchaseOrderVendorName}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.goodsReceipt}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.goodsReceiptQuantity}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.invoiceQuantity}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.invoiceamount}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.paymentDueDate}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm">
+                      {item.status === "Paid" && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                          <span className="font-medium text-green-600">Paid</span>
+                        </div>
+                      )}
+ 
+                      {item.status === "Submitted" && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                          <span className="font-medium text-yellow-600">
+                            Submitted
+                          </span>
+                        </div>
+                      )}
+ 
+                      {item.status === "Rejected" && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                          <span className="font-medium text-red-600">
+                            Rejected
+                          </span>
+                        </div>
+                      )}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.paymentReference}
+                    </td>
+ 
+                    <td className="px-6 py-4 text-sm">
+                      {item.attachment !== "Invoice not generated" ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded bg-red-600 text-xs text-white">
+                            <i className="ri-file-pdf-fill"></i>
+                          </div>
+                          <span>{item.attachment}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">
+                          {item.attachment}
+                        </span>
+                      )}
+                    </td>
+
+                      </tr>
+
+                    )
+                  })}
+
+                </tbody>
+
+              </table>
+
+            </div>
 
           </div>
         )}
@@ -2244,7 +3191,7 @@ Return exactly this JSON structure:
 
                         <p className="mt-1 text-sm font-semibold text-gray-900">
                           {selectedInvoice.currency}{" "}
-                          {selectedInvoice.amount}
+                          {selectedInvoice.invoiceamount}
                         </p>
 
                       </div>
@@ -2278,7 +3225,7 @@ Return exactly this JSON structure:
                     </h3>
 
                     <p className="mt-1 text-xs text-gray-500">
-                      AI evaluated 8 procurement validation rules
+                      AI evaluated 10 procurement validation rules
                     </p>
 
                   </div>
@@ -2598,7 +3545,7 @@ Return exactly this JSON structure:
                         lines.push(`Invoice: ${selectedInvoice.invoiceNumber}`)
                         lines.push(`Vendor: ${selectedInvoice.vendorName}`)
                         lines.push(`Date: ${selectedInvoice.invoiceDate}`)
-                        lines.push(`Amount: ${selectedInvoice.currency} ${selectedInvoice.amount}`)
+                        lines.push(`Amount: ${selectedInvoice.currency} ${selectedInvoice.invoiceamount}`)
                         lines.push("")
                         lines.push(`Confidence Score: ${validationResult.confidenceScore}%`)
                         lines.push(`Risk Level: ${validationResult.riskLevel}`)
