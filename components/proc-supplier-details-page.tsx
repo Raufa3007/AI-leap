@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, Download } from "lucide-react"
+import { ChevronLeft, Download, CheckCircle, X } from "lucide-react"
 
 interface SupplierData {
   id: string
@@ -44,6 +44,9 @@ export default function ProcSupplierDetailsPage({
   const [supplier, setSupplier] = useState<SupplierData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectComment, setRejectComment] = useState("")
 
   const nameToFetch = companyName || supplierId
 
@@ -130,10 +133,14 @@ export default function ProcSupplierDetailsPage({
             </h1>
           </div>
           <div className="flex gap-3">
-            <button className="px-6 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+            <button
+              onClick={() => setShowRejectModal(true)}
+              className="px-6 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
               Reject supplier
             </button>
             <button
+              onClick={() => setShowApproveModal(true)}
               className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-colors"
               style={{ backgroundColor: "#1B733D" }}
             >
@@ -282,6 +289,67 @@ export default function ProcSupplierDetailsPage({
           )}
         </div>
       </div>
+
+      {/* Approve Success Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-10 flex flex-col items-center gap-4 w-80">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#E6F4EC" }}>
+              <CheckCircle size={36} style={{ color: "#1B733D" }} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Supplier Approved</h2>
+            <p className="text-sm text-gray-500 text-center">The supplier has been successfully approved.</p>
+            <button
+              onClick={() => setShowApproveModal(false)}
+              className="mt-2 px-8 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-colors"
+              style={{ backgroundColor: "#1B733D" }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Comment Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-[420px]">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Reject Supplier</h2>
+              <button onClick={() => { setShowRejectModal(false); setRejectComment("") }} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Please provide a reason for rejecting this supplier.</p>
+            <textarea
+              value={rejectComment}
+              onChange={(e) => setRejectComment(e.target.value)}
+              placeholder="Enter rejection reason..."
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{ focusRingColor: "#1B733D" } as any}
+              onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px #1B733D40")}
+              onBlur={(e) => (e.target.style.boxShadow = "")}
+            />
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => { setShowRejectModal(false); setRejectComment("") }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowRejectModal(false); setRejectComment("") }}
+                disabled={!rejectComment.trim()}
+                className="flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50"
+                style={{ backgroundColor: "#1B733D" }}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

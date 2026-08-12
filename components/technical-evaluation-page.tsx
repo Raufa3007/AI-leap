@@ -1,25 +1,120 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, LayoutGrid, X } from "lucide-react"
+import {
+  ChevronLeft,
+  LayoutGrid,
+  X,
+  Sparkles,
+  Loader2,
+} from "lucide-react"
+
 import SignatureVerificationDialog from "./signature-verification-dialog"
 import TechnicalEvaluationTable from "./technical-evaluation-table"
 import FinancialEvaluationTable from "./financial-evaluation-table"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
 
-type EvaluationRow = { [key: string]: string }
 
-const VENDOR_SCORE_MAP: { name: string; scoreKey: string; location: string; avatar: string; color: string }[] = [
-  { name: "Accenture",         scoreKey: "1_Accenture Proposal.txt Score", location: "New York",  avatar: "A", color: "#4A5568" },
-  { name: "Deloitte",          scoreKey: "2_Deloitte Proposal.txt Score",  location: "London",   avatar: "D", color: "#3B82F6" },
-  { name: "Kaar Technologies", scoreKey: "3_KaarTech Proposal.txt Score",  location: "Chennai",  avatar: "K", color: "#FF6B6B" },
+// ============================================================
+// TYPES
+// ============================================================
+
+type EvaluationRow = {
+  [key: string]: string
+}
+
+
+// ============================================================
+// VENDOR CONFIGURATION
+// ============================================================
+
+const VENDOR_SCORE_MAP: {
+  name: string
+  scoreKey: string
+  location: string
+  avatar: string
+  color: string
+}[] = [
+  {
+    name: "Accenture",
+    scoreKey: "1_Accenture Proposal.txt Score",
+    location: "New York",
+    avatar: "A",
+    color: "#4A5568",
+  },
+  {
+    name: "Deloitte",
+    scoreKey: "2_Deloitte Proposal.txt Score",
+    location: "London",
+    avatar: "D",
+    color: "#3B82F6",
+  },
+  {
+    name: "Kaar Technologies",
+    scoreKey: "3_KaarTech Proposal.txt Score",
+    location: "Chennai",
+    avatar: "K",
+    color: "#FF6B6B",
+  },
 ]
+
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 
 function parseScore(raw: string | undefined): number | null {
   if (!raw) return null
-  const n = parseInt(raw.replace(/\*/g, "").trim(), 10)
+
+  const n = parseInt(
+    raw.replace(/\*/g, "").trim(),
+    10
+  )
+
   return isNaN(n) ? null : n
 }
+
+
+/**
+ * Gets the score, reason and reference for a particular vendor
+ * from one evaluation row.
+ *
+ * Example:
+ *
+ * 1_Accenture Proposal.txt Score
+ * 1_Accenture Proposal.txt Reason
+ * 1_Accenture Proposal.txt Reference
+ */
+function getVendorEvaluation(
+  row: EvaluationRow,
+  vendor: {
+    name: string
+    scoreKey: string
+  }
+) {
+  const scoreKey = vendor.scoreKey
+
+  const reasonKey = scoreKey.replace(
+    " Score",
+    " Reason"
+  )
+
+  const referenceKey = scoreKey.replace(
+    " Score",
+    " Reference"
+  )
+
+  return {
+    score: parseScore(row[scoreKey]),
+    reason: row[reasonKey] || "",
+    reference: row[referenceKey] || "",
+  }
+}
+
+
+// ============================================================
+// PROPS
+// ============================================================
 
 interface TechnicalEvaluationPageProps {
   onBack: () => void
@@ -27,483 +122,1858 @@ interface TechnicalEvaluationPageProps {
   onCommercialCompleted?: () => void
 }
 
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
+
 export default function TechnicalEvaluationPage({
   onBack,
   onNavigateToVendorEvaluation,
   onCommercialCompleted,
 }: TechnicalEvaluationPageProps) {
-  const [acknowledged, setAcknowledged] = useState(false)
-  const [activeSection, setActiveSection] = useState("rfp-details")
-  const [collapsed, setCollapsed] = useState(false)
-  const [showSignatureDialog, setShowSignatureDialog] = useState(false)
-  const [showDecisionDialog, setShowDecisionDialog] = useState(false)
-  const [selectedDecision, setSelectedDecision] = useState("")
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [vendorDecisions, setVendorDecisions] = useState<{ [key: number]: "approved" | "rejected" | "pending" }>(
-    { 0: "pending", 1: "pending", 2: "pending" }
-  )
-  const [vendorScores, setVendorScores] = useState<{ [name: string]: number | null }>({})
-  const [evalRows, setEvalRows] = useState<EvaluationRow[]>([])
-  const [evalHeaders, setEvalHeaders] = useState<string[]>([])
-  const [showEvalModal, setShowEvalModal] = useState(false)
-  const [isReviewing, setIsReviewing] = useState(false)
-  const [reviewError, setReviewError] = useState("")
 
-  const rfpDetailsRef = useRef<HTMLDivElement>(null)
-  const acknowledgmentRef = useRef<HTMLDivElement>(null)
-  const vendorsRef = useRef<HTMLDivElement>(null)
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
+  const [acknowledged, setAcknowledged] =
+    useState(false)
+
+  const [activeSection, setActiveSection] =
+    useState("rfp-details")
+
+  const [collapsed, setCollapsed] =
+    useState(false)
+
+  const [showSignatureDialog, setShowSignatureDialog] =
+    useState(false)
+
+  const [showDecisionDialog, setShowDecisionDialog] =
+    useState(false)
+
+  const [selectedDecision, setSelectedDecision] =
+    useState("")
+
+  const [showSuccessMessage, setShowSuccessMessage] =
+    useState(false)
+
+  const [vendorDecisions, setVendorDecisions] =
+    useState<{
+      [name: string]:
+        | "approved"
+        | "rejected"
+        | "pending"
+    }>(
+      Object.fromEntries(
+        VENDOR_SCORE_MAP.map((v) => [
+          v.name,
+          "pending",
+        ])
+      )
+    )
+
+  const [vendorScores, setVendorScores] =
+    useState<{
+      [name: string]: number | null
+    }>(() => {
+      try {
+        return (
+          JSON.parse(
+            localStorage.getItem(
+              "evalVendorScores"
+            ) || "null"
+          ) ?? {}
+        )
+      } catch {
+        return {}
+      }
+    })
+
+  const [evalRows, setEvalRows] =
+    useState<EvaluationRow[]>(() => {
+      try {
+        return (
+          JSON.parse(
+            localStorage.getItem(
+              "evalRows"
+            ) || "null"
+          ) ?? []
+        )
+      } catch {
+        return []
+      }
+    })
+
+  const [showEvalModal, setShowEvalModal] =
+    useState(false)
+
+  const [isReviewing, setIsReviewing] =
+    useState(false)
+
+  const [reviewError, setReviewError] =
+    useState("")
+
+
+  // ==========================================================
+  // NEW STATE
+  // Used when clicking a score to show AI reasoning
+  // ==========================================================
+
+  const [selectedEvaluation, setSelectedEvaluation] =
+    useState<{
+      vendor: string
+      score: number | null
+      reason: string
+      reference: string
+      subCriterion: string
+      weight: string
+    } | null>(null)
+
+
+  // ==========================================================
+  // REFS
+  // ==========================================================
+
+  const rfpDetailsRef =
+    useRef<HTMLDivElement>(null)
+
+  const acknowledgmentRef =
+    useRef<HTMLDivElement>(null)
+
+  const vendorsRef =
+    useRef<HTMLDivElement>(null)
+
+
+  // ==========================================================
+  // SCROLL HANDLER
+  // ==========================================================
 
   useEffect(() => {
+
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200
-      if (vendorsRef.current && scrollPosition >= vendorsRef.current.offsetTop) {
+
+      const scrollPosition =
+        window.scrollY + 200
+
+      if (
+        vendorsRef.current &&
+        scrollPosition >=
+          vendorsRef.current.offsetTop
+      ) {
         setActiveSection("vendors")
-      } else if (acknowledgmentRef.current && scrollPosition >= acknowledgmentRef.current.offsetTop) {
-        setActiveSection("acknowledgment")
+
+      } else if (
+        acknowledgmentRef.current &&
+        scrollPosition >=
+          acknowledgmentRef.current.offsetTop
+      ) {
+        setActiveSection(
+          "acknowledgment"
+        )
+
       } else {
         setActiveSection("rfp-details")
       }
     }
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener(
+      "scroll",
+      handleScroll
+    )
+
+    return () =>
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      )
+
   }, [])
 
-  const scrollToSection = (sectionId: string) => {
+
+  // ==========================================================
+  // SCROLL TO SECTION
+  // ==========================================================
+
+  const scrollToSection = (
+    sectionId: string
+  ) => {
+
     const refs = {
       "rfp-details": rfpDetailsRef,
       acknowledgment: acknowledgmentRef,
       vendors: vendorsRef,
     }
-    const ref = refs[sectionId as keyof typeof refs]
+
+    const ref =
+      refs[
+        sectionId as keyof typeof refs
+      ]
+
     if (ref?.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      ref.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
     }
   }
+
+
+  // ==========================================================
+  // ACKNOWLEDGEMENT
+  // ==========================================================
 
   const handleAcknowledgeClick = () => {
     setShowSignatureDialog(true)
   }
+
 
   const handleSignatureAcknowledge = () => {
     setAcknowledged(true)
     setShowSignatureDialog(false)
   }
 
+
+  // ==========================================================
+  // AI TECHNICAL EVALUATION
+  // ==========================================================
+
   const handleReview = async () => {
+
     setIsReviewing(true)
     setReviewError("")
+
     try {
-      const res = await fetch("http://127.0.0.1:5000/evaluate", { method: "POST" })
-      if (!res.ok) throw new Error()
+
+      const res = await fetch(
+        "http://127.0.0.1:5000/evaluate",
+        {
+          method: "POST",
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error()
+      }
+
       const data = await res.json()
-      const rows: EvaluationRow[] = data?.evaluation_table ?? []
+
+      const rows: EvaluationRow[] =
+        data?.evaluation_table ?? []
+
+
+      // ------------------------------------------------------
+      // CHECK RESULT
+      // ------------------------------------------------------
+
       if (!rows.length) {
-        setReviewError("Evaluation has not been completed yet.")
+
+        setReviewError(
+          "Evaluation has not been completed yet."
+        )
+
         setIsReviewing(false)
+
         return
       }
+
+
+      // ------------------------------------------------------
+      // FIND TOTAL SCORE ROW
+      // ------------------------------------------------------
+
       const totalRow = rows.find(
-        (r) => r["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score"
+        (r) =>
+          r["Main Criterion"]
+            ?.replace(/\*/g, "")
+            .trim()
+            .toLowerCase() ===
+          "total score"
       )
-      const scores: { [name: string]: number | null } = {}
-      VENDOR_SCORE_MAP.forEach(({ name, scoreKey }) => {
-        scores[name] = parseScore(totalRow?.[scoreKey])
-      })
+
+
+      // ------------------------------------------------------
+      // EXTRACT VENDOR SCORES
+      // ------------------------------------------------------
+
+      const scores: {
+        [name: string]: number | null
+      } = {}
+
+
+      VENDOR_SCORE_MAP.forEach(
+        ({
+          name,
+          scoreKey,
+        }) => {
+
+          scores[name] =
+            parseScore(
+              totalRow?.[scoreKey]
+            )
+        }
+      )
+
+
+      // ------------------------------------------------------
+      // SAVE RESULTS
+      // ------------------------------------------------------
+
       setVendorScores(scores)
+
       setEvalRows(rows)
-      setEvalHeaders(Object.keys(rows[0]))
+
+      localStorage.setItem(
+        "evalVendorScores",
+        JSON.stringify(scores)
+      )
+
+      localStorage.setItem(
+        "evalRows",
+        JSON.stringify(rows)
+      )
+
+
+      // ------------------------------------------------------
+      // SHOW RESULT MODAL
+      // ------------------------------------------------------
+
       setShowEvalModal(true)
+
     } catch {
-      setReviewError("Unable to load evaluation results.")
+
+      setReviewError(
+        "Unable to load evaluation results."
+      )
+
     } finally {
+
       setIsReviewing(false)
     }
   }
+
+
+  // ==========================================================
+  // DECISION
+  // ==========================================================
 
   const handleDecideClick = () => {
     setShowDecisionDialog(true)
   }
 
+
   const handleCompleteDecision = () => {
+
     setShowDecisionDialog(false)
+
     setShowSuccessMessage(true)
 
-    if (selectedDecision === "completed" && onCommercialCompleted) {
-      console.log("[v0] Technical evaluation completed, triggering commercial evaluation visibility")
+
+    if (
+      selectedDecision === "completed" &&
+      onCommercialCompleted
+    ) {
+
+      console.log(
+        "[v0] Technical evaluation completed, triggering commercial evaluation visibility"
+      )
+
       onCommercialCompleted()
     }
+
 
     setTimeout(() => {
       setShowSuccessMessage(false)
     }, 3000)
   }
 
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
+
     <div className="w-full h-screen flex flex-col bg-white">
-      {showSuccessMessage && (
-        <div
-          className="fixed top-4 left-4 z-50 bg-white rounded-md shadow-lg flex items-center gap-3 pr-4"
-          style={{ borderLeft: "4px solid #1B733D" }}
-        >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <i className="ri-checkbox-circle-line text-2xl" style={{ color: "#1B733D" }} />
-            <span className="font-normal text-base" style={{ color: "#000525" }}>
-              Technical evaluation completed successfully
-            </span>
+
+
+      {/* ======================================================
+          AI LOADER
+      ====================================================== */}
+
+      {isReviewing && (
+
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+
+          <div className="flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl px-16 py-12 gap-4">
+
+            <Loader2
+              size={48}
+              className="animate-spin text-green-700"
+            />
+
+            <p className="text-lg font-semibold text-gray-900">
+              Evaluating Vendor Technical Proposals...
+            </p>
+
+            <div className="flex items-center gap-2">
+
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
+
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
+
+              <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
+
+            </div>
+
           </div>
-          <button
-            onClick={() => setShowSuccessMessage(false)}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-          >
-            <i className="ri-close-line text-xl text-gray-600" />
-          </button>
+
         </div>
       )}
 
+
+      {/* ======================================================
+          SUCCESS MESSAGE
+      ====================================================== */}
+
+      {showSuccessMessage && (
+
+        <div
+          className="fixed top-4 left-4 z-50 bg-white rounded-md shadow-lg flex items-center gap-3 pr-4"
+          style={{
+            borderLeft:
+              "4px solid #1B733D",
+          }}
+        >
+
+          <div className="flex items-center gap-3 px-4 py-3">
+
+            <i
+              className="ri-checkbox-circle-line text-2xl"
+              style={{
+                color: "#1B733D",
+              }}
+            />
+
+            <span
+              className="font-normal text-base"
+              style={{
+                color: "#000525",
+              }}
+            >
+              Technical evaluation completed successfully
+            </span>
+
+          </div>
+
+          <button
+            onClick={() =>
+              setShowSuccessMessage(false)
+            }
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+
+            <i className="ri-close-line text-xl text-gray-600" />
+
+          </button>
+
+        </div>
+      )}
+
+
+      {/* ======================================================
+          TOP HEADER
+      ====================================================== */}
+
       <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-white">
+
         <div className="flex items-center gap-3">
+
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full bg-[#1B733D] text-white flex items-center justify-center hover:bg-[#155a30] transition-colors"
             aria-label="Go back"
           >
+
             <ChevronLeft size={20} />
+
           </button>
-          <h1 className="text-2xl font-semibold text-green-700">Conduct Technical assessment</h1>
+
+          <h1 className="text-2xl font-semibold text-green-700">
+            Conduct Technical assessment
+          </h1>
+
         </div>
+
+
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+
+          <button
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+          >
+
             <i className="ri-save-line" />
+
             Save As Draft
+
           </button>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+
+
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+
             <i className="ri-check-line" />
+
             Save
+
           </button>
-          
+
         </div>
+
       </div>
 
+
+      {/* ======================================================
+          MAIN CONTENT
+      ====================================================== */}
+
       <div className="flex-1 flex overflow-hidden">
+
+
+        {/* ====================================================
+            LEFT SIDEBAR
+        ==================================================== */}
+
         <div
           className={`transition-all duration-300 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0 ${
-            collapsed ? "w-16" : "w-64"
+            collapsed
+              ? "w-16"
+              : "w-64"
           }`}
         >
+
           <div className="p-4">
+
             <div className="flex items-center justify-between mb-4">
-              {!collapsed && <h2 className="text-sm font-semibold text-gray-900">Sections</h2>}
+
+              {!collapsed && (
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Sections
+                </h2>
+              )}
+
               <button
-                onClick={() => setCollapsed(!collapsed)}
+                onClick={() =>
+                  setCollapsed(!collapsed)
+                }
                 className="p-1 hover:bg-gray-200 rounded transition"
                 aria-label="Toggle collapse"
               >
+
                 <LayoutGrid className="text-gray-600 w-5 h-5" />
+
               </button>
+
             </div>
 
+
             <nav className="space-y-1">
+
               {[
-                { id: "rfp-details", label: "RFP details" },
-                { id: "acknowledgment", label: "Acknowledgment" },
-                { id: "vendors", label: "Vendors" },
+                {
+                  id: "rfp-details",
+                  label: "RFP details",
+                },
+                {
+                  id: "acknowledgment",
+                  label: "Acknowledgment",
+                },
+                {
+                  id: "vendors",
+                  label: "Vendors",
+                },
               ].map((item) => (
+
                 <button
                   key={item.id}
-                  onClick={() => scrollToSection(item.id)}
+                  onClick={() =>
+                    scrollToSection(
+                      item.id
+                    )
+                  }
                   className={`group relative w-full text-left px-3 py-2 rounded text-sm flex items-center transition-all duration-200 ${
                     activeSection === item.id
                       ? "bg-green-100 text-green-700 border-l-4 border-green-600"
                       : "text-gray-700 hover:bg-green-50 hover:text-green-700"
                   }`}
                 >
-                  {!collapsed && <span className="transition-all duration-200">{item.label}</span>}
+
+                  {!collapsed && (
+                    <span className="transition-all duration-200">
+                      {item.label}
+                    </span>
+                  )}
+
                 </button>
+
               ))}
+
             </nav>
+
           </div>
+
         </div>
 
+
+        {/* ====================================================
+            PAGE CONTENT
+        ==================================================== */}
+
         <div className="flex-1 overflow-y-auto">
+
           <div className="max-w-6xl mx-auto p-8 space-y-8">
+
+
+            {/* =================================================
+                PAGE TITLE
+            ================================================= */}
+
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-green-700">Leadership Development Training Program</h2>
+
+              <h2 className="text-2xl font-semibold text-green-700">
+                Leadership Development Training Program
+              </h2>
+
               <span className="px-3 py-1 bg-orange-100 text-orange-600 text-sm font-medium rounded">
                 Evaluation Inprogress
               </span>
+
             </div>
 
-            <div ref={rfpDetailsRef} className="space-y-6">
+
+            {/* =================================================
+                RFP DETAILS
+            ================================================= */}
+
+            <div
+              ref={rfpDetailsRef}
+              className="space-y-6"
+            >
+
               <div className="grid grid-cols-3 gap-6">
+
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">RFP ID</p>
-                  <p className="text-sm font-semibold text-blue-600">RFP2131424</p>
+
+                  <p className="text-xs text-gray-500 mb-2">
+                    RFP ID
+                  </p>
+
+                  <p className="text-sm font-semibold text-blue-600">
+                    RFP2131424
+                  </p>
+
                 </div>
+
+
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">PR Reference</p>
-                  <p className="text-sm font-semibold text-blue-600">PR524252</p>
+
+                  <p className="text-xs text-gray-500 mb-2">
+                    PR Reference
+                  </p>
+
+                  <p className="text-sm font-semibold text-blue-600">
+                    PR524252
+                  </p>
+
                 </div>
+
+
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Bid closing date/time</p>
-                  <p className="text-sm font-medium text-gray-900">29th Oct 2025, 5:00 PM</p>
+
+                  <p className="text-xs text-gray-500 mb-2">
+                    Bid closing date/time
+                  </p>
+
+                  <p className="text-sm font-medium text-gray-900">
+                    29th Oct 2025, 5:00 PM
+                  </p>
+
                 </div>
+
               </div>
+
+
               <div className="grid grid-cols-2 gap-6">
+
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Deadline</p>
-                  <p className="text-sm text-gray-900">24-Oct-2025 6:00 PM</p>
+
+                  <p className="text-xs text-gray-500 mb-2">
+                    Deadline
+                  </p>
+
+                  <p className="text-sm text-gray-900">
+                    24-Oct-2025 6:00 PM
+                  </p>
+
                 </div>
+
+
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Evaluator</p>
-                  <p className="text-sm text-gray-900">Eng. Ahmed Saleh (TEC Member)</p>
+
+                  <p className="text-xs text-gray-500 mb-2">
+                    Evaluator
+                  </p>
+
+                  <p className="text-sm text-gray-900">
+                    Eng. Ahmed Saleh (TEC Member)
+                  </p>
+
                 </div>
+
               </div>
+
             </div>
 
-            <div ref={acknowledgmentRef} className="space-y-4">
-              <h3 className="text-xl font-semibold text-green-700">Acknowledgment</h3>
+
+            {/* =================================================
+                ACKNOWLEDGMENT
+            ================================================= */}
+
+            <div
+              ref={acknowledgmentRef}
+              className="space-y-4"
+            >
+
+              <h3 className="text-xl font-semibold text-green-700">
+                Acknowledgment
+              </h3>
+
+
               <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  By confirming below, I acknowledge that I am an authorized member of the Technical Evaluation
-                  Committee for RFP-1003 and that I am present for the official opening of the Technical Proposals.
+
+                  By confirming below, I acknowledge that I am an authorized member of the Technical Evaluation Committee for RFP-1003 and that I am present for the official opening of the Technical Proposals.
+
                 </p>
+
+
                 <p className="text-sm text-gray-700">
+
                   You will receive a confirmation code on your registered mobile number.
+
                 </p>
+
+
                 {!acknowledged ? (
+
                   <button
                     onClick={handleAcknowledgeClick}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
+
                     I acknowledge
+
                   </button>
+
                 ) : (
+
                   <button
                     disabled
-                    className="px-6 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
+                    className="px-6 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
                   >
+
                     <i className="ri-check-line" />
+
                     You have acknowledged
+
                   </button>
+
                 )}
+
               </div>
+
             </div>
 
-            <div ref={vendorsRef} className="space-y-4">
+
+            {/* =================================================
+                VENDORS
+            ================================================= */}
+
+            <div
+              ref={vendorsRef}
+              className="space-y-4"
+            >
+
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-green-700">Vendor list</h3>
+
+                <h3 className="text-xl font-semibold text-green-700">
+                  Vendor list
+                </h3>
+
+
                 {acknowledged && (
+
                   <div className="flex items-center gap-3">
+
+
+                    {/* REVIEW ERROR */}
+
                     {reviewError && (
-                      <span className="text-xs text-red-500">{reviewError}</span>
+
+                      <span className="text-xs text-red-500">
+                        {reviewError}
+                      </span>
+
                     )}
+
+
+                    {/* VIEW RESULTS */}
+
+                    {evalRows.length > 0 && (
+
+                      <button
+                        onClick={() =>
+                          setShowEvalModal(true)
+                        }
+                        className="px-6 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 flex items-center gap-2"
+                      >
+
+                        View Results
+
+                      </button>
+
+                    )}
+
+
+                    {/* AI EVALUATION */}
+
                     <button
                       onClick={handleReview}
                       disabled={isReviewing}
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                     >
+
                       {isReviewing ? (
-                        <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> Evaluating...</>
-                      ) : "Evaluate with AI"}
+
+                        <>
+                          <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" />
+
+                          Evaluating...
+                        </>
+
+                      ) : (
+
+                        <>
+                          <Sparkles size={16} />
+
+                          {evalRows.length > 0
+                            ? "Re-evaluate with AI"
+                            : "Evaluate with AI"}
+
+                        </>
+
+                      )}
+
                     </button>
-                    {/* <button
-                      onClick={onNavigateToVendorEvaluation}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Evaluate vendors
-                    </button> */}
+
                   </div>
+
                 )}
+
               </div>
+
+
+              {/* =================================================
+                  LOCKED VENDOR VIEW
+              ================================================= */}
 
               {!acknowledged ? (
+
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
+
                   <div className="relative">
-                    <img src="/locked-documents-illustration.jpg" alt="Locked" className="w-64 h-48 opacity-50" />
+
+                    <img
+                      src="/locked-documents-illustration.jpg"
+                      alt="Locked"
+                      className="w-64 h-48 opacity-50"
+                    />
+
                     <div className="absolute inset-0 flex items-center justify-center">
+
                       <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+
                         <i className="ri-lock-fill text-3xl text-white" />
+
                       </div>
+
                     </div>
-                  </div>
-                  <p className="text-lg font-medium text-gray-700">Vendors list & submissions are locked</p>
-                  <p className="text-sm text-gray-500">Kindly acknowledge to proceed</p>
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-12 gap-4 bg-blue-900 text-white p-4 font-medium text-sm">
-                      <div className="col-span-3">Vendors ({VENDOR_SCORE_MAP.length})</div>
-                      <div className="col-span-3">Evaluation status</div>
-                      <div className="col-span-3">Total score (Out of 100)</div>
-                      <div className="col-span-3">Decision</div>
-                    </div>
-                    {VENDOR_SCORE_MAP.map((vendor, index) => {
-                      const decision = vendorDecisions[index]
-                      const score = vendorScores[vendor.name]
-                      return (
-                        <div key={index} className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center">
-                          <div className="col-span-3 flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                              style={{ backgroundColor: vendor.color }} onClick={onNavigateToVendorEvaluation}
-                            >
-                              {vendor.avatar}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900" onClick={onNavigateToVendorEvaluation}>{vendor.name}</p>
-                              <p className="text-xs text-gray-500" onClick={onNavigateToVendorEvaluation}>{vendor.location}</p>
-                            </div>
-                          </div>
-                          <div className="col-span-3">
-                            <span
-                              className={`inline-block px-3 py-1 text-xs font-medium rounded ${
-                                decision === "approved"
-                                  ? "bg-green-100 text-green-700"
-                                  : decision === "rejected"
-                                  ? "bg-red-100 text-red-600"
-                                  : score !== null && score !== undefined
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-orange-100 text-orange-600"
-                              }`}
-                            >
-                              {decision === "approved" ? "Approved" : decision === "rejected" ? "Rejected" : score !== null && score !== undefined ? "Completed" : "Pending"}
-                            </span>
-                          </div>
-                          <div className="col-span-3">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {score !== null && score !== undefined ? score : "--"}
-                            </p>
-                          </div>
-                          <div className="col-span-3 flex items-center gap-2">
-                            <button
-                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "approved" }))}
-                              disabled={decision !== "pending" || score === null || score === undefined}
-                              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                                decision === "approved"
-                                  ? "bg-green-600 text-white cursor-not-allowed"
-                                  : score === null || score === undefined
-                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
-                                  : decision !== "pending"
-                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
-                                  : "border border-green-600 text-green-600 hover:bg-green-50"
-                              }`}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => setVendorDecisions((prev) => ({ ...prev, [index]: "rejected" }))}
-                              disabled={decision !== "pending" || score === null || score === undefined}
-                              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                                decision === "rejected"
-                                  ? "bg-red-600 text-white cursor-not-allowed"
-                                  : score === null || score === undefined
-                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
-                                  : decision !== "pending"
-                                  ? "border border-gray-300 text-gray-400 cursor-not-allowed"
-                                  : "border border-red-500 text-red-500 hover:bg-red-50"
-                              }`}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
+
                   </div>
 
-                 
+
+                  <p className="text-lg font-medium text-gray-700">
+                    Vendors list & submissions are locked
+                  </p>
+
+                  <p className="text-sm text-gray-500">
+                    Kindly acknowledge to proceed
+                  </p>
+
                 </div>
+
+              ) : (
+
+                <div className="space-y-8">
+
+
+                  {/* =================================================
+                      VENDOR SCORE TABLE
+                  ================================================= */}
+
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+
+
+                    {/* HEADER */}
+
+                    <div className="grid grid-cols-12 gap-4 bg-[rgb(27,115,61)] p-4 text-sm font-medium text-white">
+
+                      <div className="col-span-3">
+                        Vendors ({VENDOR_SCORE_MAP.length})
+                      </div>
+
+                      <div className="col-span-3">
+                        Evaluation status
+                      </div>
+
+                      <div className="col-span-3">
+                        Total score (Out of 100)
+                      </div>
+
+                      <div className="col-span-3">
+                        Decision
+                      </div>
+
+                    </div>
+
+
+                    {/* VENDOR ROWS */}
+
+                    {[...VENDOR_SCORE_MAP]
+                      .sort((a, b) => {
+
+                        const sa =
+                          vendorScores[a.name] ??
+                          -1
+
+                        const sb =
+                          vendorScores[b.name] ??
+                          -1
+
+                        return sb - sa
+
+                      })
+                      .map((vendor) => {
+
+                        const decision =
+                          vendorDecisions[
+                            vendor.name
+                          ]
+
+                        const score =
+                          vendorScores[
+                            vendor.name
+                          ]
+
+
+                        return (
+
+                          <div
+                            key={vendor.name}
+                            className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center"
+                          >
+
+
+                            {/* VENDOR */}
+
+                            <div className="col-span-3 flex items-center gap-3">
+
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer"
+                                style={{
+                                  backgroundColor:
+                                    vendor.color,
+                                }}
+                                onClick={
+                                  onNavigateToVendorEvaluation
+                                }
+                              >
+
+                                {vendor.avatar}
+
+                              </div>
+
+
+                              <div>
+
+                                <p
+                                  className="text-sm font-medium text-gray-900 cursor-pointer"
+                                  onClick={
+                                    onNavigateToVendorEvaluation
+                                  }
+                                >
+                                  {vendor.name}
+                                </p>
+
+                                <p
+                                  className="text-xs text-gray-500 cursor-pointer"
+                                  onClick={
+                                    onNavigateToVendorEvaluation
+                                  }
+                                >
+                                  {vendor.location}
+                                </p>
+
+                              </div>
+
+                            </div>
+
+
+                            {/* STATUS */}
+
+                            <div className="col-span-3">
+
+                              <span
+                                className={`inline-block px-3 py-1 text-xs font-medium rounded ${
+                                  decision === "approved"
+                                    ? "bg-green-100 text-green-700"
+                                    : decision === "rejected"
+                                    ? "bg-red-100 text-red-600"
+                                    : score !== null &&
+                                      score !== undefined
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-600"
+                                }`}
+                              >
+
+                                {decision ===
+                                "approved"
+                                  ? "Approved"
+                                  : decision ===
+                                    "rejected"
+                                  ? "Rejected"
+                                  : score !== null &&
+                                    score !== undefined
+                                  ? "Completed"
+                                  : "Pending"}
+
+                              </span>
+
+                            </div>
+
+
+                            {/* SCORE */}
+
+                            <div className="col-span-3">
+
+                              <p className="text-sm font-semibold text-gray-900">
+
+                                {score !== null &&
+                                score !== undefined
+                                  ? score
+                                  : "--"}
+
+                              </p>
+
+                            </div>
+
+
+                            {/* DECISION */}
+
+                            <div className="col-span-3 flex items-center gap-2">
+
+                              <button
+                                onClick={() =>
+                                  setVendorDecisions(
+                                    (prev) => ({
+                                      ...prev,
+                                      [vendor.name]:
+                                        "approved",
+                                    })
+                                  )
+                                }
+                                disabled={
+                                  decision !==
+                                    "pending" ||
+                                  score === null ||
+                                  score === undefined
+                                }
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                  decision ===
+                                  "approved"
+                                    ? "bg-green-600 text-white cursor-not-allowed"
+                                    : score === null ||
+                                      score === undefined
+                                    ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                    : decision !==
+                                      "pending"
+                                    ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                    : "border border-green-600 text-green-600 hover:bg-green-50"
+                                }`}
+                              >
+
+                                Approve
+
+                              </button>
+
+
+                              <button
+                                onClick={() =>
+                                  setVendorDecisions(
+                                    (prev) => ({
+                                      ...prev,
+                                      [vendor.name]:
+                                        "rejected",
+                                    })
+                                  )
+                                }
+                                disabled={
+                                  decision !==
+                                    "pending" ||
+                                  score === null ||
+                                  score === undefined
+                                }
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                  decision ===
+                                  "rejected"
+                                    ? "bg-red-600 text-white cursor-not-allowed"
+                                    : score === null ||
+                                      score === undefined
+                                    ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                    : decision !==
+                                      "pending"
+                                    ? "border border-gray-300 text-gray-400 cursor-not-allowed"
+                                    : "border border-red-500 text-red-500 hover:bg-red-50"
+                                }`}
+                              >
+
+                                Reject
+
+                              </button>
+
+                            </div>
+
+                          </div>
+
+                        )
+
+                      })}
+
+                  </div>
+
+                </div>
+
               )}
+
             </div>
+
           </div>
+
         </div>
+
+
+        {/* ======================================================
+            DECISION DIALOG
+        ====================================================== */}
 
         {showDecisionDialog && (
+
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+
             <AssessmentDecisionDialog
-              onComplete={handleCompleteDecision}
-              onCancel={() => setShowDecisionDialog(false)}
-              onDecisionChange={setSelectedDecision}
+              onComplete={
+                handleCompleteDecision
+              }
+              onCancel={() =>
+                setShowDecisionDialog(false)
+              }
+              onDecisionChange={
+                setSelectedDecision
+              }
             />
+
           </div>
+
         )}
 
+
+        {/* ======================================================
+            SIGNATURE DIALOG
+        ====================================================== */}
+
         <SignatureVerificationDialog
-          isOpen={showSignatureDialog}
-          onClose={() => setShowSignatureDialog(false)}
-          onAcknowledge={handleSignatureAcknowledge}
+          isOpen={
+            showSignatureDialog
+          }
+          onClose={() =>
+            setShowSignatureDialog(false)
+          }
+          onAcknowledge={
+            handleSignatureAcknowledge
+          }
         />
+
       </div>
 
-      {/* AI Evaluation Results Modal */}
+
+      {/* ========================================================
+          AI EVALUATION RESULTS MODAL
+      ======================================================== */}
+
       {showEvalModal && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: "90vw", maxHeight: "85vh" }}>
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <h2 className="text-lg font-semibold text-green-700">AI Evaluation Results</h2>
+
+          <div
+            className="bg-white rounded-2xl shadow-2xl flex flex-col"
+            style={{
+              width: "92vw",
+              maxWidth: "1400px",
+              maxHeight: "88vh",
+            }}
+          >
+
+
+            {/* ==================================================
+                MODAL HEADER
+            ================================================== */}
+
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
+
+              <div>
+
+                <h2 className="text-xl font-semibold text-green-700">
+                  AI Technical Evaluation
+                </h2>
+
+                <p className="text-sm text-gray-500 mt-1">
+                  Vendor proposals evaluated against the RFP evaluation criteria
+                </p>
+
+              </div>
+
+
               <button
-                onClick={() => setShowEvalModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() =>
+                  setShowEvalModal(false)
+                }
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Close"
               >
+
                 <X className="w-5 h-5 text-gray-600" />
+
               </button>
+
             </div>
 
-            {/* Modal Body — scrollable table */}
-            <div className="flex-1 overflow-auto p-6">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm" style={{ minWidth: "1100px" }}>
-                  <thead>
-                    <tr>
-                      {evalHeaders.map((h) => (
-                        <th
-                          key={h}
-                          className="bg-gray-50 text-left px-3 py-2 font-semibold text-gray-700 border border-gray-200 whitespace-nowrap"
-                          style={{ minWidth: "140px" }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {evalRows.map((row, i) => {
-                      const isTotal =
-                        row["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score"
-                      return (
-                        <tr
-                          key={i}
-                          className={isTotal ? "bg-green-700 text-white font-semibold" : "border-b border-gray-100 hover:bg-gray-50"}
-                        >
-                          {evalHeaders.map((h) => (
-                            <td key={h} className="px-3 py-2 border border-gray-200 align-middle">
-                              {row[h] === "N/A" ? "" : row[h]}
-                            </td>
-                          ))}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+
+            {/* ==================================================
+                SCROLLABLE BODY (cards + table together)
+            ================================================== */}
+
+            <div className="flex-1 overflow-auto px-6 py-6">
+
+              {/* VENDOR SUMMARY CARDS */}
+
+              <div className="grid grid-cols-3 gap-4 mb-6">
+
+                {[...VENDOR_SCORE_MAP]
+                  .sort((a, b) => {
+
+                    const scoreA =
+                      vendorScores[a.name] ??
+                      -1
+
+                    const scoreB =
+                      vendorScores[b.name] ??
+                      -1
+
+                    return scoreB - scoreA
+
+                  })
+                  .map((vendor, index) => {
+
+                    const score =
+                      vendorScores[
+                        vendor.name
+                      ]
+
+
+                    return (
+
+                      <div
+                        key={vendor.name}
+                        className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                            style={{ backgroundColor: vendor.color }}
+                          >
+                            {vendor.avatar}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{vendor.name}</p>
+                            <p className="text-xs text-gray-500">Technical Proposal</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {index === 0 && score !== null && score !== undefined && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium block mb-1">
+                              Highest
+                            </span>
+                          )}
+                          <p className="text-2xl font-bold text-gray-900">
+                            {score ?? "--"}<span className="text-xs font-normal text-gray-400">/100</span>
+                          </p>
+                        </div>
+                      </div>
+
+                    )
+
+                  })}
+
               </div>
+
+              {/* TABLE */}
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+
+                <table className="w-full border-collapse">
+
+                  {/* =================================================
+                      TABLE HEADER
+                  ================================================= */}
+
+                  <thead className="sticky top-0 z-10">
+
+                    <tr className="bg-[#1B733D] text-white">
+
+                      <th className="px-4 py-4 text-left min-w-[420px]">
+                        Evaluation Criteria
+                      </th>
+
+                      <th className="px-4 py-4 text-center w-[100px] border-r-2 border-gray-300">
+                        Weight
+                      </th>
+
+                      {VENDOR_SCORE_MAP.map(
+                        (vendor) => (
+
+                          <th
+                            key={vendor.name}
+                            className="px-4 py-4 text-center min-w-[170px]"
+                          >
+                            {vendor.name}
+                          </th>
+
+                        )
+                      )}
+
+                    </tr>
+
+                  </thead>
+
+
+                  {/* =================================================
+                      TABLE BODY
+                  ================================================= */}
+
+                  <tbody>
+
+                    {evalRows
+                      .filter(
+                        (row) =>
+                          row[
+                            "Main Criterion"
+                          ]
+                            ?.replace(
+                              /\*/g,
+                              ""
+                            )
+                            .trim()
+                            .toLowerCase() !==
+                          "total score"
+                      )
+                      .map(
+                        (
+                          row,
+                          index
+                        ) => {
+
+                          const mainCriterion =
+                            row[
+                              "Main Criterion"
+                            ]
+                              ?.replace(
+                                /\*/g,
+                                ""
+                              )
+                              .trim() ||
+                            ""
+
+
+                          const subCriterion =
+                            row[
+                              "Sub-Criterion"
+                            ]
+                              ?.replace(
+                                /\*/g,
+                                ""
+                              )
+                              .trim() ||
+                            ""
+
+
+                          const weight =
+                            row[
+                              "Sub Weight"
+                            ] ||
+                            row[
+                              "Sub Weight "
+                            ] ||
+                            ""
+
+
+                          return (
+
+                            <tr
+                              key={index}
+                              className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
+                            >
+
+                              {/* ===================================
+                                  CRITERIA
+                              =================================== */}
+
+                              <td className="px-4 py-4 align-top">
+
+                                <div className="font-semibold text-gray-900">
+                                  {mainCriterion}
+                                </div>
+
+
+                                {subCriterion && (
+
+                                  <div className="mt-1 text-sm text-gray-500 leading-5">
+                                    {subCriterion}
+                                  </div>
+
+                                )}
+
+                              </td>
+
+
+                              {/* ===================================
+                                  WEIGHT
+                              =================================== */}
+
+                              <td className="px-4 py-4 text-center align-top border-r-2 border-gray-300">
+
+                                <span className="inline-flex items-center justify-center  text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
+
+                                  {weight ||
+                                    "--"}
+
+                                </span>
+
+                              </td>
+
+
+                              {/* ===================================
+                                  VENDOR SCORES
+                              =================================== */}
+
+                              {VENDOR_SCORE_MAP.map(
+                                (vendor) => {
+
+                                  const evaluation =
+                                    getVendorEvaluation(
+                                      row,
+                                      vendor
+                                    )
+
+
+                                  const score =
+                                    evaluation.score
+
+
+                                  return (
+
+                                    <td
+                                      key={
+                                        vendor.name
+                                      }
+                                      className="px-4 py-4 text-center align-top"
+                                    >
+
+                                      {score !==
+                                      null ? (
+
+                                        <button
+                                          onClick={() =>
+                                            setSelectedEvaluation(
+                                              {
+                                                vendor:
+                                                  vendor.name,
+                                                score:
+                                                  score,
+                                                reason:
+                                                  evaluation.reason,
+                                                reference:
+                                                  evaluation.reference,
+                                                subCriterion:
+                                                  subCriterion,
+                                                weight:
+                                                  weight,
+                                              }
+                                            )
+                                          }
+                                          title="Click for more detail"
+                                          className="inline-flex items-center justify-center min-w-[65px] px-3 py-2 rounded-lg font-bold text-sm text-gray-800  transition  hover:scale-105 cursor-pointer"
+                                        >
+
+                                          {score}
+                                          /
+                                          {weight ||
+                                            "?"}
+
+                                        </button>
+
+                                      ) : (
+
+                                        <span className="text-gray-400">
+                                          --
+                                        </span>
+
+                                      )}
+
+                                    </td>
+
+                                  )
+
+                                }
+                              )}
+
+                            </tr>
+
+                          )
+
+                        }
+                      )}
+
+                    {/* =================================================
+                        INSIGHTS ROW
+                    ================================================= */}
+                    <tr className="border-t border-gray-200 bg-blue-50/40">
+                      <td className="px-4 py-3 align-top">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">AI Insights</p>
+                      </td>
+                      <td className="px-4 py-3 border-r-2 border-gray-300" />
+                      {VENDOR_SCORE_MAP.map((vendor) => {
+                        const totalRow = evalRows.find((r) => r["Main Criterion"]?.replace(/\*/g, "").trim().toLowerCase() === "total score")
+                        const prefix = vendor.scoreKey.replace(" Score", "").toLowerCase()
+                        const insight = totalRow
+                          ? Object.entries(totalRow).find(
+                              ([k]) => k.toLowerCase().startsWith(prefix) && k.toLowerCase().includes("reason")
+                            )?.[1] || "--"
+                          : "--"
+                        return (
+                          <td key={vendor.name} className="px-4 py-3 align-top">
+                            <p className="text-xs text-gray-600 leading-5">{insight}</p>
+                          </td>
+                        )
+                      })}
+                    </tr>
+
+                  </tbody>
+
+
+                  {/* =================================================
+                      TOTAL SCORE
+                  ================================================= */}
+
+                  <tfoot>
+
+                    <tr className="bg-gray-50 border-t-2 border-gray-300">
+
+                      <td className="px-4 py-5 font-bold text-gray-900">
+                        TOTAL SCORE
+                      </td>
+
+
+                      <td className="px-4 py-5 text-center font-bold border-r-2 border-gray-300">
+                        100
+                      </td>
+
+
+                      {VENDOR_SCORE_MAP.map(
+                        (vendor) => {
+
+                          const score =
+                            vendorScores[
+                              vendor.name
+                            ]
+
+
+                          return (
+
+                            <td
+                              key={
+                                vendor.name
+                              }
+                              className="px-4 py-5 text-center"
+                            >
+
+                              <span className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold text-lg text-gray-900">
+
+                                {score ??
+                                  "--"}
+
+                                /100
+
+                              </span>
+
+                            </td>
+
+                          )
+
+                        }
+                      )}
+
+                    </tr>
+
+                  </tfoot>
+
+                </table>
+
+              </div>
+
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end px-6 py-4 border-t border-gray-200 flex-shrink-0">
+            {/* ==================================================
+                MODAL FOOTER
+            ================================================== */}
+
+            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0">
+
+              <p className="text-xs text-gray-500">
+
+                Click any vendor score to view AI reasoning and proposal reference.
+
+              </p>
+
+
               <button
-                onClick={() => setShowEvalModal(false)}
+                onClick={() =>
+                  setShowEvalModal(false)
+                }
                 className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
+
                 Close
+
               </button>
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
+
+      {/* ========================================================
+          AI REASONING POPUP
+      ======================================================== */}
+
+      {selectedEvaluation && (
+
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+
+
+            {/* ==================================================
+                REASONING HEADER
+            ================================================== */}
+
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
+
+              <div>
+
+                <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                  AI Evaluation
+                </p>
+
+                <h2 className="text-xl font-semibold text-gray-900 mt-1">
+                  {selectedEvaluation.vendor}
+                </h2>
+
+              </div>
+
+
+              <button
+                onClick={() =>
+                  setSelectedEvaluation(null)
+                }
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Close AI reasoning"
+              >
+
+                <X className="w-5 h-5 text-gray-600" />
+
+              </button>
+
+            </div>
+
+
+            {/* ==================================================
+                REASONING BODY
+            ================================================== */}
+
+            <div className="p-6 space-y-6">
+
+
+              {/* SCORE */}
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm text-gray-500">
+                    Evaluation Score
+                  </p>
+
+                  <p className="text-4xl font-bold text-green-700 mt-1">
+
+                    {selectedEvaluation.score}
+
+                    <span className="text-lg text-gray-400">
+                      /{selectedEvaluation.weight}
+                    </span>
+
+                  </p>
+
+                </div>
+
+
+                <div className="bg-green-50 rounded-xl px-4 py-3">
+
+                  <p className="text-xs text-green-600 font-semibold text-center">
+                    CRITERIA WEIGHT
+                  </p>
+
+                  <p className="text-xl font-bold text-green-700 text-center">
+                    {selectedEvaluation.weight}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              {/* EVALUATION CRITERIA */}
+
+              <div>
+
+                <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                  Evaluation Criteria
+                </p>
+
+                <p className="mt-2 text-sm text-gray-800 leading-6">
+                  {selectedEvaluation.subCriterion ||
+                    "No sub-criterion provided."}
+                </p>
+
+              </div>
+
+
+              {/* AI REASONING */}
+
+              <div>
+
+                <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                  AI Reasoning
+                </p>
+
+                <div className="mt-2 bg-gray-50 border border-gray-200 rounded-xl p-4">
+
+                  <p className="text-sm text-gray-700 leading-6">
+                    {selectedEvaluation.reason ||
+                      "No reasoning provided."}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              {/* PROPOSAL REFERENCE */}
+
+              <div>
+
+                <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                  Proposal Reference
+                </p>
+
+                <div className="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+
+                  <span className="text-lg">
+                    📄
+                  </span>
+
+                  <p className="text-sm font-medium text-blue-700">
+                    {selectedEvaluation.reference ||
+                      "No page reference provided."}
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* ==================================================
+                REASONING FOOTER
+            ================================================== */}
+
+            <div className="flex justify-end px-6 py-4 border-t border-gray-200">
+
+              <button
+                onClick={() =>
+                  setSelectedEvaluation(null)
+                }
+                className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+
+                Close
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
   )
 }

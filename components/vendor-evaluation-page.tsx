@@ -167,91 +167,95 @@ export default function VendorEvaluationPage({ onBack }: VendorEvaluationPagePro
                 <div className="grid grid-cols-2 gap-6">
 
                   {/* Vendor Info */}
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-blue-900 text-white px-4 py-3">
-                      <p className="text-sm font-semibold">Vendor Information</p>
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">CR Number</p>
-                        <p className="text-sm font-semibold text-gray-900">{selectedVendor.crNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Location</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedVendor.location}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Address</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedVendor.address}</p>
-                      </div>
-                    </div>
-                  </div>
+                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+  {/* Updated with Tailwind arbitrary value syntax */}
+  <div className="bg-[rgb(27,115,61)] text-white px-4 py-3">
+    <p className="text-sm font-semibold">Vendor Information</p>
+  </div>
+  <div className="p-5 space-y-4">
+    <div>
+      <p className="text-xs text-gray-500 mb-1">CR Number</p>
+      <p className="text-sm font-semibold text-gray-900">{selectedVendor.crNumber}</p>
+    </div>
+    <div>
+      <p className="text-xs text-gray-500 mb-1">Location</p>
+      <p className="text-sm font-medium text-gray-900">{selectedVendor.location}</p>
+    </div>
+    <div>
+      <p className="text-xs text-gray-500 mb-1">Address</p>
+      <p className="text-sm font-medium text-gray-900">{selectedVendor.address}</p>
+    </div>
+  </div>
+</div>
 
                   {/* Estimated & Quoted Price */}
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-blue-900 text-white px-4 py-3">
-                      <p className="text-sm font-semibold">Estimated &amp; Quoted Price</p>
-                    </div>
-                    <div className="p-5 space-y-4">
-                      {/* Gauge */}
-                      <div className="flex justify-center">
-                        <div className="relative w-48 h-28">
-                          <svg className="w-full h-full" viewBox="0 0 240 120" style={{ overflow: "visible" }}>
-                            <path d="M 20 110 A 100 100 0 0 1 220 110" fill="none" stroke="#E5E7EB" strokeWidth="20" strokeLinecap="round" />
-                            <path d="M 20 110 A 100 100 0 0 1 200 110" fill="none" stroke="#F59E0B" strokeWidth="20" strokeLinecap="round" />
-                            <circle cx="200" cy="110" r="10" fill="#F59E0B" />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center pt-6">
-                            <p className="text-lg font-bold text-gray-900">90,000,000</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-start gap-2">
-                          <div className="w-3 h-3 bg-orange-400 rounded-full mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs text-gray-500">Quoted Price (SAR)</p>
-                            <p className="text-sm font-semibold text-gray-900">90,000,000</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <div className="w-3 h-3 bg-gray-300 rounded-full mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs text-gray-500">Expected Price (SAR)</p>
-                            <p className="text-sm font-semibold text-gray-900">100,000,000</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+  {/* Header updated to rgb(27, 115, 61) & duplicate nested wrapper removed */}
+  <div className="bg-[rgb(27,115,61)] text-white px-4 py-3">
+    <p className="text-sm font-semibold">Estimated &amp; Quoted Price</p>
+  </div>
+
+  <div className="p-5 space-y-4">
+    {/* Gauge */}
+    <div className="flex justify-center">
+      <div className="relative w-48 h-28">
+        <svg className="w-full h-full" viewBox="0 0 240 120" style={{ overflow: "visible" }}>
+          <path d="M 20 110 A 100 100 0 0 1 220 110" fill="none" stroke="#E5E7EB" strokeWidth="20" strokeLinecap="round" />
+          <path d="M 20 110 A 100 100 0 0 1 200 110" fill="none" stroke="#F59E0B" strokeWidth="20" strokeLinecap="round" />
+          <circle cx="200" cy="110" r="10" fill="#F59E0B" />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center pt-6">
+          <p className="text-lg font-bold text-gray-900">90,000,000</p>
+        </div>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="flex items-start gap-2">
+        <div className="w-3 h-3 bg-orange-400 rounded-full mt-1 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-500">Quoted Price (SAR)</p>
+          <p className="text-sm font-semibold text-gray-900">90,000,000</p>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <div className="w-3 h-3 bg-gray-300 rounded-full mt-1 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-500">Expected Price (SAR)</p>
+          <p className="text-sm font-semibold text-gray-900">100,000,000</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
                 </div>
 
                 {/* Basic Details */}
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-blue-900 text-white px-4 py-3">
-                    <p className="text-sm font-semibold">Basic Details</p>
-                  </div>
-                  <div className="p-5">
-                    <div className="grid grid-cols-3 gap-6">
-                      {[
-                        { label: "Bank Name",               value: "Saudi National Bank (SNB)" },
-                        { label: "Account Number",          value: "123456789012" },
-                        { label: "IBAN Number",             value: "SA1230000001234567890012" },
-                        { label: "Tax Number",              value: "3001234567" },
-                        { label: "Reconciliation Account",  value: "400001234" },
-                        { label: "Initial Guarantee (SAR)", value: "10,000" },
-                        { label: "Phone Number",            value: "+966 501234567" },
-                        { label: "Email",                   value: "info@vendor.com" },
-                        { label: "Price Preference (SAR)",  value: "100,000,000" },
-                      ].map(({ label, value }) => (
-                        <div key={label}>
-                          <p className="text-xs text-gray-500 mb-1">{label}</p>
-                          <p className="text-sm font-semibold text-gray-900">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+  {/* Header updated to rgb(27, 115, 61) */}
+  <div className="bg-[rgb(27,115,61)] text-white px-4 py-3">
+    <p className="text-sm font-semibold">Basic Details</p>
+  </div>
+  <div className="p-5">
+    <div className="grid grid-cols-3 gap-6">
+      {[
+        { label: "Bank Name", value: "Saudi National Bank (SNB)" },
+        { label: "Account Number", value: "123456789012" },
+        { label: "IBAN Number", value: "SA1230000001234567890012" },
+        { label: "Tax Number", value: "3001234567" },
+        { label: "Reconciliation Account", value: "400001234" },
+        { label: "Initial Guarantee (SAR)", value: "10,000" },
+        { label: "Phone Number", value: "+966 501234567" },
+        { label: "Email", value: "info@vendor.com" },
+        { label: "Price Preference (SAR)", value: "100,000,000" },
+      ].map(({ label, value }) => (
+        <div key={label}>
+          <p className="text-xs text-gray-500 mb-1">{label}</p>
+          <p className="text-sm font-semibold text-gray-900">{value}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
               </div>
             )}
 
@@ -269,39 +273,40 @@ export default function VendorEvaluationPage({ onBack }: VendorEvaluationPagePro
                 </div>
 
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-blue-900">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-white">Type of Document</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-white">Attachment</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-white">Uploaded By</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-white">Uploaded Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((doc, i) => (
-                        <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-sm text-gray-900">{doc.type}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center flex-shrink-0">
-                                <i className="ri-file-pdf-line text-white text-sm" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
-                                <p className="text-xs text-gray-500">{doc.size}</p>
-                              </div>
-                              <button className="ml-auto p-1.5 hover:bg-gray-100 rounded">
-                                <Download className="w-4 h-4 text-gray-600" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{doc.uploadedBy}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{doc.date}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                 <table className="w-full">
+  <thead>
+    {/* Updated background color to rgb(27, 115, 61) */}
+    <tr className="bg-[rgb(27,115,61)]">
+      <th className="px-4 py-3 text-left text-sm font-semibold text-white">Type of Document</th>
+      <th className="px-4 py-3 text-left text-sm font-semibold text-white">Attachment</th>
+      <th className="px-4 py-3 text-left text-sm font-semibold text-white">Uploaded By</th>
+      <th className="px-4 py-3 text-left text-sm font-semibold text-white">Uploaded Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {documents.map((doc, i) => (
+      <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+        <td className="px-4 py-3 text-sm text-gray-900">{doc.type}</td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-red-600">
+              <i className="ri-file-pdf-line text-sm text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
+              <p className="text-xs text-gray-500">{doc.size}</p>
+            </div>
+            <button className="ml-auto rounded p-1.5 hover:bg-gray-100">
+              <Download className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-900">{doc.uploadedBy}</td>
+        <td className="px-4 py-3 text-sm text-gray-900">{doc.date}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
                 </div>
               </div>
             )}

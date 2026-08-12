@@ -1467,25 +1467,62 @@ State which fields matched and their values.
 
 10. Cumulative Purchase Order Amount Validation
 
-Look at ALL invoices in the REFERENCE INVOICE DATASET that share the same purchaseOrder as the selected invoice.
+The selected invoice is already present in the Reference Invoice Dataset.
 
-Sum the invoiceamount of all those invoices (including the selected invoice).
+Use ONLY the Reference Invoice Dataset.
 
-Compare the cumulative sum against the purchaseOrderAmount of the selected invoice.
+Do NOT count the selected invoice separately.
 
-If cumulative sum <= purchaseOrderAmount:
+Find every invoice in the Reference Invoice Dataset that has the same purchaseOrder value as the selected invoice.
+
+From each matching invoice, read ONLY these fields:
+invoiceNumber
+purchaseOrder
+invoiceamount
+
+Ignore every other monetary field including purchaseOrderAmount, taxAmount, netAmount, amount.
+
+Convert invoiceamount and purchaseOrderAmount to numeric values before any calculation.
+
+Calculate:
+Total Invoice Amount = Sum of invoiceamount of ALL matching invoices (do not add the selected invoice again).
+
+Compare Total Invoice Amount with purchaseOrderAmount of the selected invoice.
+
+If Total Invoice Amount <= purchaseOrderAmount:
 PASS
 
-If cumulative sum > purchaseOrderAmount but selected invoice alone does not exceed it:
-WARNING
-
-If cumulative sum > purchaseOrderAmount:
+If Total Invoice Amount > purchaseOrderAmount:
 FAIL
 
 Reason:
-Cumulative invoice amount for this Purchase Order exceeds the Purchase Order amount.
+"The cumulative invoice amount exceeds the Purchase Order amount."
 
-State the cumulative total, the PO amount, and the excess amount.
+In the reason field return exactly the following:
+
+PO: {purchaseOrder}
+PO Amount: {purchaseOrderAmount}
+Total Invoiced: {totalInvoiceAmount}
+Difference: {difference}
+
+Invoice Breakdown:
+
+| Invoice Number | Invoice Amount |
+|---|---|
+|5100002201|10000.00|
+|5100002202|12000.00|
+|5100002203|8000.00|
+|5100002204|9000.00|
+|5100002205|15000.00|
+
+Do not summarize the invoice list.
+Include every matching invoice in the table.
+Return the table in valid markdown.
+
+Example:
+PO: 4500005000 | PO Amount: 50000.00 | Total Invoiced: 54000.00 | Difference: 4000.00 | Invoices: 5100002201=10000.00,5100002202=12000.00,5100002203=8000.00
+
+If PASS, use the same format but Difference will be 0 or negative.
 
 CONFIDENCE SCORE:
 
@@ -1607,6 +1644,7 @@ Return exactly this JSON structure:
       }
 
       const data = await response.json()
+      console.log("AI validation response:", data)
 
       const rawResult =
         data.candidates?.[0]?.content?.parts?.[0]?.text
@@ -1616,7 +1654,7 @@ Return exactly this JSON structure:
       }
 
       const parsedResult: ValidationResponse = JSON.parse(rawResult)
-
+      console.log("VALIDATION RESULT", parsedResult)
       setValidationResult(parsedResult)
     } catch (error) {
       console.error("Invoice validation error:", error)
@@ -3042,55 +3080,16 @@ Return exactly this JSON structure:
 
               <div className="flex min-h-[520px] flex-col items-center justify-center px-6">
 
-                <div className="relative">
+                <Loader2 size={48} className="animate-spin text-green-700" />
 
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-50">
-
-                    <Brain
-                      size={40}
-                      className="text-green-700"
-                    />
-
-                  </div>
-
-                  <div className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-white shadow-lg">
-
-                    <Loader2
-                      size={18}
-                      className="animate-spin"
-                    />
-
-                  </div>
-
-                </div>
-
-                <h3 className="mt-7 text-xl font-semibold text-gray-900">
-                  AI is validating the invoice
+                <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                  Validating invoice...
                 </h3>
 
-                <p className="mt-2 max-w-md text-center text-sm leading-6 text-gray-500">
-                  The AI model is checking the Purchase Order, vendor,
-                  Goods Receipt, quantity, amount, tax, payment terms
-                  and similar invoices.
-                </p>
-
-                <div className="mt-8 flex items-center gap-2">
-
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600" />
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600 [animation-delay:150ms]" />
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-green-600 [animation-delay:300ms]" />
-
-                </div>
-
-                <div className="mt-7 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-xs font-medium text-green-700">
-
-                  <Loader2
-                    size={14}
-                    className="animate-spin"
-                  />
-
-                  AI model is running...
-
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:0ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-green-600 [animation-delay:300ms]" />
                 </div>
 
               </div>
@@ -3342,7 +3341,7 @@ Return exactly this JSON structure:
                                 {config.label}
                               </span>
 
-                              {validation.reason && (
+                              {(validation.reason || index === 9) && (
                                 <button
                                   onClick={() => toggleReason(index)}
                                   className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
@@ -3396,15 +3395,56 @@ Return exactly this JSON structure:
 
                                 </div>
 
-                                <div>
+                                <div className="w-full">
 
                                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
                                     AI reasoning
                                   </p>
 
-                                  <p className="text-sm leading-6 text-gray-600">
-                                    {validation.reason}
-                                  </p>
+                                  {(validation.title.toLowerCase().includes("cumulative") || index === 9) ? (() => {
+                                    const po = selectedInvoice?.purchaseOrder
+                                    const poAmt = parseFloat(selectedInvoice?.purchaseOrderAmount || "0")
+                                    const matchingInvoices = po ? invoiceData.filter((inv) => inv.purchaseOrder === po) : []
+                                    const total = matchingInvoices.reduce((sum, inv) => sum + parseFloat(inv.invoiceamount || "0"), 0)
+                                    const diff = total - poAmt
+                                    console.log("CUMULATIVE DEBUG", { po, poAmt, matchingInvoices, total, diff })
+                                    return (
+                                      <div className="mt-1 space-y-3">
+                                        <p className="text-sm leading-6 text-gray-600">{validation.reason?.split("Invoice Breakdown:")[0].trim()}</p>
+                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                          <span><span className="font-medium text-gray-700">PO:</span> {po}</span>
+                                          <span><span className="font-medium text-gray-700">PO Amount:</span> {poAmt.toFixed(2)}</span>
+                                        </div>
+                                        <table className="w-full text-sm border-collapse">
+                                          <thead>
+                                            <tr>
+                                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700 bg-gray-50">Invoice Number</th>
+                                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700 bg-gray-50">Invoice Amount</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {matchingInvoices.map((inv, i) => (
+                                              <tr key={i}>
+                                                <td className="border border-gray-300 px-4 py-2 text-gray-800">{inv.invoiceNumber}</td>
+                                                <td className="border border-gray-300 px-4 py-2 text-gray-800">{inv.invoiceamount}</td>
+                                              </tr>
+                                            ))}
+                                            <tr className="font-semibold bg-gray-50">
+                                              <td className="border border-gray-300 px-4 py-2 text-gray-900">Total</td>
+                                              <td className="border border-gray-300 px-4 py-2 text-gray-900">{total.toFixed(2)}</td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                        <p className={`text-sm font-medium ${diff > 0 ? "text-red-600" : "text-green-600"}`}>
+                                          Difference: {diff.toFixed(2)}
+                                        </p>
+                                      </div>
+                                    )
+                                  })() : (
+                                    <p className="text-sm leading-6 text-gray-600">
+                                      {validation.reason}
+                                    </p>
+                                  )}
 
                                 </div>
 
@@ -3471,10 +3511,7 @@ Return exactly this JSON structure:
                         <div className="bg-white/70 px-5 py-5">
 
                           <p className="text-sm leading-6 text-gray-700">
-                            {
-                              validationResult
-                                .recommendation.summary
-                            }
+                            {validationResult.recommendation.summary?.split("Invoice Breakdown:")[0].trim()}
                           </p>
 
                           {validationResult.recommendation.why
@@ -3498,7 +3535,7 @@ Return exactly this JSON structure:
 
                                       <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-400" />
 
-                                      <span>{reason}</span>
+                                      <span>{reason?.split("Invoice Breakdown:")[0].trim()}</span>
 
                                     </li>
 
