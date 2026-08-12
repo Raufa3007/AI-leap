@@ -1612,7 +1612,76 @@ export default function CommercialAssessmentPage({
             </div>
 
             {/* ==================================================
-                TABLE SCROLL AREA
+                FIXED TABLE HEADER - STAYS VISIBLE WHILE SCROLLING
+            ================================================== */}
+
+            <div className="flex-shrink-0 bg-white px-6 pb-0 pt-0 overflow-hidden">
+
+              <div className="w-full border border-gray-200 rounded-t-xl overflow-hidden">
+
+                <table className="w-full table-fixed border-collapse">
+
+                  <thead>
+
+                    <tr className="bg-[#1B733D] text-white">
+
+                      <th className="px-4 py-4 text-left w-[34%] bg-[#1B733D]">
+                        Evaluation Criteria
+                      </th>
+
+                      <th className="px-4 py-4 text-center w-[8%] border-r-2 border-green-700 bg-[#1B733D]">
+                        Weight
+                      </th>
+
+                      {sortedVendors.map(
+                        (vendor) => {
+
+                          const config =
+                            getVendorConfig(
+                              vendor.name ||
+                                getVendorNameById(
+                                  vendor.id
+                                )
+                            )
+
+                          return (
+
+                            <th
+                              key={
+                                vendor.id
+                              }
+                              className="px-4 py-4 text-center bg-[#1B733D]"
+                              style={{
+                                width: `${
+                                  58 /
+                                  Math.max(
+                                    sortedVendors.length,
+                                    1
+                                  )
+                                }%`,
+                              }}
+                            >
+                              {
+                                config.name
+                              }
+                            </th>
+
+                          )
+                        }
+                      )}
+
+                    </tr>
+
+                  </thead>
+
+                </table>
+
+              </div>
+
+            </div>
+
+            {/* ==================================================
+                TABLE SCROLL AREA - CONTENT SCROLLS ONLY
 
                 IMPORTANT:
                 pr-0 is intentional.
@@ -1627,71 +1696,14 @@ export default function CommercialAssessmentPage({
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
 
-              <div className="w-full pl-6 pr-0 py-6">
+              <div className="w-full pl-6 pr-0">
 
-                <div className="w-full border border-gray-200 rounded-xl overflow-hidden">
+                <div className="w-full border border-t-0 border-gray-200 rounded-b-xl overflow-hidden">
 
                   <table className="w-full table-fixed border-collapse">
 
                     {/* ==================================================
-                        STICKY TABLE HEADER
-                    ================================================== */}
-
-                    <thead className="sticky top-0 z-30">
-
-                      <tr className="bg-[#1B733D] text-white">
-
-                        <th className="px-4 py-4 text-left w-[34%] bg-[#1B733D]">
-                          Evaluation Criteria
-                        </th>
-
-                        <th className="px-4 py-4 text-center w-[8%] border-r-2 border-green-700 bg-[#1B733D]">
-                          Weight
-                        </th>
-
-                        {sortedVendors.map(
-                          (vendor) => {
-
-                            const config =
-                              getVendorConfig(
-                                vendor.name ||
-                                  getVendorNameById(
-                                    vendor.id
-                                  )
-                              )
-
-                            return (
-
-                              <th
-                                key={
-                                  vendor.id
-                                }
-                                className="px-4 py-4 text-center bg-[#1B733D]"
-                                style={{
-                                  width: `${
-                                    58 /
-                                    Math.max(
-                                      sortedVendors.length,
-                                      1
-                                    )
-                                  }%`,
-                                }}
-                              >
-                                {
-                                  config.name
-                                }
-                              </th>
-
-                            )
-                          }
-                        )}
-
-                      </tr>
-
-                    </thead>
-
-                    {/* ==================================================
-                        TABLE BODY
+                        TABLE BODY - SCROLLS ONLY
                     ================================================== */}
 
                     <tbody>
