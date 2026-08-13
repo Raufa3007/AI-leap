@@ -8,6 +8,7 @@ import {
   CHECKLIST_QUESTIONS,
 } from "@/lib/pr-constants"
 import { savePRDraft } from "./save-pr-draft"
+import { extractTextFromPDF } from "@/lib/pdf-extractor"
 
 export interface BillItemState {
   id: number
@@ -68,6 +69,14 @@ export interface ProcessChatResponse {
   error?: string
 }
 
+export interface PDFExtractResponse {
+  success: boolean
+  message: string
+  updatedState?: FullPRState
+  extractedData?: any
+  error?: string
+}
+
 const budgetValues = BUDGET_CODE_OPTIONS.map((o) => o.value)
 const materialGroupValues = MATERIAL_GROUP_OPTIONS.map((o) => o.value)
 const uomValues = UNIT_OF_MEASURE_OPTIONS.map((o) => o.value)
@@ -118,6 +127,291 @@ function validateAndSanitizeExtractedData(extracted: any) {
   }
 
   return extracted
+}
+
+export async function extractPRDetailsFromPDF(
+  fileBase64: string,
+  currentState: FullPRState,
+): Promise<PDFExtractResponse> {
+  try {
+    if (!fileBase64 || typeof fileBase64 !== "string") {
+      return {
+        success: false,
+        message: "Please upload a PDF file.",
+        error: "Missing PDF file data",
+      }
+    }
+
+    const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, "").trim()
+    if (!cleanBase64) {
+      return {
+        success: false,
+        message: "Please upload a PDF file.",
+        error: "Empty base64 payload",
+      }
+    }
+
+    const buffer = Buffer.from(cleanBase64, "base64")
+    if (!buffer || buffer.length === 0) {
+      return {
+        success: false,
+        message: "Please upload a PDF file.",
+        error: "Invalid Buffer conversion",
+      }
+    }
+
+    // 1. Server-side PDF extraction
+    let extractedText = ""
+    try {
+      extractedText = await extractTextFromPDF(buffer)
+    } catch (parseErr: any) {
+      console.error("[ai-pr-assistant] PDF extraction error:", parseErr)
+      const msg = parseErr?.message || ""
+      if (msg.includes("No readable text")) {
+        return {
+          success: false,
+          message: "No readable text could be extracted from this PDF.",
+          error: msg,
+        }
+      }
+      return {
+        success: false,
+        message: "Unable to read this PDF. Please try another document.",
+        error: msg,
+      }
+    }
+
+    if (
+      !extractedText ||
+      extractedText.trim() === "" ||
+      extractedText.trim() === "No readable text could be extracted from this PDF."
+    ) {
+      return {
+        success: false,
+        message: "No readable text could be extracted from this PDF.",
+        error: "Empty or unreadable PDF text",
+      }
+    }
+
+    // 2. Call Gemini 2.5 Flash with extracted text
+    const apiKey = getApiKey()
+    const ai = new GoogleGenAI({ apiKey })
+
+    const systemPrompt = `You are a specialized Procurement Purchase Requisition (PR) PDF Data Extraction AI Assistant.
+Your task is to extract structured procurement information from text extracted from a PDF document (RFP, Scope of Work, Quotation, Proposal, Purchase Order, etc.).
+
+STRICT EXTRACTION RULES:
+1. Extract ONLY information explicitly available in the PDF text provided. Do NOT invent, assume, or infer unsupported information.
+2. If a field (scope_of_work, purpose_and_justification, business_impact_expected_outcome) is not explicitly stated in the PDF text, return null for that field. Do NOT generate placeholder or generic text.
+3. For Purpose & Justification: Return null if the document does not provide explicit purpose or justification. Do not generate a generic justification.
+4. For Business Impact / Expected Outcome: Return null if expected benefits/impact/outcomes are unavailable in the PDF.
+5. Dates MUST be formatted strictly as YYYY-MM-DD (e.g. 2026-08-25). If no delivery date is given in the PDF, return null. Never invent dates.
+6. Prices: Extract the explicit estimated unit price as a numeric string without currency symbols (e.g. "75000" for ₹75,000, $75,000, SAR 75,000). If unavailable, return null. Do NOT calculate unit price from total price unless explicitly provided.
+7. For Bill of Quantity (BOQ):
+   - Inspect ALL sections of the document including tables, item lists, pricing sections, scope sections, technical specifications, quantity schedules, commercial sections, and delivery requirements.
+   - Every distinct product, material, service, or line item MUST be extracted into a separate object in bill_of_quantity.
+   - material_group: MUST be ONE of the allowed material group codes listed below, or null if ambiguous.
+   - item_name: Explicate title/name of product or service.
+   - delivery_date: Date formatted as YYYY-MM-DD or null.
+   - quantity: Quantity as string (numeric only, e.g. "10") or null.
+   - unit_of_measure: MUST be ONE of the allowed UOM codes listed below, or null if ambiguous.
+   - unit_price: Unit price as numeric string or null.
+   - description: Relevant description of item. If not explicitly found in PDF, write a concise, relevant description based on the item name and context.
+8. For Procurement Checklist:
+   - Carefully check the 6 checklist questions below against the PDF document content.
+   - Return answer: true ONLY when the PDF text clearly and explicitly supports that checklist item.
+   - A partial or weak match must remain false. Do not guess.
+
+ALLOWED MATERIAL GROUPS (material_group must ONLY be one of these exact codes or null):
+${MATERIAL_GROUP_OPTIONS.map((m) => `- "${m.value}": ${m.label}`).join("\n")}
+
+ALLOWED UNITS OF MEASURE (unit_of_measure must ONLY be one of these exact codes or null):
+${UNIT_OF_MEASURE_OPTIONS.map((u) => `- "${u.value}": ${u.label}`).join("\n")}
+
+CHECKLIST QUESTIONS (id 1-6):
+${CHECKLIST_QUESTIONS.map((c) => `- Question ID ${c.id}: ${c.question}`).join("\n")}
+
+Return ONLY a JSON object adhering strictly to this schema:
+{
+  "scope_of_work": string | null,
+  "purpose_and_justification": string | null,
+  "business_impact_expected_outcome": string | null,
+  "checklist_updates": [
+    {
+      "question_id": number,
+      "answer": boolean
+    }
+  ],
+  "bill_of_quantity": [
+    {
+      "material_group": string | null,
+      "item_name": string | null,
+      "delivery_date": string | null,
+      "quantity": string | null,
+      "unit_of_measure": string | null,
+      "unit_price": string | null,
+      "description": string | null
+    }
+  ]
+}`
+
+    const userContent = `EXTRACTED PDF DOCUMENT TEXT:\n\n${extractedText}`
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: systemPrompt + "\n\n" + userContent }],
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+      },
+    })
+
+    const rawText = response.text || "{}"
+    let extractedDataRaw: any
+    try {
+      extractedDataRaw = cleanAndParseJSON(rawText)
+    } catch (jsonErr: any) {
+      console.error("[ai-pr-assistant] Invalid JSON returned by Gemini:", rawText, jsonErr)
+      return {
+        success: false,
+        message: "Unable to extract procurement information from the document. Please try again.",
+        error: "Invalid JSON response from Gemini",
+      }
+    }
+
+    const extracted = validateAndSanitizeExtractedData(extractedDataRaw)
+
+    // 3. Merge into PR state (preserving existing user-entered values)
+    const newState: FullPRState = JSON.parse(JSON.stringify(currentState))
+
+    if (extracted.scope_of_work && typeof extracted.scope_of_work === "string" && extracted.scope_of_work.trim()) {
+      newState.formData.scope_of_work = extracted.scope_of_work.trim()
+    }
+
+    if (
+      extracted.purpose_and_justification &&
+      typeof extracted.purpose_and_justification === "string" &&
+      extracted.purpose_and_justification.trim()
+    ) {
+      newState.formData.purpose_and_justification = extracted.purpose_and_justification.trim()
+    }
+
+    if (
+      extracted.business_impact_expected_outcome &&
+      typeof extracted.business_impact_expected_outcome === "string" &&
+      extracted.business_impact_expected_outcome.trim()
+    ) {
+      newState.formData.business_impact_expected_outcome = extracted.business_impact_expected_outcome.trim()
+    }
+
+    // Merge Procurement Checklist (false -> true ONLY, never true -> false)
+    if (Array.isArray(extracted.checklist_updates)) {
+      extracted.checklist_updates.forEach((up: { question_id: number; answer: boolean }) => {
+        if (up && typeof up.question_id === "number" && up.answer === true) {
+          const item = newState.checklist.find((c) => c.id === up.question_id)
+          if (item) {
+            item.answer = true
+          }
+        }
+      })
+    }
+
+    // Merge Bill of Quantity (BOQ)
+    if (Array.isArray(extracted.bill_of_quantity) && extracted.bill_of_quantity.length > 0) {
+      const isInitialSingleEmpty =
+        newState.billItems.length === 1 &&
+        !newState.billItems[0].itemName &&
+        !newState.billItems[0].quantity &&
+        !newState.billItems[0].unitPrice
+
+      let itemsTarget = isInitialSingleEmpty ? [] : [...newState.billItems]
+
+      extracted.bill_of_quantity.forEach((exItem: any) => {
+        if (!exItem) return
+
+        let existingMatch = itemsTarget.find(
+          (b) =>
+            b.itemName &&
+            exItem.item_name &&
+            (b.itemName.toLowerCase().includes(exItem.item_name.toLowerCase()) ||
+              exItem.item_name.toLowerCase().includes(b.itemName.toLowerCase())),
+        )
+
+        if (existingMatch) {
+          if (exItem.material_group && !existingMatch.materialGroup) existingMatch.materialGroup = exItem.material_group
+          if (exItem.delivery_date && !existingMatch.deliveryDate) existingMatch.deliveryDate = exItem.delivery_date
+          if (exItem.quantity && !existingMatch.quantity) existingMatch.quantity = String(exItem.quantity)
+          if (exItem.unit_of_measure && !existingMatch.unitOfMeasure) existingMatch.unitOfMeasure = exItem.unit_of_measure
+          if (exItem.unit_price && !existingMatch.unitPrice) {
+            const cleanedPrice = String(exItem.unit_price).replace(/[^0-9.]/g, "")
+            existingMatch.unitPrice = cleanedPrice || String(exItem.unit_price)
+          }
+          if (exItem.description && !existingMatch.description) existingMatch.description = exItem.description
+          if (exItem.item_name && !existingMatch.itemName) existingMatch.itemName = exItem.item_name
+        } else {
+          const nextId = itemsTarget.length > 0 ? Math.max(...itemsTarget.map((b) => b.id)) + 1 : 1
+          const cleanedPrice = exItem.unit_price ? String(exItem.unit_price).replace(/[^0-9.]/g, "") : ""
+          itemsTarget.push({
+            id: nextId,
+            materialGroup: exItem.material_group || "",
+            itemName: exItem.item_name || "",
+            deliveryDate: exItem.delivery_date || "",
+            quantity: exItem.quantity ? String(exItem.quantity) : "",
+            unitOfMeasure: exItem.unit_of_measure || "",
+            unitPrice: cleanedPrice || (exItem.unit_price ? String(exItem.unit_price) : ""),
+            description: exItem.description || "",
+          })
+        }
+      })
+
+      newState.billItems = itemsTarget
+    }
+
+    // Auto-save draft if PR Number exists
+    if (newState.formData.pr_number) {
+      try {
+        await savePRDraft({
+          ...newState.formData,
+          preferred_vendors: newState.vendors.map((v) => ({ name: v.name })),
+          bill_of_quantity: newState.billItems.map((item) => ({
+            material_group: item.materialGroup,
+            item_name: item.itemName,
+            delivery_date: item.deliveryDate,
+            quantity: item.quantity,
+            unit_of_measure: item.unitOfMeasure,
+            unit_price: item.unitPrice,
+            description: item.description,
+          })),
+          checklist_project_in_procurement_plan: newState.checklist[0]?.answer || false,
+          checklist_team_specifications_mentioned: newState.checklist[1]?.answer || false,
+          checklist_supplier_coordinator_details: newState.checklist[2]?.answer || false,
+          checklist_sample_receiver_details: newState.checklist[3]?.answer || false,
+          checklist_scope_similar_to_existing_contract: newState.checklist[4]?.answer || false,
+          checklist_limited_tender_companies_listed: newState.checklist[5]?.answer || false,
+        })
+      } catch (err) {
+        console.error("[ai-pr-assistant] Auto-save draft error after PDF extract:", err)
+      }
+    }
+
+    return {
+      success: true,
+      message: "PDF processed successfully. PR fields have been auto-filled from the document.",
+      updatedState: newState,
+      extractedData: extracted,
+    }
+  } catch (error: any) {
+    console.error("[ai-pr-assistant] Error processing PDF:", error)
+    return {
+      success: false,
+      message: "Unable to extract procurement information from the document. Please try again.",
+      error: error?.message || "Unknown error",
+    }
+  }
 }
 
 export async function extractAndProcessPRChat(
@@ -248,7 +542,6 @@ Respond with a JSON object matching this schema:
 
     // Merge BOQ Items
     if (Array.isArray(extracted.bill_of_quantity) && extracted.bill_of_quantity.length > 0) {
-      // Check if existing items are just 1 empty initial item
       const isInitialSingleEmpty =
         newState.billItems.length === 1 &&
         !newState.billItems[0].itemName &&
@@ -257,10 +550,9 @@ Respond with a JSON object matching this schema:
 
       let itemsTarget = isInitialSingleEmpty ? [] : [...newState.billItems]
 
-      extracted.bill_of_quantity.forEach((exItem: any, idx: number) => {
+      extracted.bill_of_quantity.forEach((exItem: any) => {
         if (!exItem) return
 
-        // Try matching existing item by itemName (case-insensitive substring) or by position
         let existingMatch = itemsTarget.find(
           (b) =>
             b.itemName &&
@@ -342,7 +634,7 @@ Respond with a JSON object matching this schema:
       missingList.push("Requestor Contact Details")
     }
 
-    newState.billItems.forEach((bItem, idx) => {
+    newState.billItems.forEach((bItem) => {
       if (!bItem.itemName) return
       const missingDetails: string[] = []
       if (!bItem.materialGroup) missingDetails.push("Material Group")

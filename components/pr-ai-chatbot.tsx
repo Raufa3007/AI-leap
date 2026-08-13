@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import {
   extractAndProcessPRChat,
+  extractPRDetailsFromPDF,
   FullPRState,
   ChatMessage,
 } from "@/app/actions/ai-pr-assistant"
@@ -80,22 +81,36 @@ For example:
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-
     if (file) {
       setSelectedFile(file)
     }
   }
 
   const handleSend = async () => {
-    if (!input.trim() || isProcessing || isReadOnly) return
+    if ((!input.trim() && !selectedFile) || isProcessing || isReadOnly) return
 
     const userText = input.trim()
+    const attachedFile = selectedFile
+
+    // Clear input bar state immediately
     setInput("")
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+
+    // Build chat message text
+    let chatDisplayMsg = userText
+    if (attachedFile) {
+      chatDisplayMsg = userText
+        ? `📄 Attached: ${attachedFile.name}\n\n${userText}`
+        : `📄 Attached document: ${attachedFile.name}`
+    }
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      text: userText,
+      text: chatDisplayMsg,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }
 
@@ -103,34 +118,92 @@ For example:
     setMessages(newHistory)
     setIsProcessing(true)
 
+    let currentStateToUse = prState
+
     try {
-      const response = await extractAndProcessPRChat(userText, newHistory, prState)
+      // 1. Process attached PDF document if present
+      if (attachedFile) {
+        if (attachedFile.type !== "application/pdf" && !attachedFile.name.toLowerCase().endsWith(".pdf")) {
+          const errorMsg: ChatMessage = {
+            id: `assistant-error-${Date.now()}`,
+            role: "assistant",
+            text: "Please upload a PDF file.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }
+          setMessages((prev) => [...prev, errorMsg])
+          setIsProcessing(false)
+          return
+        }
 
-      if (response.success && response.updatedState) {
-        onUpdateState(response.updatedState)
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = (err) => reject(err)
+          reader.readAsDataURL(attachedFile)
+        })
 
+        const pdfResponse = await extractPRDetailsFromPDF(base64, currentStateToUse)
+
+        if (pdfResponse.success && pdfResponse.updatedState) {
+          currentStateToUse = pdfResponse.updatedState
+          onUpdateState(currentStateToUse)
+        } else {
+          const errorMsg: ChatMessage = {
+            id: `assistant-pdf-err-${Date.now()}`,
+            role: "assistant",
+            text: pdfResponse.message || "Unable to extract procurement information from the document.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }
+          setMessages((prev) => [...prev, errorMsg])
+          setIsProcessing(false)
+          return
+        }
+      }
+
+      // 2. Process text message if present (or send summary if PDF only)
+      if (userText) {
+        const chatResponse = await extractAndProcessPRChat(userText, newHistory, currentStateToUse)
+
+        if (chatResponse.success && chatResponse.updatedState) {
+          onUpdateState(chatResponse.updatedState)
+
+          let replyText = chatResponse.message
+          if (attachedFile) {
+            replyText = `📄 **Document "${attachedFile.name}" processed & PR form updated.**\n\n` + replyText
+          }
+
+          const assistantMsg: ChatMessage = {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            text: replyText,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }
+          setMessages((prev) => [...prev, assistantMsg])
+        } else {
+          const errorMsg: ChatMessage = {
+            id: `assistant-error-${Date.now()}`,
+            role: "assistant",
+            text: chatResponse.message || "Sorry, I couldn't process that — please try again.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          }
+          setMessages((prev) => [...prev, errorMsg])
+        }
+      } else if (attachedFile) {
+        // PDF attached without text message
         const assistantMsg: ChatMessage = {
-          id: `assistant-${Date.now()}`,
+          id: `assistant-pdf-${Date.now()}`,
           role: "assistant",
-          text: response.message,
+          text: `📄 **PDF Document Processed Successfully!**\n\nI've extracted the procurement details from "${attachedFile.name}" and auto-filled your PR form:\n\n• Scope of Work\n• Purpose & Justification\n• Business Impact / Expected Outcome\n• Matching Procurement Checklist Items\n• Bill of Quantity Items`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         }
         setMessages((prev) => [...prev, assistantMsg])
-      } else {
-        const errorMsg: ChatMessage = {
-          id: `assistant-error-${Date.now()}`,
-          role: "assistant",
-          text: response.message || "Sorry, I couldn't process that — please try again.",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        }
-        setMessages((prev) => [...prev, errorMsg])
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error in AI PR Assistant handleSend:", err)
       const errorMsg: ChatMessage = {
         id: `assistant-error-${Date.now()}`,
         role: "assistant",
-        text: "Sorry, I couldn't process that — please try again.",
+        text: err?.message || "Sorry, I couldn't process that — please try again.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }
       setMessages((prev) => [...prev, errorMsg])
@@ -379,6 +452,7 @@ For example:
           <input
             ref={fileInputRef}
             type="file"
+            accept="application/pdf,.pdf"
             className="hidden"
             onChange={handleFileChange}
             disabled={isProcessing || isReadOnly}
@@ -413,7 +487,7 @@ For example:
           {/* Send Button */}
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isProcessing || isReadOnly}
+            disabled={(!input.trim() && !selectedFile) || isProcessing || isReadOnly}
             className="m-1.5 p-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white rounded-lg transition-colors shrink-0 shadow-sm"
             aria-label="Send Message"
           >

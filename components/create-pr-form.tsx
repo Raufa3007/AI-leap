@@ -6,7 +6,7 @@ import { savePRDraft, submitPR, loadPRDraft } from "@/app/actions/save-pr-draft"
 import { useToast } from "@/hooks/use-toast"
 import { BUDGET_CODE_OPTIONS, MATERIAL_GROUP_OPTIONS, UNIT_OF_MEASURE_OPTIONS } from "@/lib/pr-constants"
 import PRAIChatbot from "./pr-ai-chatbot"
-import { FullPRState } from "@/app/actions/ai-pr-assistant"
+import { FullPRState, extractPRDetailsFromPDF } from "@/app/actions/ai-pr-assistant"
 
 interface Vendor {
   id: number
@@ -106,6 +106,66 @@ export default function CreatePRForm({
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showAIChat, setShowAIChat] = useState(true)
+  const [isExtractingPDF, setIsExtractingPDF] = useState(false)
+
+  const handlePDFUpload = async (file: File) => {
+    if (!file) return
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a PDF file.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsExtractingPDF(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = (err) => reject(err)
+        reader.readAsDataURL(file)
+      })
+
+      const currentState: FullPRState = {
+        formData,
+        vendors,
+        billItems,
+        checklist,
+      }
+
+      const response = await extractPRDetailsFromPDF(base64, currentState)
+
+      if (response.success && response.updatedState) {
+        setFormData(response.updatedState.formData)
+        setVendors(response.updatedState.vendors)
+        setBillItems(response.updatedState.billItems)
+        setChecklist(response.updatedState.checklist)
+
+        toast({
+          title: "PDF Processed Successfully",
+          description: "PR fields have been auto-filled from the document.",
+          duration: 4000,
+        })
+      } else {
+        toast({
+          title: "PDF Extraction Failed",
+          description: response.message || "Unable to extract procurement information from the document.",
+          variant: "destructive",
+        })
+      }
+    } catch (err: any) {
+      console.error("PDF upload error:", err)
+      toast({
+        title: "Error Reading PDF",
+        description: err?.message || "Unable to read this PDF. Please try another document.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsExtractingPDF(false)
+    }
+  }
 
 
   const handleInputChange = (field: string, value: string) => {
@@ -816,12 +876,53 @@ export default function CreatePRForm({
 
             <div>
               <h2 className="text-xl font-semibold text-green-700 mb-4">Attachments</h2>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                <p className="text-gray-700 font-medium">Click or Drag file to this area to upload</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Supports single or for bulk upload and Max file size is 15MB
-                </p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-slate-50 hover:bg-slate-100 transition-colors relative">
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  disabled={isReadOnly || isExtractingPDF}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handlePDFUpload(file)
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                />
+                <div className="text-center space-y-3">
+                  {isExtractingPDF ? (
+                    <div className="py-4 space-y-2">
+                      <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                      <p className="text-sm font-semibold text-green-700">Reading PDF...</p>
+                      <p className="text-xs text-gray-500">Extracting procurement information & updating PR form...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 text-green-600 mx-auto" />
+                      <div>
+                        <p className="text-base font-bold text-gray-800">Upload Procurement Document</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Upload an RFP, Scope of Work, quotation, proposal, or other procurement document.
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-gray-200 text-left max-w-lg mx-auto bg-white p-4 rounded-lg border border-gray-200 text-xs space-y-1.5 text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-2">The system will automatically extract:</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          <span>✓ Scope of Work</span>
+                          <span>✓ Purpose & Justification</span>
+                          <span>✓ Business Impact / Expected Outcome</span>
+                          <span>✓ Procurement Checklist matches</span>
+                          <span>✓ Bill of Quantity</span>
+                          <span>✓ Material Group</span>
+                          <span>✓ Item Name</span>
+                          <span>✓ Delivery Date</span>
+                          <span>✓ Quantity</span>
+                          <span>✓ Unit of Measure</span>
+                          <span className="col-span-2">✓ Estimated Unit Price</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
