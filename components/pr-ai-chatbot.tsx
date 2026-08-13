@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  Paperclip,
 } from "lucide-react"
 import {
   extractAndProcessPRChat,
@@ -43,16 +44,18 @@ export default function PRAIChatbot({
     {
       id: "welcome-1",
       role: "assistant",
-      text: `Hello! I'm your PR AI Assistant. Tell me what you'd like to requisition in natural language, and I will extract the details into your form automatically.
+      text: `Hello! I'm your RFP AI Assistant. Tell me what you'd like to requisition in natural language, and I will extract the details into your form automatically.
 
 For example:
-"Create a PR for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003. Requested date is August 11, 2026."`,
+"Create a RFP for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003. Requested date is August 11, 2026."`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ])
 
   const [input, setInput] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDraftCardExpanded, setIsDraftCardExpanded] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -74,6 +77,14 @@ For example:
   const completedCount = mandatoryFields.filter((f) => f.filled).length
   const totalMandatory = mandatoryFields.length
   const isReadyToSubmit = completedCount === totalMandatory
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (file) {
+      setSelectedFile(file)
+    }
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing || isReadOnly) return
@@ -150,14 +161,14 @@ For example:
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 leading-tight">PR AI Assistant</h2>
-            <p className="text-xs text-slate-500 font-medium">AI-powered PR creation</p>
+            <h2 className="text-base font-bold text-slate-900 leading-tight">RFP AI Assistant</h2>
+            <p className="text-xs text-slate-500 font-medium">AI-powered RFP creation</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-semibold rounded-full">
+          {/* <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-semibold rounded-full">
             Gemini 2.5
-          </span>
+          </span> */}
         </div>
       </div>
 
@@ -178,96 +189,98 @@ For example:
       </div>
 
       {/* Live Mini Draft Card */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 shadow-xs">
-        <button
-          onClick={() => setIsDraftCardExpanded(!isDraftCardExpanded)}
-          className="w-full flex items-center justify-between text-xs font-bold text-slate-800 hover:text-green-700 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-green-600" />
-            <span>PR Draft Card — {prState.formData.pr_number}</span>
-          </div>
-          {isDraftCardExpanded ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+      {false && (
+        <div className="bg-white border-b border-slate-200 px-4 py-3 shadow-xs">
+          <button
+            onClick={() => setIsDraftCardExpanded(!isDraftCardExpanded)}
+            className="w-full flex items-center justify-between text-xs font-bold text-slate-800 hover:text-green-700 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-green-600" />
+              <span>RFP Draft Card — {prState.formData.pr_number}</span>
+            </div>
+            {isDraftCardExpanded ? (
+              <ChevronUp className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isDraftCardExpanded && (
+            <div className="mt-2 text-xs space-y-1.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-700">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-slate-500 font-medium">Department:</span>{" "}
+                  <span className={prState.formData.department ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
+                    {prState.formData.department || "Not provided"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Budget Code:</span>{" "}
+                  <span className={prState.formData.budget_code_cost_centre ? "font-semibold text-slate-900" : "text-slate-500"}>
+                    {getBudgetLabel(prState.formData.budget_code_cost_centre)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Requestor:</span>{" "}
+                  <span className={prState.formData.requestor_name ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
+                    {prState.formData.requestor_name || "Not provided"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Req Date:</span>{" "}
+                  <span className={prState.formData.requested_date ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
+                    {prState.formData.requested_date || "Not provided"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Vendors summary */}
+              <div className="pt-1 border-t border-slate-200">
+                <span className="text-slate-500 font-medium">Vendors:</span>{" "}
+                {prState.vendors.length > 0 ? (
+                  <span className="font-semibold text-slate-900">
+                    {prState.vendors.map((v) => v.name).join(", ")}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 italic font-medium">
+                    none yet — required before submit
+                  </span>
+                )}
+              </div>
+
+              {/* BOQ Summary */}
+              <div className="pt-1 border-t border-slate-200">
+                <span className="text-slate-500 font-medium">BOQ Items ({prState.billItems.length}):</span>
+                <ul className="mt-1 space-y-1">
+                  {prState.billItems.map((item, idx) => {
+                    const missing: string[] = []
+                    if (!item.materialGroup) missing.push("Material Group")
+                    if (!item.unitOfMeasure) missing.push("UOM")
+                    if (!item.unitPrice) missing.push("Unit Price")
+                    if (!item.deliveryDate) missing.push("Delivery Date")
+
+                    return (
+                      <li key={item.id || idx} className="text-slate-800 flex items-start gap-1">
+                        <span className="font-semibold text-slate-600">{idx + 1}.</span>
+                        <div>
+                          <span>{item.itemName || "Unnamed Item"}</span>
+                          {item.quantity && <span className="font-medium"> — Qty {item.quantity}</span>}
+                          {missing.length > 0 && (
+                            <span className="text-amber-600 text-[11px] block italic">
+                              (missing: {missing.join(", ")})
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            </div>
           )}
-        </button>
-
-        {isDraftCardExpanded && (
-          <div className="mt-2 text-xs space-y-1.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-700">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-slate-500 font-medium">Department:</span>{" "}
-                <span className={prState.formData.department ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
-                  {prState.formData.department || "Not provided"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Budget Code:</span>{" "}
-                <span className={prState.formData.budget_code_cost_centre ? "font-semibold text-slate-900" : "text-slate-500"}>
-                  {getBudgetLabel(prState.formData.budget_code_cost_centre)}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Requestor:</span>{" "}
-                <span className={prState.formData.requestor_name ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
-                  {prState.formData.requestor_name || "Not provided"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 font-medium">Req Date:</span>{" "}
-                <span className={prState.formData.requested_date ? "font-semibold text-slate-900" : "text-amber-600 italic"}>
-                  {prState.formData.requested_date || "Not provided"}
-                </span>
-              </div>
-            </div>
-
-            {/* Vendors summary */}
-            <div className="pt-1 border-t border-slate-200">
-              <span className="text-slate-500 font-medium">Vendors:</span>{" "}
-              {prState.vendors.length > 0 ? (
-                <span className="font-semibold text-slate-900">
-                  {prState.vendors.map((v) => v.name).join(", ")}
-                </span>
-              ) : (
-                <span className="text-amber-600 italic font-medium">
-                  none yet — required before submit
-                </span>
-              )}
-            </div>
-
-            {/* BOQ Summary */}
-            <div className="pt-1 border-t border-slate-200">
-              <span className="text-slate-500 font-medium">BOQ Items ({prState.billItems.length}):</span>
-              <ul className="mt-1 space-y-1">
-                {prState.billItems.map((item, idx) => {
-                  const missing: string[] = []
-                  if (!item.materialGroup) missing.push("Material Group")
-                  if (!item.unitOfMeasure) missing.push("UOM")
-                  if (!item.unitPrice) missing.push("Unit Price")
-                  if (!item.deliveryDate) missing.push("Delivery Date")
-
-                  return (
-                    <li key={item.id || idx} className="text-slate-800 flex items-start gap-1">
-                      <span className="font-semibold text-slate-600">{idx + 1}.</span>
-                      <div>
-                        <span>{item.itemName || "Unnamed Item"}</span>
-                        {item.quantity && <span className="font-medium"> — Qty {item.quantity}</span>}
-                        {missing.length > 0 && (
-                          <span className="text-amber-600 text-[11px] block italic">
-                            (missing: {missing.join(", ")})
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -358,8 +371,31 @@ For example:
       )}
 
       {/* Input Form */}
+      {/* Input Form */}
       <div className="p-3 bg-white border-t border-slate-200">
         <div className="relative flex items-end bg-slate-100 border border-slate-300 rounded-xl focus-within:ring-2 focus-within:ring-green-600 focus-within:border-transparent transition-all">
+
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={isProcessing || isReadOnly}
+          />
+
+          {/* Attachment Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing || isReadOnly}
+            className="m-1.5 p-2 text-slate-500 hover:text-green-600 hover:bg-slate-200 disabled:text-slate-300 rounded-lg transition-colors shrink-0"
+            aria-label="Attach Document"
+            title="Attach Document"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -371,8 +407,10 @@ For example:
                 : "Describe your PR request... (Press Enter to send, Shift+Enter for newline)"
             }
             rows={2}
-            className="w-full resize-none bg-transparent px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
+            className="w-full resize-none bg-transparent px-2 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
           />
+
+          {/* Send Button */}
           <button
             onClick={handleSend}
             disabled={!input.trim() || isProcessing || isReadOnly}
@@ -382,6 +420,32 @@ For example:
             <Send className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Selected File */}
+        {selectedFile && (
+          <div className="mt-2 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText className="w-4 h-4 text-green-600 shrink-0" />
+              <span className="text-xs text-slate-700 truncate">
+                {selectedFile.name}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFile(null)
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = ""
+                }
+              }}
+              className="text-xs text-red-500 hover:text-red-700 ml-2"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
         <p className="text-[11px] text-slate-400 mt-1.5 text-center">
           Gemini extracts details & merges into form • Review draft before submitting
         </p>

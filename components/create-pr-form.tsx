@@ -405,16 +405,13 @@ export default function CreatePRForm({
             <nav className="space-y-1">
               {[
                 "RFP Details",
-                "Scope Of Work",
-                "Procurement Details",
-                "Procurement Checklist",
                 "Bill of Quantity",
-                "Technical Committee Members",
-                "Technical Requirements",
-                "Technical Evaluation Criteria",
-                "Vendor Evaluation Weightage",
-                "Man Power",
-                "Attachments",
+                "Scope Of Work",
+                "Purpose & Justification",
+                "Business Impact / Expected Outcome",
+                 "Vendor Selection",               
+                "Procurement Checklist",
+               "Attachments",
               ].map((section) => (
                 <button
                   key={section}
