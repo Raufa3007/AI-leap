@@ -8,6 +8,7 @@ interface PRFormData {
   pr_number: string
   department: string
   budget_code_cost_centre: string
+  project_name_english?: string
   project_name_arabic: string
   requestor_name: string
   requestor_contact_details: string
@@ -92,6 +93,7 @@ export async function savePRDraft(data: PRFormData) {
       pr_number: data.pr_number,
       department: data.department,
       budget_code_cost_centre: data.budget_code_cost_centre,
+      project_name_english: data.project_name_english,
       project_name_arabic: data.project_name_arabic,
       requestor_name: data.requestor_name,
       requestor_contact_details: data.requestor_contact_details,

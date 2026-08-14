@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, Plus, Trash2, Upload, Sparkles } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Upload, Sparkles } from "lucide-react"
 import { savePRDraft, submitPR, loadPRDraft } from "@/app/actions/save-pr-draft"
 import { useToast } from "@/hooks/use-toast"
 import { BUDGET_CODE_OPTIONS, MATERIAL_GROUP_OPTIONS, UNIT_OF_MEASURE_OPTIONS } from "@/lib/pr-constants"
@@ -51,6 +51,7 @@ export default function CreatePRForm({
     pr_number: editPrNumber || generatePRNumber(),
     department: "",
     budget_code_cost_centre: "",
+    project_name_english: "",
     project_name_arabic: "",
     requestor_name: "",
     requestor_contact_details: "",
@@ -106,6 +107,7 @@ export default function CreatePRForm({
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showAIChat, setShowAIChat] = useState(true)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [isExtractingPDF, setIsExtractingPDF] = useState(false)
 
   const handlePDFUpload = async (file: File) => {
@@ -241,17 +243,59 @@ export default function CreatePRForm({
       toast({ title: "Error", description: "Department is required", variant: "destructive" })
       return
     }
+    if (!formData.project_name_english.trim()) {
+      toast({ title: "Error", description: "Project Name (English) is required", variant: "destructive" })
+      return
+    }
+    if (!formData.budget_code_cost_centre.trim()) {
+      toast({ title: "Error", description: "Budget code/Cost centre is required", variant: "destructive" })
+      return
+    }
     if (!formData.requestor_name.trim()) {
       toast({ title: "Error", description: "Requestor name is required", variant: "destructive" })
       return
     }
-    if (!formData.requested_date) {
-      toast({ title: "Error", description: "Requested date is required", variant: "destructive" })
+    if (!formData.requestor_contact_details.trim()) {
+      toast({ title: "Error", description: "Contact details are required", variant: "destructive" })
       return
     }
     if (vendors.length === 0) {
       toast({ title: "Error", description: "At least one vendor is required", variant: "destructive" })
       return
+    }
+
+    if (billItems.length === 0) {
+      toast({ title: "Error", description: "At least one Bill of Quantity (BOQ) item is required", variant: "destructive" })
+      return
+    }
+
+    for (let i = 0; i < billItems.length; i++) {
+      const item = billItems[i]
+      const itemNum = i + 1
+      if (!item.materialGroup?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Material Group is required`, variant: "destructive" })
+        return
+      }
+      if (!item.itemName?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Item Name is required`, variant: "destructive" })
+        return
+      }
+      if (!item.deliveryDate?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Expected Delivery Date is required`, variant: "destructive" })
+        return
+      }
+      if (!item.quantity?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Quantity is required`, variant: "destructive" })
+        return
+      }
+      if (!item.unitOfMeasure?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Unit of Measure (UOM) is required`, variant: "destructive" })
+        return
+      }
+      if (!item.unitPrice?.trim()) {
+        toast({ title: "Error", description: `BOQ Item #${itemNum}: Estimated Unit Price is required`, variant: "destructive" })
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -322,6 +366,7 @@ export default function CreatePRForm({
             pr_number: data.pr_number || "5672",
             department: data.department || "",
             budget_code_cost_centre: data.budget_code_cost_centre || "",
+            project_name_english: data.project_name_english || "",
             project_name_arabic: data.project_name_arabic || "",
             requestor_name: data.requestor_name || "",
             requestor_contact_details: data.requestor_contact_details || "",
@@ -422,7 +467,13 @@ export default function CreatePRForm({
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAIChat(!showAIChat)}
+            onClick={() => {
+              const nextShow = !showAIChat
+              setShowAIChat(nextShow)
+              if (nextShow) {
+                setIsSidebarCollapsed(true)
+              }
+            }}
             className={`px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
               showAIChat
                 ? "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
@@ -454,44 +505,83 @@ export default function CreatePRForm({
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Sections</h2>
-              <button className="p-1 hover:bg-gray-200 rounded">
-                <i className="ri-layout-grid-line text-gray-600" />
-              </button>
-            </div>
-            <nav className="space-y-1">
+        {isSidebarCollapsed ? (
+          <div className="w-14 border-r border-gray-200 bg-gray-50 flex flex-col items-center py-4 flex-shrink-0 transition-all">
+            <button
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="p-1.5 hover:bg-gray-200 rounded text-gray-600 mb-4"
+              title="Expand Sections Sidebar"
+              aria-label="Expand Sections Sidebar"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <div className="space-y-3 w-full flex flex-col items-center">
               {[
-                "RFP Details",
-                "Bill of Quantity",
-                "Scope Of Work",
-                "Purpose & Justification",
-                "Business Impact / Expected Outcome",
-                 "Vendor Selection",               
-                "Procurement Checklist",
-               "Attachments",
-              ].map((section) => (
+                { title: "RFP Details", icon: "ri-file-list-line" },
+                { title: "Bill of Quantity", icon: "ri-shopping-cart-line" },
+                { title: "Scope Of Work", icon: "ri-draft-line" },
+                { title: "Purpose & Justification", icon: "ri-file-text-line" },
+                { title: "Business Impact / Expected Outcome", icon: "ri-bar-chart-box-line" },
+                { title: "Vendor Selection", icon: "ri-user-follow-line" },
+                { title: "Procurement Checklist", icon: "ri-checkbox-line" },
+                { title: "Attachments", icon: "ri-attachment-line" },
+              ].map((sec) => (
                 <button
-                  key={section}
-                  className={`w-full text-left px-3 py-2 rounded text-sm ${
-                    section === "RFP Details"
-                      ? "bg-green-100 text-green-700 border-l-4 border-green-600"
-                      : "text-gray-700 hover:bg-gray-200"
-                  }`}
+                  key={sec.title}
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  title={sec.title}
+                  className="p-2 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-green-700 transition-colors"
                 >
-                  {section}
+                  <i className={`${sec.icon} text-lg`} />
                 </button>
               ))}
-            </nav>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0 transition-all">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">Sections</h2>
+                <button
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                  title="Collapse Sections Sidebar"
+                  aria-label="Collapse Sections Sidebar"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              </div>
+              <nav className="space-y-1">
+                {[
+                  "RFP Details",
+                  "Bill of Quantity",
+                  "Scope Of Work",
+                  "Purpose & Justification",
+                  "Business Impact / Expected Outcome",
+                  "Vendor Selection",
+                  "Procurement Checklist",
+                  "Attachments",
+                ].map((section) => (
+                  <button
+                    key={section}
+                    className={`w-full text-left px-3 py-2 rounded text-sm ${
+                      section === "RFP Details"
+                        ? "bg-green-100 text-green-700 border-l-4 border-green-600 font-medium"
+                        : "text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {section}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-6 space-y-8">
             <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">PR Details</h2>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">RFP Details</h2>
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -540,18 +630,33 @@ export default function CreatePRForm({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project Name in Arabic <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Type Here"
-                    value={formData.project_name_arabic}
-                    onChange={(e) => handleInputChange("project_name_arabic", e.target.value)}
-                    disabled={isReadOnly}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Name (English) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Type Here"
+                      value={formData.project_name_english}
+                      onChange={(e) => handleInputChange("project_name_english", e.target.value)}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Name in Arabic <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Type Here"
+                      value={formData.project_name_arabic}
+                      onChange={(e) => handleInputChange("project_name_arabic", e.target.value)}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -594,124 +699,7 @@ export default function CreatePRForm({
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Approvers</label>
-                  <div className="flex gap-2">
-                    <div className="text-sm text-gray-500">No approvers assigned yet</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">Scope of Work</h2>
-              <textarea
-                placeholder="Type here..."
-                value={formData.scope_of_work}
-                onChange={(e) => handleInputChange("scope_of_work", e.target.value)}
-                disabled={isReadOnly}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
-              />
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">Purpose & Justification</h2>
-              <textarea
-                placeholder="Type here..."
-                value={formData.purpose_and_justification}
-                onChange={(e) => handleInputChange("purpose_and_justification", e.target.value)}
-                disabled={isReadOnly}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
-              />
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">Business impact / Expected outcome</h2>
-              <textarea
-                placeholder="Type here..."
-                value={formData.business_impact_expected_outcome}
-                onChange={(e) => handleInputChange("business_impact_expected_outcome", e.target.value)}
-                disabled={isReadOnly}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-green-700">Choose any preferred vendors</h2>
-                <button
-                  onClick={() => setShowVendorModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
-                  disabled={isReadOnly}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add vendor
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-green-600 text-white">
-                      <th className="px-4 py-2 text-left text-sm font-medium">S. No</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium">Vendor name</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vendors.map((vendor) => (
-                      <tr key={vendor.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm">{vendor.id}</td>
-                        <td className="px-4 py-2 text-sm">{vendor.name}</td>
-                        <td className="px-4 py-2 text-sm flex gap-2">
-                          <button className="p-1 hover:bg-gray-200 rounded disabled:opacity-50" disabled={isReadOnly}>
-                            <i className="ri-edit-line text-gray-600" />
-                          </button>
-                          <button
-                            onClick={() => setVendors(vendors.filter((v) => v.id !== vendor.id))}
-                            className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
-                            disabled={isReadOnly}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">Procurement Check List</h2>
-              <div className="space-y-3">
-                {checklist.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                  >
-                    <label className="text-sm text-gray-700">{item.question}</label>
-                    <button
-                      onClick={() =>
-                        setChecklist(checklist.map((c) => (c.id === item.id ? { ...c, answer: !c.answer } : c)))
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        item.answer ? "bg-green-600" : "bg-gray-300"
-                      } disabled:opacity-50`}
-                      disabled={isReadOnly}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          item.answer ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
+                  <div>
               <h2 className="text-xl font-semibold text-green-700 mb-4">Bill Of Quantity</h2>
               <div className="space-y-4">
                 {billItems.map((item) => {
@@ -874,10 +862,128 @@ export default function CreatePRForm({
               </div>
             </div>
 
+                <div>
+                  {/* <label className="block text-sm font-medium text-gray-700 mb-2">Approvers</label>
+                  <div className="flex gap-2">
+                    <div className="text-sm text-gray-500">No approvers assigned yet</div>
+                  </div> */}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">Scope of Work</h2>
+              <textarea
+                placeholder="Type here..."
+                value={formData.scope_of_work}
+                onChange={(e) => handleInputChange("scope_of_work", e.target.value)}
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
+              />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">Purpose & Justification</h2>
+              <textarea
+                placeholder="Type here..."
+                value={formData.purpose_and_justification}
+                onChange={(e) => handleInputChange("purpose_and_justification", e.target.value)}
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
+              />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">Business impact / Expected outcome</h2>
+              <textarea
+                placeholder="Type here..."
+                value={formData.business_impact_expected_outcome}
+                onChange={(e) => handleInputChange("business_impact_expected_outcome", e.target.value)}
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 disabled:bg-gray-100 disabled:text-gray-500"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-green-700">Choose any preferred vendors</h2>
+                <button
+                  onClick={() => setShowVendorModal(true)}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
+                  disabled={isReadOnly}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add vendor
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-green-600 text-white">
+                      <th className="px-4 py-2 text-left text-sm font-medium">S. No</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">Vendor name</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors.map((vendor) => (
+                      <tr key={vendor.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="px-4 py-2 text-sm">{vendor.id}</td>
+                        <td className="px-4 py-2 text-sm">{vendor.name}</td>
+                        <td className="px-4 py-2 text-sm flex gap-2">
+                          <button className="p-1 hover:bg-gray-200 rounded disabled:opacity-50" disabled={isReadOnly}>
+                            <i className="ri-edit-line text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => setVendors(vendors.filter((v) => v.id !== vendor.id))}
+                            className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                            disabled={isReadOnly}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">Procurement Check List</h2>
+              <div className="space-y-3">
+                {checklist.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                  >
+                    <label className="text-sm text-gray-700">{item.question}</label>
+                    <button
+                      onClick={() =>
+                        setChecklist(checklist.map((c) => (c.id === item.id ? { ...c, answer: !c.answer } : c)))
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        item.answer ? "bg-green-600" : "bg-gray-300"
+                      } disabled:opacity-50`}
+                      disabled={isReadOnly}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          item.answer ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          
+
             <div>
               <h2 className="text-xl font-semibold text-green-700 mb-4">Attachments</h2>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-slate-50 hover:bg-slate-100 transition-colors relative">
-                <input
+                {/* <input
                   type="file"
                   accept="application/pdf,.pdf"
                   disabled={isReadOnly || isExtractingPDF}
@@ -886,7 +992,7 @@ export default function CreatePRForm({
                     if (file) handlePDFUpload(file)
                   }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-                />
+                /> */}
                 <div className="text-center space-y-3">
                   {isExtractingPDF ? (
                     <div className="py-4 space-y-2">
@@ -902,23 +1008,6 @@ export default function CreatePRForm({
                         <p className="text-xs text-gray-500 mt-1">
                           Upload an RFP, Scope of Work, quotation, proposal, or other procurement document.
                         </p>
-                      </div>
-
-                      <div className="mt-4 pt-4 border-t border-gray-200 text-left max-w-lg mx-auto bg-white p-4 rounded-lg border border-gray-200 text-xs space-y-1.5 text-gray-700">
-                        <p className="font-semibold text-gray-900 mb-2">The system will automatically extract:</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          <span>✓ Scope of Work</span>
-                          <span>✓ Purpose & Justification</span>
-                          <span>✓ Business Impact / Expected Outcome</span>
-                          <span>✓ Procurement Checklist matches</span>
-                          <span>✓ Bill of Quantity</span>
-                          <span>✓ Material Group</span>
-                          <span>✓ Item Name</span>
-                          <span>✓ Delivery Date</span>
-                          <span>✓ Quantity</span>
-                          <span>✓ Unit of Measure</span>
-                          <span className="col-span-2">✓ Estimated Unit Price</span>
-                        </div>
                       </div>
                     </>
                   )}
