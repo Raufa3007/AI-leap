@@ -1,0 +1,8 @@
+[33mfe18bf18[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mraufa-work[m[33m, [m[1;31morigin/raufa-work[m[33m)[m HEAD@{0}: commit: dhanashri combined
+[33m4135f937[m[33m ([m[1;31morigin/dhanashri[m[33m)[m HEAD@{1}: pull origin dhanashri: Fast-forward
+[33m7c1bc320[m HEAD@{2}: commit (merge): cahnges made
+[33m51ebd18b[m HEAD@{3}: filter-branch: rewrite
+[33m330d678e[m HEAD@{4}: commit: Remove venv311 from tracking, fix .gitignore
+[33m83f862b7[m HEAD@{5}: commit: sampath sorting
+[33m886809bb[m HEAD@{6}: commit: final changes
+[33mc28d8b6b[m HEAD@{7}: commit (merge): changes
