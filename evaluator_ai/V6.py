@@ -7,6 +7,11 @@
 from dotenv import load_dotenv
 
 load_dotenv()
+from google import genai
+
+from flask import Flask, request, jsonify, render_template, Response
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 import os
 import re
@@ -133,192 +138,121 @@ def clean_text(text):
 
     return text.strip()
 
+def parse_markdown_table_to_json(markdown_table_text):
+    try:
+        df = pd.read_csv(StringIO(markdown_table_text), sep="|", engine="python", skipinitialspace=True)
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # drop any unnamed column
+        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+        json_data = df.to_dict(orient="records")
+        return json_data
+    except Exception as e:
+        print("Error parsing markdown to JSON:", e)
+        return []
+    
+    
 
-# ============================================================
+def evaluate_commercial_vendors(vendors):
 
-def sanitize_nan(obj):
-    """
-    Convert NaN values into N/A so JSON serialization works.
-    """
+    prompt = generate_commercial_prompt(vendors)
 
-    if isinstance(obj, dict):
-        return {
-            key: sanitize_nan(value)
-            for key, value in obj.items()
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
+            "temperature": 0
         }
+    )
 
-    if isinstance(obj, list):
-        return [
-            sanitize_nan(item)
-            for item in obj
-        ]
+    print(response.text)
 
-    if isinstance(obj, float) and math.isnan(obj):
-        return "N/A"
+    text = response.text.strip()
 
-    return obj
+    # Remove markdown fences
+    text = text.replace("```json", "")
+    text = text.replace("```", "")
+    text = text.strip()
+
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        print("Gemini returned invalid JSON:")
+        print(text)
+        raise
+
+    return result
 
 
-# ============================================================
+
+def generate_commercial_prompt(vendors):
+
+    prompt = []
+
+    prompt.append(
+        """
+You are an expert Procurement Commercial Evaluation Officer.
+
+Evaluate every vendor independently.
+
+Use the following weights.
+
+Technical Proposal Score : 40%
+
+Past Project Experience : 15%
+
+On-Time Delivery : 10%
+
+Compliance : 10%
+
+Financial Stability : 10%
+
+Customer References : 10%
+
+Risk Score : 5%
+
+Return ONLY valid JSON.
+"""
+    )
+
+    prompt.append(json.dumps(vendors, indent=2))
+
+    prompt.append(
+        """
+Return JSON only.
+
+Example
+
+{
+   "vendors":[
+      {
+         "id":1,
+         "overallScore":89,
+         "status":"Completed",
+         "recommendation":"Recommended",
+         "aiInsight":"Excellent financial capability with low commercial risk."
+      }
+   ]
+}
+"""
+    )
+
+    return "\n".join(prompt)
+
+
+
 
 def call_gemini(prompt, temperature=0.0):
-    """
-    Send prompt to Gemini and return plain text response.
-    """
-
-    response = model.generate_content(
-        prompt,
-        generation_config={
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
             "temperature": temperature
         }
     )
 
-    if not response:
-        raise ValueError("Gemini returned an empty response.")
-
-    if not response.text:
-        raise ValueError("Gemini response did not contain text.")
-
     return response.text.strip()
 
 
-# ============================================================
-
-def clean_gemini_json(text):
-    """
-    Clean Gemini response before JSON parsing.
-
-    Handles responses such as:
-
-    ```json
-    {...}
-    ```
-
-    or
-
-    ```
-    {...}
-    ```
-    """
-
-    if not text:
-        return ""
-
-    text = text.strip()
-
-    # Remove markdown code fence
-    text = re.sub(
-        r"^```json\s*",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
-
-    text = re.sub(
-        r"^```\s*",
-        "",
-        text
-    )
-
-    text = re.sub(
-        r"\s*```$",
-        "",
-        text
-    )
-
-    text = text.strip()
-
-    # Sometimes Gemini adds text before/after JSON.
-    # Try to isolate the main JSON object.
-    first_brace = text.find("{")
-    last_brace = text.rfind("}")
-
-    if (
-        first_brace != -1
-        and last_brace != -1
-        and last_brace > first_brace
-    ):
-        text = text[first_brace:last_brace + 1]
-
-    return text.strip()
-
-
-# ============================================================
-
-def parse_markdown_table_to_json(markdown_table_text):
-    """
-    Convert a markdown table into a list of dictionaries.
-    """
-
-    try:
-
-        if not markdown_table_text:
-            return []
-
-        lines = [
-            line.strip()
-            for line in markdown_table_text.splitlines()
-            if "|" in line
-        ]
-
-        if len(lines) < 2:
-            return []
-
-        table_text = "\n".join(lines)
-
-        df = pd.read_csv(
-            StringIO(table_text),
-            sep="|",
-            engine="python",
-            skipinitialspace=True
-        )
-
-        # Remove empty columns
-        df = df.loc[
-            :,
-            ~df.columns.astype(str).str.contains(
-                "^Unnamed"
-            )
-        ]
-
-        # Strip whitespace
-        df = df.apply(
-            lambda column: column.map(
-                lambda value:
-                value.strip()
-                if isinstance(value, str)
-                else value
-            )
-        )
-
-        # Remove markdown separator rows
-        if len(df.columns) > 0:
-
-            first_column = df.columns[0]
-
-            df = df[
-                ~df[first_column]
-                .astype(str)
-                .str.match(r"^\s*:?-+:?\s*$")
-            ]
-
-        return df.to_dict(
-            orient="records"
-        )
-
-    except Exception as e:
-
-        print(
-            "Error parsing markdown table:",
-            e
-        )
-
-        return []
-
-
-# ============================================================
-# FILE READING
-# ============================================================
+# --- File Reading and AI Interaction Functions ---
 
 def read_text_file(file_path):
     """

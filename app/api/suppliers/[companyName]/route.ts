@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { fetchSupplierByName } from "@/app/actions/fetch-supplier-by-name"
 
-export async function GET(request: NextRequest, { params }: { params: { companyName: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ companyName: string }> }) {
   try {
-    const companyName = decodeURIComponent(params.companyName)
+    const resolvedParams = await params
+    const companyName = decodeURIComponent(resolvedParams.companyName)
     console.log("[v0] API: Fetching supplier by name:", companyName)
 
     const supplier = await fetchSupplierByName(companyName)
