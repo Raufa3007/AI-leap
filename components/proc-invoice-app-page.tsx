@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef } from "react"
 import InvoiceSnapshotDialog from "./invoice-snapshot-dialog"
@@ -1025,9 +1025,9 @@ Do not return explanations outside the JSON.
       // ======================================================
       // GEMINI API
       // ======================================================
-
+const GEMINI_API_KEY="AQ.Ab8RN6JLDyW9djlVxZvHKwx5FInf5k3zNeBwqAW-SJDxTrG15g"
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
 

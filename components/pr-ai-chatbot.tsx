@@ -428,7 +428,7 @@ For example:
         <div className="p-3 bg-green-50 border-t border-green-200 shadow-inner">
           <div className="flex items-center gap-2 text-green-800 font-semibold text-xs mb-2">
             <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span>PR is ready for submission!</span>
+            <span>RFP is ready for submission!</span>
           </div>
           <div className="flex gap-2">
             <button
@@ -492,8 +492,8 @@ For example:
             disabled={isProcessing || isReadOnly}
             placeholder={
               isReadOnly
-                ? "This PR is submitted and read-only"
-                : "Describe your PR request... (Press Enter to send, Shift+Enter for newline)"
+                ? "This RFP is submitted and read-only"
+                : "Describe your RFP request..."
             }
             rows={2}
             className="w-full resize-none bg-transparent px-2 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
