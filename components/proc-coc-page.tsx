@@ -55,7 +55,7 @@ export default function ProcCOCPage({ onBack }: ProcCOCPageProps) {
           <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded" aria-label="Go back">
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-semibold text-green-700">Create PR</h1>
+          <h1 className="text-2xl font-semibold text-green-700">Create RFP</h1>
         </div>
         <div className="flex items-center gap-3">
           <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2">

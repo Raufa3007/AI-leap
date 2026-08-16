@@ -68,12 +68,27 @@ For example:
     scrollToBottom()
   }, [messages, isProcessing])
 
+  const isBOQComplete =
+    prState.billItems.length > 0 &&
+    prState.billItems.every(
+      (item) =>
+        !!item.materialGroup?.trim() &&
+        !!item.itemName?.trim() &&
+        !!item.deliveryDate?.trim() &&
+        !!item.quantity?.trim() &&
+        !!item.unitOfMeasure?.trim() &&
+        !!item.unitPrice?.trim(),
+    )
+
   // Count completed mandatory fields (matching handleSubmitPR)
   const mandatoryFields = [
-    { label: "Department", filled: !!prState.formData.department.trim() },
-    { label: "Requestor Name", filled: !!prState.formData.requestor_name.trim() },
-    { label: "Requested Date", filled: !!prState.formData.requested_date.trim() },
+    { label: "Department", filled: !!prState.formData.department?.trim() },
+    { label: "Project Name (English)", filled: !!prState.formData.project_name_english?.trim() },
+    { label: "Budget Code", filled: !!prState.formData.budget_code_cost_centre?.trim() },
+    { label: "Requestor Name", filled: !!prState.formData.requestor_name?.trim() },
+    { label: "Contact Details", filled: !!prState.formData.requestor_contact_details?.trim() },
     { label: "Preferred Vendor", filled: prState.vendors.length > 0 },
+    { label: "BOQ Items Complete", filled: isBOQComplete },
   ]
   const completedCount = mandatoryFields.filter((f) => f.filled).length
   const totalMandatory = mandatoryFields.length

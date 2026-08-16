@@ -220,7 +220,13 @@ export default function ProcRfpsPage({
                 <tr
                   key={index}
                   onClick={() => {
-                    setSelectedPRNumber(item.prNumber)
+                    if (item.status === "Draft" && onEditPR) {
+                      onEditPR(item.prNumber)
+                    } else if (onViewPR) {
+                      onViewPR(item.prNumber)
+                    } else {
+                      setSelectedPRNumber(item.prNumber)
+                    }
                   }}
                   className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
                 >

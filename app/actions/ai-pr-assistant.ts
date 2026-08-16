@@ -36,6 +36,7 @@ export interface PRFormDataState {
   pr_number: string
   department: string
   budget_code_cost_centre: string
+  project_name_english: string
   project_name_arabic: string
   requestor_name: string
   requestor_contact_details: string
@@ -205,18 +206,18 @@ STRICT EXTRACTION RULES:
 2. If a field (scope_of_work, purpose_and_justification, business_impact_expected_outcome) is not explicitly stated in the PDF text, return null for that field. Do NOT generate placeholder or generic text.
 3. For Purpose & Justification: Return null if the document does not provide explicit purpose or justification. Do not generate a generic justification.
 4. For Business Impact / Expected Outcome: Return null if expected benefits/impact/outcomes are unavailable in the PDF.
-5. Dates MUST be formatted strictly as YYYY-MM-DD (e.g. 2026-08-25). If no delivery date is given in the PDF, return null. Never invent dates.
-6. Prices: Extract the explicit estimated unit price as a numeric string without currency symbols (e.g. "75000" for ₹75,000, $75,000, SAR 75,000). If unavailable, return null. Do NOT calculate unit price from total price unless explicitly provided.
+5. Dates MUST be formatted strictly as ISO YYYY-MM-DD (e.g. 2026-08-25). Convert formats like 25-Aug-2026, August 25, 2026, or 25/08/2026 to YYYY-MM-DD. If no delivery date is given in the PDF, return null. Never invent dates.
+6. Prices: Extract explicit estimated unit price as a numeric string without currency symbols (e.g. "75000" for ₹75,000, $75,000, SAR 75,000). If only total price and quantity are given, calculate: Unit Price = Total Price / Quantity. If unavailable or ambiguous, return null.
 7. For Bill of Quantity (BOQ):
    - Inspect ALL sections of the document including tables, item lists, pricing sections, scope sections, technical specifications, quantity schedules, commercial sections, and delivery requirements.
    - Every distinct product, material, service, or line item MUST be extracted into a separate object in bill_of_quantity.
    - material_group: MUST be ONE of the allowed material group codes listed below, or null if ambiguous.
-   - item_name: Explicate title/name of product or service.
+   - item_name: Standardized, concise title generated strictly from the source text.
    - delivery_date: Date formatted as YYYY-MM-DD or null.
-   - quantity: Quantity as string (numeric only, e.g. "10") or null.
-   - unit_of_measure: MUST be ONE of the allowed UOM codes listed below, or null if ambiguous.
-   - unit_price: Unit price as numeric string or null.
-   - description: Relevant description of item. If not explicitly found in PDF, write a concise, relevant description based on the item name and context.
+   - quantity: Quantity as numeric string (e.g. "10") or null.
+   - unit_of_measure: MUST be ONE of the allowed UOM codes listed below (e.g., EA for laptops/keyboards, SERV for services, LIC for software licenses, MTR for cables). Use document value or derive safely from item type. If uncertain, return null.
+   - unit_price: Unit price as numeric string without currency symbols or null.
+   - description: Relevant specifications and characteristics summarized from source text without inventing missing specs.
 8. For Procurement Checklist:
    - Carefully check the 6 checklist questions below against the PDF document content.
    - Return answer: true ONLY when the PDF text clearly and explicitly supports that checklist item.
@@ -233,6 +234,9 @@ ${CHECKLIST_QUESTIONS.map((c) => `- Question ID ${c.id}: ${c.question}`).join("\
 
 Return ONLY a JSON object adhering strictly to this schema:
 {
+  "department": string | null,
+  "budget_code_cost_centre": string | null,
+  "project_name_english": string | null,
   "scope_of_work": string | null,
   "purpose_and_justification": string | null,
   "business_impact_expected_outcome": string | null,
@@ -287,6 +291,26 @@ Return ONLY a JSON object adhering strictly to this schema:
 
     // 3. Merge into PR state (preserving existing user-entered values)
     const newState: FullPRState = JSON.parse(JSON.stringify(currentState))
+
+    if (extracted.department && typeof extracted.department === "string" && extracted.department.trim()) {
+      newState.formData.department = extracted.department.trim()
+    }
+
+    if (
+      extracted.budget_code_cost_centre &&
+      typeof extracted.budget_code_cost_centre === "string" &&
+      extracted.budget_code_cost_centre.trim()
+    ) {
+      newState.formData.budget_code_cost_centre = extracted.budget_code_cost_centre.trim()
+    }
+
+    if (
+      extracted.project_name_english &&
+      typeof extracted.project_name_english === "string" &&
+      extracted.project_name_english.trim()
+    ) {
+      newState.formData.project_name_english = extracted.project_name_english.trim()
+    }
 
     if (extracted.scope_of_work && typeof extracted.scope_of_work === "string" && extracted.scope_of_work.trim()) {
       newState.formData.scope_of_work = extracted.scope_of_work.trim()
@@ -450,16 +474,21 @@ ${JSON.stringify(currentState, null, 2)}
 STRICT EXTRACTION RULES:
 1. Extract ONLY information explicitly stated or unambiguously implied by the user message or conversation context.
 2. If a field is not mentioned or unknown, return null for that field. Never invent prices, quantities, dates, names, or codes.
-3. Dates MUST be formatted as ISO YYYY-MM-DD (e.g. 2026-08-11).
-4. Map free text items to the best matching allowed code ONLY when unambiguous (e.g., "business laptops" -> MG003, "IT department" -> department: "IT", "budget code BC003" -> BC003). If uncertain, return null.
-5. Create distinct objects in bill_of_quantity for distinct products/services mentioned.
-6. Check if user is answering checklist questions (ids 1-6) and include updates in checklist_updates array if applicable.
-7. Return valid JSON adhering strictly to the schema provided below.
+3. Dates MUST be formatted strictly as ISO YYYY-MM-DD (e.g. 2026-08-11). Convert multi-format dates like 25-Aug-2026, August 25, 2026, or 25/08/2026 to YYYY-MM-DD.
+4. Prices: Extract numeric string without currency symbols. If total price and quantity are given, compute: Estimated Unit Price = Total Price / Quantity.
+5. Material Group: MUST be ONE of the allowed material group codes listed below. If ambiguous, return null.
+6. Unit of Measure (UOM): MUST be ONE of the allowed UOM codes (e.g. EA for laptops/keyboards, SERV for services, LIC for software licenses, MTR for cables). Derive safely from item type or doc value; if uncertain, return null.
+7. Item Name & Description: Generate a standardized, concise Item Name and specs Description strictly from source details without inventing missing specs.
+8. Map free text items to the best matching allowed code ONLY when unambiguous (e.g., "business laptops" -> MG003, "IT department" -> department: "IT", "budget code BC003" -> BC003). If uncertain, return null.
+9. Create distinct objects in bill_of_quantity for distinct products/services mentioned.
+10. Check if user is answering checklist questions (ids 1-6) and include updates in checklist_updates array if applicable.
+11. Return valid JSON adhering strictly to the schema provided below.
 
 Respond with a JSON object matching this schema:
 {
   "department": string | null,
   "budget_code_cost_centre": string | null,
+  "project_name_english": string | null,
   "project_name_arabic": string | null,
   "requestor_name": string | null,
   "requestor_contact_details": string | null,
@@ -513,6 +542,7 @@ Respond with a JSON object matching this schema:
 
     if (extracted.department) newState.formData.department = extracted.department
     if (extracted.budget_code_cost_centre) newState.formData.budget_code_cost_centre = extracted.budget_code_cost_centre
+    if (extracted.project_name_english) newState.formData.project_name_english = extracted.project_name_english
     if (extracted.project_name_arabic) newState.formData.project_name_arabic = extracted.project_name_arabic
     if (extracted.requestor_name) newState.formData.requestor_name = extracted.requestor_name
     if (extracted.requestor_contact_details) newState.formData.requestor_contact_details = extracted.requestor_contact_details
@@ -601,21 +631,45 @@ Respond with a JSON object matching this schema:
     // Determine missing mandatory fields (matching handleSubmitPR validation)
     const missingMandatory: string[] = []
     if (!newState.formData.department.trim()) missingMandatory.push("Department")
+    if (!newState.formData.project_name_english?.trim()) missingMandatory.push("Project Name (English)")
+    if (!newState.formData.budget_code_cost_centre?.trim()) missingMandatory.push("Budget Code / Cost Centre")
     if (!newState.formData.requestor_name.trim()) missingMandatory.push("Requestor Name")
-    if (!newState.formData.requested_date.trim()) missingMandatory.push("Requested Date")
+    if (!newState.formData.requestor_contact_details?.trim()) missingMandatory.push("Contact Details")
     if (newState.vendors.length === 0) missingMandatory.push("At least one Preferred Vendor")
+
+    if (newState.billItems.length === 0) {
+      missingMandatory.push("At least one Bill of Quantity (BOQ) line item")
+    } else {
+      newState.billItems.forEach((bItem, idx) => {
+        const itemNum = idx + 1
+        const missingFields: string[] = []
+        if (!bItem.materialGroup?.trim()) missingFields.push("Material Group")
+        if (!bItem.itemName?.trim()) missingFields.push("Item Name")
+        if (!bItem.deliveryDate?.trim()) missingFields.push("Expected Delivery Date")
+        if (!bItem.quantity?.trim()) missingFields.push("Quantity")
+        if (!bItem.unitOfMeasure?.trim()) missingFields.push("Unit of Measure (UOM)")
+        if (!bItem.unitPrice?.trim()) missingFields.push("Estimated Unit Price")
+
+        if (missingFields.length > 0) {
+          missingMandatory.push(
+            `BOQ Item #${itemNum} (${bItem.itemName || "Unnamed"}): missing ${missingFields.join(", ")}`,
+          )
+        }
+      })
+    }
 
     const isReadyForSubmit = missingMandatory.length === 0
 
     // Build Captured and Missing summaries for conversational response
     const capturedList: string[] = []
     if (newState.formData.department) capturedList.push(`Department: ${newState.formData.department}`)
+    if (newState.formData.project_name_english) capturedList.push(`Project Name (English): ${newState.formData.project_name_english}`)
     if (newState.formData.budget_code_cost_centre) {
       const bOpt = BUDGET_CODE_OPTIONS.find((b) => b.value === newState.formData.budget_code_cost_centre)
       capturedList.push(`Budget Code: ${bOpt ? bOpt.label : newState.formData.budget_code_cost_centre}`)
     }
     if (newState.formData.requestor_name) capturedList.push(`Requestor: ${newState.formData.requestor_name}`)
-    if (newState.formData.requested_date) capturedList.push(`Requested Date: ${newState.formData.requested_date}`)
+    if (newState.formData.requestor_contact_details) capturedList.push(`Contact Details: ${newState.formData.requestor_contact_details}`)
     if (newState.vendors.length > 0) {
       capturedList.push(`Vendors: ${newState.vendors.map((v) => v.name).join(", ")}`)
     }
@@ -629,23 +683,6 @@ Respond with a JSON object matching this schema:
 
     // Build Missing items list
     const missingList: string[] = [...missingMandatory]
-
-    if (!newState.formData.requestor_contact_details.trim()) {
-      missingList.push("Requestor Contact Details")
-    }
-
-    newState.billItems.forEach((bItem) => {
-      if (!bItem.itemName) return
-      const missingDetails: string[] = []
-      if (!bItem.materialGroup) missingDetails.push("Material Group")
-      if (!bItem.deliveryDate) missingDetails.push("Delivery Date")
-      if (!bItem.unitOfMeasure) missingDetails.push("UOM")
-      if (!bItem.unitPrice) missingDetails.push("Unit Price")
-      if (!bItem.description) missingDetails.push("Description")
-      if (missingDetails.length > 0) {
-        missingList.push(`For "${bItem.itemName}": ${missingDetails.join(", ")}`)
-      }
-    })
 
     // Construct AI natural language response
     let aiResponseMessage = ""
