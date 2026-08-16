@@ -224,6 +224,9 @@ export default function CreatePRForm({
           description: "Your PR draft has been saved and can be edited later.",
           duration: 3000,
         })
+        setTimeout(() => {
+          onBack()
+        }, 1200)
       } else {
         toast({ title: "Error", description: result.error, variant: "destructive" })
       }
@@ -243,8 +246,8 @@ export default function CreatePRForm({
       toast({ title: "Error", description: "Department is required", variant: "destructive" })
       return
     }
-    if (!formData.project_name_english.trim()) {
-      toast({ title: "Error", description: "Project Name (English) is required", variant: "destructive" })
+    if (!formData.project_name_english.trim() && !formData.project_name_arabic.trim()) {
+      toast({ title: "Error", description: "Project Name is required", variant: "destructive" })
       return
     }
     if (!formData.budget_code_cost_centre.trim()) {
@@ -337,7 +340,7 @@ export default function CreatePRForm({
         setIsReadOnly(true)
         setTimeout(() => {
           onBack()
-        }, 2000)
+        }, 1200)
       } else {
         toast({ title: "Error", description: submitResult.error, variant: "destructive" })
       }
