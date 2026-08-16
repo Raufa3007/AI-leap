@@ -155,10 +155,9 @@ def evaluate_commercial_vendors(vendors):
 
     prompt = generate_commercial_prompt(vendors)
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
+    response = model.generate_content(
+        prompt,
+        generation_config={
             "temperature": 0
         }
     )
@@ -241,15 +240,31 @@ Example
 
 
 def call_gemini(prompt, temperature=0.0):
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
+    response = model.generate_content(
+        prompt,
+        generation_config={
             "temperature": temperature
         }
     )
-
     return response.text.strip()
+
+
+def clean_gemini_json(text):
+    text = text.strip()
+    text = re.sub(r"^```json\s*", "", text)
+    text = re.sub(r"^```\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    return text.strip()
+
+
+def sanitize_nan(obj):
+    if isinstance(obj, list):
+        return [sanitize_nan(i) for i in obj]
+    if isinstance(obj, dict):
+        return {k: sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, float) and math.isnan(obj):
+        return ""
+    return obj
 
 
 # --- File Reading and AI Interaction Functions ---
