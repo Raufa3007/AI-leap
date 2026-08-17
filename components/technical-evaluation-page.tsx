@@ -404,6 +404,12 @@ export default function TechnicalEvaluationPage({
         "https://ai-leap.onrender.com/evaluate",
         {
           method: "POST",
+    headers: {
+            "Content-Type":
+              "application/json",
+            Accept:
+              "application/json",
+          }
         }
       )
 
