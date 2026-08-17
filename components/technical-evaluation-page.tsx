@@ -401,7 +401,7 @@ export default function TechnicalEvaluationPage({
 
     try {
       const res = await fetch(
-        "http://127.0.0.1:5000/evaluate",
+        "https://ai-leap.onrender.com/evaluate",
         {
           method: "POST",
         }
