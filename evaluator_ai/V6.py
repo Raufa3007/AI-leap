@@ -57,20 +57,49 @@ app = Flask(__name__)
 
 CORS(
     app,
-    resources={
-        r"/*": {
-            "origins": "*"
-        }
-    }
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=False
 )
 
 
 @app.after_request
 def add_cors_headers(response):
+    # Always attach CORS headers, including 4xx/5xx responses.
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Max-Age"] = "86400"
     return response
+
+
+@app.route("/", methods=["OPTIONS"])
+def root_options():
+    return ("", 204)
+
+
+@app.errorhandler(400)
+def handle_400(error):
+    return jsonify({"error": str(error.description) if getattr(error, "description", None) else "Bad request"}), 400
+
+
+@app.errorhandler(404)
+def handle_404(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+
+@app.errorhandler(405)
+def handle_405(error):
+    return jsonify({"error": "Method not allowed"}), 405
+
+
+@app.errorhandler(500)
+def handle_500(error):
+    import traceback
+    traceback.print_exc()
+    return jsonify({
+        "message": "Internal server error.",
+        "error": str(error)
+    }), 500
 
 
 # ============================================================
@@ -92,15 +121,20 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # ============================================================
 
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
+client = None
 
 if not GEMINI_API_KEY:
-
-    print(
-        "WARNING: GEMINI_API_KEY is not configured."
-    )
-
-client = genai.Client(api_key=GEMINI_API_KEY)
+    print("WARNING: GEMINI_API_KEY is not configured.")
+else:
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        print(f"Gemini client initialized successfully using {GEMINI_MODEL}")
+    except Exception as e:
+        print("ERROR: Failed to initialize Gemini client:")
+        print(str(e))
+        client = None
 
 
 
@@ -297,12 +331,10 @@ def evaluate_commercial_vendors(vendors):
 
     prompt = generate_commercial_prompt(vendors)
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": 0
-        }
+    raw_text = call_gemini(
+        prompt,
+        temperature=0.0,
+        response_mime_type="application/json"
     )
 
     print(response.text)
@@ -326,14 +358,34 @@ def evaluate_commercial_vendors(vendors):
 
 
 
-def call_gemini(prompt, temperature=0.0):
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": temperature
-        }
-    )
+def call_gemini(prompt, temperature=0.0, response_mime_type=None):
+    """Centralized Gemini call with useful server-side diagnostics."""
+
+    if client is None:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured or Gemini client initialization failed."
+        )
+
+    config = {"temperature": temperature}
+
+    if response_mime_type:
+        config["response_mime_type"] = response_mime_type
+
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(**config)
+        )
+    except Exception as e:
+        import traceback
+        print("\n========== GEMINI API ERROR ==========")
+        traceback.print_exc()
+        print("======================================\n")
+        raise RuntimeError(f"Gemini API call failed: {e}") from e
+
+    if response is None or not getattr(response, "text", None):
+        raise RuntimeError("Gemini returned an empty response.")
 
     return response.text.strip()
 
@@ -1956,9 +2008,12 @@ def clear_all_files():
 
 @app.route(
     "/evaluate-commercial",
-    methods=["POST"]
+    methods=["POST", "OPTIONS"]
 )
 def evaluate_commercial():
+
+    if request.method == "OPTIONS":
+        return ("", 204)
 
     try:
 
@@ -2067,20 +2122,15 @@ def evaluate_commercial():
 
     except Exception as e:
 
-        print(
-            "\nCOMMERCIAL EVALUATION ERROR:"
-        )
+        import traceback
 
-        print(
-            str(e)
-        )
+        print("\n========== COMMERCIAL EVALUATION ERROR ==========")
+        traceback.print_exc()
+        print("=================================================\n")
 
-        return jsonify(
-            {
-                "error":
-                    f"Commercial evaluation failed: {str(e)}"
-            }
-        ), 500
+        return jsonify({
+            "error": f"Commercial evaluation failed: {str(e)}"
+        }), 500
 
 
 # ============================================================
@@ -2661,23 +2711,16 @@ def evaluate_files():
 
     except Exception as e:
 
-        print(
-            "\nTECHNICAL EVALUATION ERROR:"
-        )
+        import traceback
 
-        print(
-            str(e)
-        )
+        print("\n========== TECHNICAL EVALUATION ERROR ==========")
+        traceback.print_exc()
+        print("===============================================\n")
 
-        return jsonify(
-            {
-                "message":
-                    "Evaluation failed.",
-
-                "error":
-                    str(e)
-            }
-        ), 500
+        return jsonify({
+            "message": "Evaluation failed.",
+            "error": str(e)
+        }), 500
 
 
 # ============================================================
