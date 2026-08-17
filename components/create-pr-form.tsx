@@ -460,7 +460,7 @@ export default function CreatePRForm({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
           <h1 className="text-2xl font-semibold text-green-700">
-            {customTitle || (isReadOnly ? "View PR (Submitted)" : editPrNumber ? "Edit PR Draft" : "Create PR")}
+            {customTitle || (isReadOnly ? "View PR (Submitted)" : editPrNumber ? "Edit PR Draft" : "Create RFP")}
           </h1>
           {isReadOnly && (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
@@ -500,7 +500,7 @@ export default function CreatePRForm({
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
               >
-                {isSubmitting ? "Submitting..." : "Submit PR"}
+                {isSubmitting ? "Submitting..." : "Submit RFP"}
               </button>
             </>
           )}

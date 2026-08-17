@@ -48,7 +48,7 @@ export default function PRAIChatbot({
       text: `Hello! I'm your RFP AI Assistant. Tell me what you'd like to requisition in natural language, and I will extract the details into your form automatically.
 
 For example:
-"Create a RFP for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003. Requested date is August 11, 2026."`,
+"Create a RFP for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003."`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ])
@@ -492,8 +492,8 @@ For example:
             disabled={isProcessing || isReadOnly}
             placeholder={
               isReadOnly
-                ? "This PR is submitted and read-only"
-                : "Describe your PR request... (Press Enter to send, Shift+Enter for newline)"
+                ? "This RFP is submitted and read-only"
+                : "Describe your RFP request..."
             }
             rows={2}
             className="w-full resize-none bg-transparent px-2 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"

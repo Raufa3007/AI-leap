@@ -801,9 +801,7 @@ def evaluate_commercial_vendors(vendors):
         "\n======================================================\n"
     )
 
-    cleaned_text = clean_gemini_json(
-        raw_text
-    )
+    cleaned_text = clean_gemini_json(raw_text)
 
     try:
 
@@ -1201,6 +1199,16 @@ Do not include Arabic text in the final table.
 
 
 # ============================================================
+
+def clean_gemini_json(text):
+    """
+    Strip markdown fences from a Gemini JSON response.
+    """
+    text = text.strip()
+    text = text.replace("```json", "")
+    text = text.replace("```", "")
+    return text.strip()
+
 
 def clean_evaluation_json(rows):
     """
