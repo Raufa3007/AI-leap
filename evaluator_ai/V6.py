@@ -122,12 +122,20 @@ else:
             f"Gemini client initialized successfully using {GEMINI_MODEL}"
         )
 
-    except Exception as e:
+   except Exception as e:
 
-        print(
-            "ERROR: Failed to initialize Gemini client:"
-        )
+    import traceback
 
+    print("\n========== TECHNICAL EVALUATION ERROR ==========")
+    traceback.print_exc()
+    print("================================================")
+
+    return jsonify(
+        {
+            "message": "Evaluation failed.",
+            "error": str(e)
+        }
+    ), 500
         print(
             str(e)
         )
@@ -2159,9 +2167,12 @@ def evaluate_commercial():
 
 @app.route(
     "/evaluate",
-    methods=["POST"]
+    methods=["POST", "OPTIONS"]
 )
 def evaluate_files():
+
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
 
     try:
 
