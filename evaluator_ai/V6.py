@@ -7,11 +7,25 @@
 from dotenv import load_dotenv
 
 load_dotenv()
-from google import genai
 
-from flask import Flask, request, jsonify, render_template, Response
+# ============================================================
+# GOOGLE GEMINI - CURRENT SDK
+# ============================================================
+
+from google import genai
+from google.genai import types
+
+# ============================================================
+# FLASK
+# ============================================================
+
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+
+# ============================================================
+# STANDARD LIBRARIES
+# ============================================================
 
 import os
 import re
@@ -20,13 +34,12 @@ import math
 import shutil
 from io import StringIO
 
+# ============================================================
+# FILE / DATA PROCESSING
+# ============================================================
+
 import fitz  # PyMuPDF
 import pandas as pd
-import google.generativeai as genai
-
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
 
 
 # ============================================================
@@ -34,7 +47,41 @@ from werkzeug.utils import secure_filename
 # ============================================================
 
 app = Flask(__name__)
-CORS(app)
+
+# ------------------------------------------------------------
+# CORS
+# ------------------------------------------------------------
+# Allows Vercel frontend to communicate with Render backend.
+# For production you can restrict this to your Vercel domain.
+# ------------------------------------------------------------
+
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": "*"
+        }
+    }
+)
+
+
+@app.after_request
+def add_cors_headers(response):
+    """
+    Explicitly add CORS headers to every response.
+    """
+
+    response.headers["Access-Control-Allow-Origin"] = "*"
+
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type, Authorization"
+    )
+
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET, POST, PUT, DELETE, OPTIONS"
+    )
+
+    return response
 
 
 # ============================================================
@@ -43,7 +90,10 @@ CORS(app)
 
 UPLOAD_FOLDER = "uploaded_files"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
@@ -52,14 +102,48 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # GEMINI CONFIGURATION
 # ============================================================
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_API_KEY = os.environ.get(
+    "GEMINI_API_KEY",
+    ""
+).strip()
+
+GEMINI_MODEL = "gemini-2.5-flash"
+
+client = None
 
 if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY is not configured.")
 
-genai.configure(api_key=GEMINI_API_KEY)
+    print(
+        "WARNING: GEMINI_API_KEY is not configured."
+    )
 
-model = genai.GenerativeModel("gemini-2.5-flash")
+else:
+
+    print(
+        "GEMINI_API_KEY loaded successfully."
+    )
+
+    try:
+
+        client = genai.Client(
+            api_key=GEMINI_API_KEY
+        )
+
+        print(
+            f"Gemini client initialized successfully using {GEMINI_MODEL}"
+        )
+
+    except Exception as e:
+
+        print(
+            "ERROR: Failed to initialize Gemini client:"
+        )
+
+        print(
+            str(e)
+        )
+
+        client = None
 
 
 # ============================================================
@@ -112,10 +196,21 @@ def sanitize_filename(filename):
 
     filename = filename.strip()
 
-    filename = filename.replace("/", "_")
-    filename = filename.replace("\\", "_")
+    filename = filename.replace(
+        "/",
+        "_"
+    )
 
-    filename = re.sub(r'[<>:"|?*]', "_", filename)
+    filename = filename.replace(
+        "\\",
+        "_"
+    )
+
+    filename = re.sub(
+        r'[<>:"|?*]',
+        "_",
+        filename
+    )
 
     return filename
 
@@ -124,150 +219,221 @@ def sanitize_filename(filename):
 
 def clean_text(text):
     """
-    Remove duplicate empty lines, trailing spaces and tabs.
+    Remove duplicate empty lines,
+    trailing spaces and tabs.
     """
 
     if not text:
         return ""
 
-    text = re.sub(r'\n\s*\n+', '\n\n', text)
+    text = re.sub(
+        r'\n\s*\n+',
+        '\n\n',
+        text
+    )
 
-    text = re.sub(r'[ ]+\n', '\n', text)
+    text = re.sub(
+        r'[ ]+\n',
+        '\n',
+        text
+    )
 
-    text = re.sub(r'[^\S\r\n]+', ' ', text)
+    text = re.sub(
+        r'[^\S\r\n]+',
+        ' ',
+        text
+    )
 
     return text.strip()
 
-def parse_markdown_table_to_json(markdown_table_text):
+
+# ============================================================
+
+def parse_markdown_table_to_json(
+    markdown_table_text
+):
+    """
+    Convert a markdown table returned by Gemini
+    into a list of dictionaries.
+    """
+
     try:
-        df = pd.read_csv(StringIO(markdown_table_text), sep="|", engine="python", skipinitialspace=True)
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # drop any unnamed column
-        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-        json_data = df.to_dict(orient="records")
+
+        df = pd.read_csv(
+            StringIO(
+                markdown_table_text
+            ),
+            sep="|",
+            engine="python",
+            skipinitialspace=True
+        )
+
+        df = df.loc[
+            :,
+            ~df.columns.astype(str).str.contains(
+                "^Unnamed"
+            )
+        ]
+
+        df = df.apply(
+            lambda column: column.map(
+                lambda value:
+                value.strip()
+                if isinstance(
+                    value,
+                    str
+                )
+                else value
+            )
+        )
+
+        json_data = df.to_dict(
+            orient="records"
+        )
+
         return json_data
+
     except Exception as e:
-        print("Error parsing markdown to JSON:", e)
+
+        print(
+            "Error parsing markdown to JSON:",
+            e
+        )
+
         return []
-    
-    
 
-def evaluate_commercial_vendors(vendors):
 
-    prompt = generate_commercial_prompt(vendors)
+# ============================================================
+# GEMINI HELPER
+# ============================================================
 
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0
-        }
+def call_gemini(
+    prompt,
+    temperature=0.0,
+    response_mime_type=None
+):
+    """
+    Centralized Gemini API call using the current
+    Google GenAI Python SDK.
+    """
+
+    if client is None:
+
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured "
+            "or Gemini client initialization failed."
+        )
+
+    config_kwargs = {
+        "temperature": temperature
+    }
+
+    if response_mime_type:
+
+        config_kwargs[
+            "response_mime_type"
+        ] = response_mime_type
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            **config_kwargs
+        )
     )
 
-    print(response.text)
+    if response is None:
 
-    text = response.text.strip()
+        raise RuntimeError(
+            "Gemini returned an empty response."
+        )
 
-    # Remove markdown fences
-    text = text.replace("```json", "")
-    text = text.replace("```", "")
-    text = text.strip()
+    text = response.text
 
-    try:
-        result = json.loads(text)
-    except json.JSONDecodeError:
-        print("Gemini returned invalid JSON:")
-        print(text)
-        raise
+    if not text:
 
-    return result
+        raise RuntimeError(
+            "Gemini returned an empty text response."
+        )
+
+    return text.strip()
 
 
-
-def generate_commercial_prompt(vendors):
-
-    prompt = []
-
-    prompt.append(
-        """
-You are an expert Procurement Commercial Evaluation Officer.
-
-Evaluate every vendor independently.
-
-Use the following weights.
-
-Technical Proposal Score : 40%
-
-Past Project Experience : 15%
-
-On-Time Delivery : 10%
-
-Compliance : 10%
-
-Financial Stability : 10%
-
-Customer References : 10%
-
-Risk Score : 5%
-
-Return ONLY valid JSON.
-"""
-    )
-
-    prompt.append(json.dumps(vendors, indent=2))
-
-    prompt.append(
-        """
-Return JSON only.
-
-Example
-
-{
-   "vendors":[
-      {
-         "id":1,
-         "overallScore":89,
-         "status":"Completed",
-         "recommendation":"Recommended",
-         "aiInsight":"Excellent financial capability with low commercial risk."
-      }
-   ]
-}
-"""
-    )
-
-    return "\n".join(prompt)
-
-
-
-
-def call_gemini(prompt, temperature=0.0):
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature": temperature
-        }
-    )
-    return response.text.strip()
-
+# ============================================================
 
 def clean_gemini_json(text):
+    """
+    Remove markdown code fences from Gemini JSON.
+    """
+
+    if not text:
+
+        return ""
+
     text = text.strip()
-    text = re.sub(r"^```json\s*", "", text)
-    text = re.sub(r"^```\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
+
+    text = re.sub(
+        r"^```json\s*",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = re.sub(
+        r"^```\s*",
+        "",
+        text
+    )
+
+    text = re.sub(
+        r"\s*```$",
+        "",
+        text
+    )
+
     return text.strip()
 
 
+# ============================================================
+
 def sanitize_nan(obj):
-    if isinstance(obj, list):
-        return [sanitize_nan(i) for i in obj]
-    if isinstance(obj, dict):
-        return {k: sanitize_nan(v) for k, v in obj.items()}
-    if isinstance(obj, float) and math.isnan(obj):
+    """
+    Convert NaN values into empty strings.
+    """
+
+    if isinstance(
+        obj,
+        list
+    ):
+
+        return [
+            sanitize_nan(i)
+            for i in obj
+        ]
+
+    if isinstance(
+        obj,
+        dict
+    ):
+
+        return {
+            k: sanitize_nan(v)
+            for k, v in obj.items()
+        }
+
+    if isinstance(
+        obj,
+        float
+    ) and math.isnan(obj):
+
         return ""
+
     return obj
 
 
-# --- File Reading and AI Interaction Functions ---
+# ============================================================
+# FILE READING
+# ============================================================
 
 def read_text_file(file_path):
     """
@@ -313,18 +479,23 @@ def extract_text_from_pdf_page(
 
     try:
 
-        with fitz.open(pdf_path) as doc:
+        with fitz.open(
+            pdf_path
+        ) as doc:
 
             if (
                 page_number < 0
                 or page_number >= len(doc)
             ):
+
                 return (
                     f"Error: Page number "
                     f"{page_number} is out of bounds."
                 )
 
-            page = doc[page_number]
+            page = doc[
+                page_number
+            ]
 
             return page.get_text()
 
@@ -338,10 +509,12 @@ def extract_text_from_pdf_page(
 
 
 # ============================================================
-# COMMERCIAL EVALUATION
+# COMMERCIAL EVALUATION PROMPT
 # ============================================================
 
-def generate_commercial_prompt(vendors):
+def generate_commercial_prompt(
+    vendors
+):
     """
     Generate the commercial evaluation prompt.
     """
@@ -543,27 +716,42 @@ FINAL VALIDATION:
 
 VENDOR DATA:
 
-{json.dumps(vendors, indent=2, ensure_ascii=False)}
+{json.dumps(
+    vendors,
+    indent=2,
+    ensure_ascii=False
+)}
 """
 
     return prompt
 
 
 # ============================================================
+# NORMALIZE COMMERCIAL RESULT
+# ============================================================
 
-def normalize_commercial_result(result):
+def normalize_commercial_result(
+    result
+):
     """
     Validate and normalize Gemini commercial result.
     """
 
-    if not isinstance(result, dict):
+    if not isinstance(
+        result,
+        dict
+    ):
+
         raise ValueError(
-            "Commercial evaluation response must be a JSON object."
+            "Commercial evaluation response "
+            "must be a JSON object."
         )
 
     if "vendors" not in result:
+
         raise ValueError(
-            "Commercial evaluation response missing 'vendors'."
+            "Commercial evaluation response "
+            "missing 'vendors'."
         )
 
     evaluated_vendors = result.get(
@@ -577,7 +765,11 @@ def normalize_commercial_result(result):
         evaluated_vendors
     ):
 
-        if not isinstance(vendor, dict):
+        if not isinstance(
+            vendor,
+            dict
+        ):
+
             continue
 
         vendor_id = (
@@ -586,10 +778,13 @@ def normalize_commercial_result(result):
         )
 
         try:
+
             vendor_id = int(
                 vendor_id
             )
+
         except Exception:
+
             vendor_id = index + 1
 
         evaluations = vendor.get(
@@ -601,6 +796,7 @@ def normalize_commercial_result(result):
             evaluations,
             list
         ):
+
             evaluations = []
 
         normalized_evaluations = []
@@ -625,6 +821,7 @@ def normalize_commercial_result(result):
                     evaluation,
                     dict
                 ):
+
                     continue
 
                 evaluation_name = str(
@@ -638,7 +835,9 @@ def normalize_commercial_result(result):
                     evaluation_name
                     == criterion_name.lower()
                 ):
+
                     matching_evaluation = evaluation
+
                     break
 
             if matching_evaluation:
@@ -649,13 +848,16 @@ def normalize_commercial_result(result):
                 )
 
                 try:
+
                     score = float(
                         raw_score
                     )
+
                 except (
                     TypeError,
                     ValueError
                 ):
+
                     score = 0
 
                 score = max(
@@ -675,14 +877,16 @@ def normalize_commercial_result(result):
                     matching_evaluation.get(
                         "reason"
                     )
-                    or "No detailed reasoning provided."
+                    or
+                    "No detailed reasoning provided."
                 )
 
                 reference = (
                     matching_evaluation.get(
                         "reference"
                     )
-                    or "Not specified"
+                    or
+                    "Not specified"
                 )
 
             else:
@@ -713,21 +917,32 @@ def normalize_commercial_result(result):
             2
         )
 
+        # ----------------------------------------------------
         # Recommendation
+        # ----------------------------------------------------
+
         if overall_score >= 80:
-            recommendation = "Recommended"
+
+            recommendation = (
+                "Recommended"
+            )
 
         elif overall_score >= 60:
+
             recommendation = (
                 "Conditionally Recommended"
             )
 
         else:
+
             recommendation = (
                 "Not Recommended"
             )
 
-        # Use AI recommendation only if valid
+        # ----------------------------------------------------
+        # AI recommendation
+        # ----------------------------------------------------
+
         ai_recommendation = str(
             vendor.get(
                 "recommendation",
@@ -740,23 +955,34 @@ def normalize_commercial_result(result):
             "Conditionally Recommended",
             "Not Recommended"
         ]:
-            recommendation = ai_recommendation
+
+            # Use the score-based recommendation
+            # as the final source of truth.
+            recommendation = recommendation
 
         normalized_vendor = {
             "id": vendor_id,
+
             "name": vendor.get(
                 "name",
                 f"Vendor {vendor_id}"
             ),
+
             "overallScore": overall_score,
+
             "status": vendor.get(
                 "status"
             ) or "Completed",
+
             "recommendation": recommendation,
+
             "aiInsight": vendor.get(
                 "aiInsight"
-            ) or "Commercial evaluation completed.",
-            "evaluations": normalized_evaluations
+            ) or
+            "Commercial evaluation completed.",
+
+            "evaluations":
+                normalized_evaluations
         }
 
         normalized_vendors.append(
@@ -770,15 +996,21 @@ def normalize_commercial_result(result):
 
 
 # ============================================================
+# COMMERCIAL EVALUATION
+# ============================================================
 
-def evaluate_commercial_vendors(vendors):
+def evaluate_commercial_vendors(
+    vendors
+):
     """
     Evaluate all vendors commercially.
     """
 
     if not vendors:
+
         raise ValueError(
-            "No vendors were provided for commercial evaluation."
+            "No vendors were provided "
+            "for commercial evaluation."
         )
 
     prompt = generate_commercial_prompt(
@@ -789,31 +1021,27 @@ def evaluate_commercial_vendors(vendors):
         "\n========== COMMERCIAL PROMPT ==========\n"
     )
 
-    print(prompt)
+    print(
+        prompt
+    )
 
     print(
         "\n========================================\n"
     )
 
-    response = model.generate_content(
+    raw_text = call_gemini(
         prompt,
-        generation_config={
-            "temperature": 0
-        }
+        temperature=0.0,
+        response_mime_type="application/json"
     )
-
-    if not response:
-        raise ValueError(
-            "Gemini returned an empty response."
-        )
-
-    raw_text = response.text.strip()
 
     print(
         "\n========== RAW COMMERCIAL GEMINI RESPONSE ==========\n"
     )
 
-    print(raw_text)
+    print(
+        raw_text
+    )
 
     print(
         "\n======================================================\n"
@@ -835,7 +1063,9 @@ def evaluate_commercial_vendors(vendors):
             "\n========== INVALID GEMINI JSON ==========\n"
         )
 
-        print(cleaned_text)
+        print(
+            cleaned_text
+        )
 
         print(
             "\n==========================================\n"
@@ -872,7 +1102,9 @@ def evaluate_commercial_vendors(vendors):
 # RFP RUBRIC FUNCTIONS
 # ============================================================
 
-def extract_table_from_gemini(text):
+def extract_table_from_gemini(
+    text
+):
     """
     Ask Gemini to extract the Evaluation Parameters
     table from the RFP.
@@ -927,6 +1159,7 @@ def extract_tables_from_response(
     """
 
     if not response_content:
+
         return []
 
     lines = response_content.splitlines()
@@ -947,7 +1180,9 @@ def extract_tables_from_response(
 
             if current_table:
 
-                if len(current_table) >= 2:
+                if len(
+                    current_table
+                ) >= 2:
 
                     tables.append(
                         "\n".join(
@@ -957,9 +1192,11 @@ def extract_tables_from_response(
 
                 current_table = []
 
-    if current_table and len(
+    if (
         current_table
-    ) >= 2:
+        and
+        len(current_table) >= 2
+    ):
 
         tables.append(
             "\n".join(
@@ -1017,14 +1254,20 @@ def extract_tables_from_response(
 
 # ============================================================
 
-def normalize_parameter_table(df):
+def normalize_parameter_table(
+    df
+):
     """
     Normalize extracted RFP parameter table.
     """
 
     try:
 
-        if df is None or df.empty:
+        if (
+            df is None
+            or df.empty
+        ):
+
             return []
 
         df.columns = [
@@ -1045,6 +1288,7 @@ def normalize_parameter_table(df):
         )
 
         # Remove markdown separator rows
+
         first_column = df.columns[0]
 
         df = df[
@@ -1056,12 +1300,19 @@ def normalize_parameter_table(df):
         ]
 
         # Fill missing values
+
         df = df.ffill()
 
         # Normalize expected number of columns
-        if len(df.columns) >= 5:
 
-            df = df.iloc[:, :5]
+        if len(
+            df.columns
+        ) >= 5:
+
+            df = df.iloc[
+                :,
+                :5
+            ]
 
             df.columns = [
                 "main_criteria",
@@ -1148,7 +1399,9 @@ and objective.
     prompt.append(
         f"\n\n### Proposals to Evaluate "
         f"({len(proposal_names)} total): "
-        + ", ".join(proposal_names)
+        + ", ".join(
+            proposal_names
+        )
     )
 
     prompt.append(
@@ -1163,7 +1416,6 @@ and objective.
 
     prompt.append(
         """
-        
 ### EXPERT EVALUATION INSTRUCTIONS
 
 - Evaluate every proposal independently.
@@ -1199,7 +1451,6 @@ and objective.
 
     prompt.append(
         """
-        
 The final row must be:
 
 Total Score
@@ -1219,8 +1470,12 @@ Do not include Arabic text in the final table.
 
 
 # ============================================================
+# TECHNICAL TABLE CLEANING
+# ============================================================
 
-def clean_evaluation_json(rows):
+def clean_evaluation_json(
+    rows
+):
     """
     Clean parsed evaluation rows.
     """
@@ -1233,17 +1488,22 @@ def clean_evaluation_json(rows):
             row,
             dict
         ):
+
             continue
 
         # Skip redundant header rows
+
         if all(
             str(key).strip()
-            == str(value).strip()
+            ==
+            str(value).strip()
             for key, value in row.items()
         ):
+
             continue
 
         # Skip separator rows
+
         if all(
             re.match(
                 r"^-+$",
@@ -1251,6 +1511,7 @@ def clean_evaluation_json(rows):
             )
             for value in row.values()
         ):
+
             continue
 
         cleaned.append(
@@ -1264,16 +1525,258 @@ def clean_evaluation_json(rows):
 
 
 # ============================================================
-# FLASK ROUTES
+# TECHNICAL OVERALL AI INSIGHTS
 # ============================================================
 
-@app.route("/", methods=["GET"])
+def generate_technical_overall_insights(
+    evaluation_table,
+    proposal_names
+):
+
+    print(
+        "\n=== AI INSIGHT DEBUG START ==="
+    )
+
+    print(
+        "[1] Vendors:",
+        proposal_names
+    )
+
+    print(
+        "[1] Evaluation table exists:",
+        bool(evaluation_table)
+    )
+
+    if (
+        not evaluation_table
+        or
+        not proposal_names
+    ):
+
+        print(
+            "[ERROR] Missing evaluation data or vendor names"
+        )
+
+        return {}
+
+    prompt = f"""
+You are a senior government IT procurement technical evaluation expert.
+
+The technical evaluation below contains criterion/sub-criterion scores,
+reasoning, and references for multiple vendor proposals.
+
+Your task is to produce ONE concise overall AI insight for EACH vendor.
+
+The insight must:
+- Be highly concise: maximum 2 sentences.
+- Highlight the most important technical strengths and weaknesses.
+- Use specific, high-value technical keywords from the evaluation.
+- Mention the most significant evidence or gap only when relevant.
+- Focus on what matters for the procurement decision.
+- Avoid repeating individual criterion scores or the total score.
+- Avoid generic statements.
+- Do not invent or assume information.
+- Do not use bullet points.
+
+Return ONLY valid JSON in exactly this structure:
+
+{{
+    "vendors": [
+        {{
+            "name": "Vendor Name",
+            "aiInsight": "Concise, evidence-based technical assessment."
+        }}
+    ]
+}}
+
+IMPORTANT:
+- Return exactly ONE insight for every vendor.
+- Use the vendor names EXACTLY as provided.
+- Keep each insight between 20-40 words.
+- Focus on the 1-2 most decision-relevant technical findings.
+
+VENDOR NAMES:
+
+{json.dumps(
+    proposal_names,
+    ensure_ascii=False,
+    indent=2
+)}
+
+TECHNICAL EVALUATION DATA:
+
+{json.dumps(
+    evaluation_table,
+    ensure_ascii=False,
+    indent=2
+)}
+"""
+
+    print(
+        "[2] Calling Gemini..."
+    )
+
+    try:
+
+        raw = call_gemini(
+            prompt,
+            temperature=0.0,
+            response_mime_type="application/json"
+        )
+
+    except Exception as e:
+
+        print(
+            "Technical overall insight Gemini error:",
+            e
+        )
+
+        return {
+            name:
+            "Overall technical insight could not be generated."
+            for name in proposal_names
+        }
+
+    print(
+        raw
+    )
+
+    cleaned = clean_gemini_json(
+        raw
+    )
+
+    print(
+        cleaned
+    )
+
+    try:
+
+        result = json.loads(
+            cleaned
+        )
+
+    except json.JSONDecodeError as e:
+
+        print(
+            "Technical overall insight JSON parse error:",
+            e
+        )
+
+        print(
+            cleaned
+        )
+
+        return {
+            name:
+            "Overall technical insight could not be generated."
+            for name in proposal_names
+        }
+
+    insights = {}
+
+    for item in result.get(
+        "vendors",
+        []
+    ):
+
+        if not isinstance(
+            item,
+            dict
+        ):
+
+            continue
+
+        name = str(
+            item.get(
+                "name",
+                ""
+            )
+        ).strip()
+
+        insight = str(
+            item.get(
+                "aiInsight",
+                ""
+            )
+        ).strip()
+
+        print(
+            f"\n[DEBUG] Vendor: {name}"
+        )
+
+        print(
+            f"[DEBUG] Insight: {insight}"
+        )
+
+        if (
+            name
+            and
+            insight
+        ):
+
+            insights[name] = insight
+
+    # --------------------------------------------------------
+    # Match names case-insensitively
+    # --------------------------------------------------------
+
+    normalized = {}
+
+    for vendor_name in proposal_names:
+
+        matched = next(
+            (
+                value
+                for key, value
+                in insights.items()
+                if key.lower()
+                ==
+                vendor_name.lower()
+            ),
+            None
+        )
+
+        normalized[
+            vendor_name
+        ] = (
+            matched
+            or
+            "Overall technical insight was not provided."
+        )
+
+        print(
+            f"[DEBUG] Matching "
+            f"{vendor_name} -> {matched}"
+        )
+
+    print(
+        "\n[DEBUG] FINAL INSIGHTS:"
+    )
+
+    print(
+        normalized
+    )
+
+    return normalized
+
+
+# ============================================================
+# ROOT
+# ============================================================
+
+@app.route(
+    "/",
+    methods=["GET"]
+)
 def index():
 
     return jsonify(
         {
-            "message": "Flask Proposal Evaluation API is running.",
-            "version": "V6"
+            "message":
+                "Flask Proposal Evaluation API is running.",
+
+            "version":
+                "V6"
         }
     )
 
@@ -1316,8 +1819,11 @@ def get_default_files():
 
         return jsonify(
             {
-                "rfp": rfp_name,
-                "proposals": proposal_names
+                "rfp":
+                    rfp_name,
+
+                "proposals":
+                    proposal_names
             }
         ), 200
 
@@ -1325,7 +1831,8 @@ def get_default_files():
 
         return jsonify(
             {
-                "error": str(e)
+                "error":
+                    str(e)
             }
         ), 500
 
@@ -1373,13 +1880,15 @@ def upload_files():
 
                 return jsonify(
                     {
-                        "error": "RFP file has no filename."
+                        "error":
+                            "RFP file has no filename."
                     }
                 ), 400
 
             rfp_filename = (
                 "rfp_"
-                + secure_filename(
+                +
+                secure_filename(
                     rfp_file.filename
                 )
             )
@@ -1421,6 +1930,7 @@ def upload_files():
         for proposal_file in proposal_files:
 
             if not proposal_file.filename:
+
                 continue
 
             original_name = sanitize_filename(
@@ -1454,9 +1964,14 @@ def upload_files():
 
         return jsonify(
             {
-                "message": "Files uploaded successfully",
-                "rfp_path": rfp_path,
-                "proposal_paths": proposal_paths
+                "message":
+                    "Files uploaded successfully",
+
+                "rfp_path":
+                    rfp_path,
+
+                "proposal_paths":
+                    proposal_paths
             }
         ), 200
 
@@ -1469,7 +1984,7 @@ def upload_files():
         return jsonify(
             {
                 "error":
-                f"An error occurred: {str(e)}"
+                    f"An error occurred: {str(e)}"
             }
         ), 500
 
@@ -1502,7 +2017,7 @@ def clear_all_files():
         return jsonify(
             {
                 "message":
-                "All uploaded files cleared"
+                    "All uploaded files cleared"
             }
         ), 200
 
@@ -1511,13 +2026,13 @@ def clear_all_files():
         return jsonify(
             {
                 "error":
-                f"Failed to clear files: {str(e)}"
+                    f"Failed to clear files: {str(e)}"
             }
         ), 500
 
 
 # ============================================================
-# COMMERCIAL EVALUATION
+# COMMERCIAL EVALUATION API
 # ============================================================
 
 @app.route(
@@ -1528,14 +2043,9 @@ def evaluate_commercial():
 
     try:
 
-        # ====================================================
-        # IMPORTANT FIX FOR:
-        #
-        # Unsupported Media Type
-        #
-        # Did not attempt to load JSON data because the request
-        # Content-Type was not 'application/json'
-        # ====================================================
+        # ----------------------------------------------------
+        # Validate Content-Type
+        # ----------------------------------------------------
 
         if not request.is_json:
 
@@ -1552,11 +2062,17 @@ def evaluate_commercial():
             return jsonify(
                 {
                     "error":
-                    "Request Content-Type must be application/json.",
+                        "Request Content-Type must be "
+                        "application/json.",
+
                     "received_content_type":
-                    request.content_type
+                        request.content_type
                 }
             ), 415
+
+        # ----------------------------------------------------
+        # Parse JSON
+        # ----------------------------------------------------
 
         request_data = request.get_json(
             silent=True
@@ -1567,9 +2083,14 @@ def evaluate_commercial():
             return jsonify(
                 {
                     "error":
-                    "Request body is empty or invalid JSON."
+                        "Request body is empty "
+                        "or invalid JSON."
                 }
             ), 400
+
+        # ----------------------------------------------------
+        # Vendors
+        # ----------------------------------------------------
 
         vendors = request_data.get(
             "vendors",
@@ -1584,7 +2105,7 @@ def evaluate_commercial():
             return jsonify(
                 {
                     "error":
-                    "'vendors' must be an array."
+                        "'vendors' must be an array."
                 }
             ), 400
 
@@ -1593,7 +2114,7 @@ def evaluate_commercial():
             return jsonify(
                 {
                     "error":
-                    "No vendors were provided."
+                        "No vendors were provided."
                 }
             ), 400
 
@@ -1612,6 +2133,10 @@ def evaluate_commercial():
         print(
             "========================================\n"
         )
+
+        # ----------------------------------------------------
+        # Evaluate
+        # ----------------------------------------------------
 
         result = evaluate_commercial_vendors(
             vendors
@@ -1634,115 +2159,13 @@ def evaluate_commercial():
         return jsonify(
             {
                 "error":
-                f"Commercial evaluation failed: {str(e)}"
+                    f"Commercial evaluation failed: {str(e)}"
             }
         ), 500
 
 
 # ============================================================
-# TECHNICAL OVERALL AI INSIGHTS
-# ============================================================
-
-def generate_technical_overall_insights(evaluation_table, proposal_names):
-    print("\n=== AI INSIGHT DEBUG START ===")
-    print("[1] Vendors:", proposal_names)
-    print("[1] Evaluation table exists:", bool(evaluation_table))
-    if not evaluation_table or not proposal_names:
-        print("[ERROR] Missing evaluation data or vendor names")
-        return{}
-    """
-    Generate one overall AI insight for each vendor from the completed
-    technical criterion scores/reasons. The insight is returned separately
-    from the row-level evaluation table so the frontend can display it
-    inside each vendor's technical assessment.
-    """
-    if not evaluation_table or not proposal_names:
-        return {}
-
-    prompt = f"""
-You are a senior government IT procurement technical evaluation expert.
-
-The technical evaluation below contains criterion/sub-criterion scores,
-reasoning, and references for multiple vendor proposals.
-
-Your task is to produce ONE concise overall AI insight for EACH vendor.
-
-The insight must:
-- Be highly concise: maximum 2 sentences.
-- Highlight the most important technical strengths and weaknesses.
-- Use specific, high-value technical keywords from the evaluation.
-- Mention the most significant evidence or gap only when relevant.
-- Focus on what matters for the procurement decision.
-- Avoid repeating individual criterion scores or the total score.
-- Avoid generic statements.
-- Do not invent or assume information.
-- Do not use bullet points.
-
-Return ONLY valid JSON in exactly this structure:
-
-{{
-    "vendors": [
-        {{
-            "name": "Vendor Name",
-            "aiInsight": "Concise, evidence-based technical assessment."
-        }}
-    ]
-}}
-
-IMPORTANT:
-- Return exactly ONE insight for every vendor.
-- Use the vendor names EXACTLY as provided.
-- Keep each insight between 20-40 words.
-- Focus on the 1-2 most decision-relevant technical findings.
-
-VENDOR NAMES:
-{json.dumps(proposal_names, ensure_ascii=False, indent=2)}
-
-TECHNICAL EVALUATION DATA:
-{json.dumps(evaluation_table, ensure_ascii=False, indent=2)}
-"""
-    print("[2] Calling Gemini...")
-
-    raw = call_gemini(prompt, temperature=0.0)
-    print(raw)
-    cleaned = clean_gemini_json(raw)
-    print(cleaned)
-
-    try:
-        result = json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        print("Technical overall insight JSON parse error:", e)
-        print(cleaned)
-        print(result)
-        return {name: "Overall technical insight could not be generated." for name in proposal_names}
-
-    insights = {}
-    for item in result.get("vendors", []):
-        if not isinstance(item, dict):
-            continue
-        name = str(item.get("name", "")).strip()
-        insight = str(item.get("aiInsight", "")).strip()
-        print(f"\n[DEBUG] Vendor: {name}")
-        print(f"[DEBUG] Insight: {insight}")
-        if name and insight:
-            insights[name] = insight
-
-    # Match names case-insensitively and always provide a value.
-    normalized = {}
-    for vendor_name in proposal_names:
-        matched = next((v for k, v in insights.items() if k.lower() == vendor_name.lower()), None)
-        normalized[vendor_name] = matched or "Overall technical insight was not provided."
-        print(f"[DEBUG] Matching {vendor_name} -> {matched}")
-        normalized[vendor_name] = (
-            matched
-            or "Overall technical insight was not provided.")
-    print("\n[DEBUG] FINAL INSIGHTS:")
-    print(normalized)
-    return normalized
-
-
-# ============================================================
-# TECHNICAL EVALUATION
+# TECHNICAL EVALUATION API
 # ============================================================
 
 @app.route(
@@ -1767,7 +2190,8 @@ def evaluate_files():
             return jsonify(
                 {
                     "error":
-                    "Crucial file 'evaluationDoc.txt' not found."
+                        "Crucial file "
+                        "'evaluationDoc.txt' not found."
                 }
             ), 404
 
@@ -1779,26 +2203,36 @@ def evaluate_files():
         rfp_path = None
 
         # First look inside uploaded_files
-        for filename in sorted(
-            os.listdir(
-                UPLOAD_FOLDER
-            )
+
+        if os.path.exists(
+            UPLOAD_FOLDER
         ):
 
-            if filename.startswith(
-                "rfp_"
-            ) and filename.lower().endswith(
-                ".pdf"
+            for filename in sorted(
+                os.listdir(
+                    UPLOAD_FOLDER
+                )
             ):
 
-                rfp_path = os.path.join(
-                    UPLOAD_FOLDER,
-                    filename
-                )
+                if (
+                    filename.startswith(
+                        "rfp_"
+                    )
+                    and
+                    filename.lower().endswith(
+                        ".pdf"
+                    )
+                ):
 
-                break
+                    rfp_path = os.path.join(
+                        UPLOAD_FOLDER,
+                        filename
+                    )
+
+                    break
 
         # Fallback to rfp.pdf
+
         if rfp_path is None:
 
             if os.path.exists(
@@ -1812,7 +2246,7 @@ def evaluate_files():
             return jsonify(
                 {
                     "error":
-                    "Crucial RFP PDF not found."
+                        "Crucial RFP PDF not found."
                 }
             ), 404
 
@@ -1830,7 +2264,7 @@ def evaluate_files():
             return jsonify(
                 {
                     "error":
-                    "Unable to extract RFP page text."
+                        "Unable to extract RFP page text."
                 }
             ), 500
 
@@ -1874,6 +2308,10 @@ def evaluate_files():
 
                 parameter_table = None
 
+        # ----------------------------------------------------
+        # Generate rubric if missing
+        # ----------------------------------------------------
+
         if not parameter_table:
 
             print(
@@ -1891,7 +2329,8 @@ def evaluate_files():
                 return jsonify(
                     {
                         "error":
-                        "AI failed to extract table from RFP text."
+                            "AI failed to extract "
+                            "table from RFP text."
                     }
                 ), 500
 
@@ -1904,7 +2343,8 @@ def evaluate_files():
                 return jsonify(
                     {
                         "error":
-                        "Could not parse criteria table from AI response."
+                            "Could not parse criteria "
+                            "table from AI response."
                     }
                 ), 500
 
@@ -1917,7 +2357,8 @@ def evaluate_files():
                 return jsonify(
                     {
                         "error":
-                        "Generated evaluation rubric is empty."
+                            "Generated evaluation "
+                            "rubric is empty."
                     }
                 ), 500
 
@@ -1945,6 +2386,17 @@ def evaluate_files():
         # ----------------------------------------------------
 
         proposal_texts = []
+
+        if not os.path.exists(
+            UPLOAD_FOLDER
+        ):
+
+            return jsonify(
+                {
+                    "error":
+                        "Upload folder does not exist."
+                }
+            ), 400
 
         for filename in sorted(
             os.listdir(
@@ -1979,9 +2431,10 @@ def evaluate_files():
 
                         pages = []
 
-                        for page_index, page in enumerate(
-                            doc
-                        ):
+                        for (
+                            page_index,
+                            page
+                        ) in enumerate(doc):
 
                             page_text = page.get_text()
 
@@ -2031,8 +2484,9 @@ def evaluate_files():
             return jsonify(
                 {
                     "error":
-                    "No proposal files found to evaluate. "
-                    "Please upload them first."
+                        "No proposal files found "
+                        "to evaluate. "
+                        "Please upload them first."
                 }
             ), 400
 
@@ -2112,22 +2566,27 @@ def evaluate_files():
             return jsonify(
                 {
                     "error":
-                    "Parsing the AI evaluation response failed.",
+                        "Parsing the AI evaluation "
+                        "response failed.",
+
                     "raw_output":
-                    gemini_output_text
+                        gemini_output_text
                 }
             ), 500
 
         # ----------------------------------------------------
         # Step 8:
-        # Generate one overall AI insight per vendor
+        # Generate overall AI insights
         # ----------------------------------------------------
+
         proposal_names = [
-            name for name, _ in proposal_texts
+            name
+            for name, _ in proposal_texts
         ]
 
         print(
-            "\n========== GENERATING TECHNICAL OVERALL INSIGHTS =========="
+            "\n========== GENERATING "
+            "TECHNICAL OVERALL INSIGHTS =========="
         )
 
         technical_overall_insights = (
@@ -2151,14 +2610,17 @@ def evaluate_files():
 
         # ----------------------------------------------------
         # Step 9:
-        # Return row-level technical evaluation plus one
-        # overall AI insight for every vendor.
+        # Return technical evaluation
         # ----------------------------------------------------
+
         return Response(
             json.dumps(
                 {
-                    "evaluation_table": evaluation_table,
-                    "technical_overall_insights": technical_overall_insights
+                    "evaluation_table":
+                        evaluation_table,
+
+                    "technical_overall_insights":
+                        technical_overall_insights
                 },
                 ensure_ascii=False,
                 sort_keys=False
@@ -2180,9 +2642,10 @@ def evaluate_files():
         return jsonify(
             {
                 "message":
-                "Evaluation failed.",
+                    "Evaluation failed.",
+
                 "error":
-                str(e)
+                    str(e)
             }
         ), 500
 
@@ -2199,10 +2662,14 @@ def health_check():
 
     return jsonify(
         {
-            "status": "ok",
+            "status":
+                "ok",
+
             "service":
-            "Proposal Evaluation API",
-            "version": "V6"
+                "Proposal Evaluation API",
+
+            "version":
+                "V6"
         }
     ), 200
 
@@ -2211,9 +2678,14 @@ def health_check():
 # APPLICATION START
 # ============================================================
 
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
 
     app.run(
         host="0.0.0.0",
