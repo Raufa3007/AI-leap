@@ -1631,30 +1631,19 @@ Return exactly this JSON structure:
 }
 `
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          config: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
           },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: "application/json",
-            },
-          }),
-        }
-      )
+        }),
+      })
 
       if (!response.ok) {
         throw new Error(`AI API error: ${response.status}`)
@@ -1664,7 +1653,8 @@ Return exactly this JSON structure:
       console.log("AI validation response:", data)
 
       const rawResult =
-        data.candidates?.[0]?.content?.parts?.[0]?.text
+        data.text || data.candidates?.[0]?.content?.parts?.[0]?.text
+
 
       if (!rawResult) {
         throw new Error("No validation response received from AI.")

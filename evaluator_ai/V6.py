@@ -22,11 +22,6 @@ from io import StringIO
 
 import fitz  # PyMuPDF
 import pandas as pd
-import google.generativeai as genai
-
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
 
 
 # ============================================================
@@ -52,14 +47,14 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # GEMINI CONFIGURATION
 # ============================================================
 
+GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 if not GEMINI_API_KEY:
     print("WARNING: GEMINI_API_KEY is not configured.")
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 # ============================================================
@@ -780,12 +775,14 @@ def evaluate_commercial_vendors(vendors):
         "\n========================================\n"
     )
 
-    response = model.generate_content(
-        prompt,
-        generation_config={
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
             "temperature": 0
         }
     )
+
 
     if not response:
         raise ValueError(

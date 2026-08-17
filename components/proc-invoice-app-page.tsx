@@ -1026,35 +1026,22 @@ Do not return explanations outside the JSON.
       // GEMINI API
       // ======================================================
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
-        {
-          method: "POST",
+      const response = await fetch("/api/gemini", {
+        method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          prompt: prompt,
+
+          config: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
           },
-
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
-              },
-            ],
-
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType:
-                "application/json",
-            },
-          }),
-        }
-      )
+        }),
+      })
 
       // ======================================================
       // API ERROR
@@ -1087,10 +1074,9 @@ Do not return explanations outside the JSON.
       // ======================================================
 
       const rawText =
-        data
-          ?.candidates?.[0]
-          ?.content?.parts?.[0]
-          ?.text
+        data?.text ||
+        data?.candidates?.[0]?.content?.parts?.[0]?.text
+
 
       if (!rawText) {
         throw new Error(
