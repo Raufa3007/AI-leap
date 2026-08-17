@@ -91,8 +91,14 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # GEMINI CONFIGURATION
 # ============================================================
 
+GEMINI_API_KEY = os.environ.get(
+    "GEMINI_API_KEY",
+    ""
+).strip()
+
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+client = None
 
 if not GEMINI_API_KEY:
 
@@ -100,8 +106,41 @@ if not GEMINI_API_KEY:
         "WARNING: GEMINI_API_KEY is not configured."
     )
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+else:
 
+    print(
+        "GEMINI_API_KEY loaded successfully."
+    )
+
+    try:
+
+        client = genai.Client(
+            api_key=GEMINI_API_KEY
+        )
+
+        print(
+            f"Gemini client initialized successfully using {GEMINI_MODEL}"
+        )
+
+   except Exception as e:
+
+    import traceback
+
+    print("\n========== TECHNICAL EVALUATION ERROR ==========")
+    traceback.print_exc()
+    print("================================================")
+
+    return jsonify(
+        {
+            "message": "Evaluation failed.",
+            "error": str(e)
+        }
+    ), 500
+        print(
+            str(e)
+        )
+
+        client = None
 
 
 # ============================================================
@@ -206,54 +245,49 @@ def clean_text(text):
 
 
 # ============================================================
-# FIX (Bug 1):
-# pandas removed DataFrame.applymap in newer releases.
-# Use DataFrame.apply(...) + Series.map(...) instead, which
-# is what the rest of the file (extract_tables_from_response,
-# normalize_parameter_table) already uses.
-# ============================================================
 
-def parse_markdown_table_to_json(markdown_table_text):
+def parse_markdown_table_to_json(
+    markdown_table_text
+):
+    """
+    Convert a markdown table returned by Gemini
+    into a list of dictionaries.
+    """
+
     try:
-        # ====================================================
-        # FIX: Gemini sometimes prepends a preamble sentence
-        # before the markdown table (e.g. "Here is the expert
-        # evaluation..."). That line has no "|" in it, so
-        # pandas was treating it as a 1-column header and
-        # every real table row after it parsed as null.
-        #
-        # Strip out any line that isn't part of the pipe table
-        # before handing the text to pd.read_csv.
-        # ====================================================
-        table_lines = [
-            line for line in markdown_table_text.splitlines()
-            if "|" in line
-        ]
-
-        if not table_lines:
-            print("No markdown table lines found in Gemini output.")
-            return []
-
-        table_text = "\n".join(table_lines)
 
         df = pd.read_csv(
-            StringIO(table_text),
+            StringIO(
+                markdown_table_text
+            ),
             sep="|",
             engine="python",
             skipinitialspace=True
         )
 
-        # drop any unnamed column
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        df = df.loc[
+            :,
+            ~df.columns.astype(str).str.contains(
+                "^Unnamed"
+            )
+        ]
 
-        # FIXED: applymap -> apply + map (applymap is removed in newer pandas)
         df = df.apply(
             lambda column: column.map(
-                lambda value: value.strip() if isinstance(value, str) else value
+                lambda value:
+                value.strip()
+                if isinstance(
+                    value,
+                    str
+                )
+                else value
             )
         )
 
-        json_data = df.to_dict(orient="records")
+        json_data = df.to_dict(
+            orient="records"
+        )
+
         return json_data
 
     except Exception as e:
@@ -267,78 +301,136 @@ def parse_markdown_table_to_json(markdown_table_text):
 
 
 # ============================================================
-# FIX (Bug 2):
-# sanitize_nan was called in evaluate_files() but was never
-# defined anywhere in the file. Added here so NaN/inf values
-# produced by pandas (e.g. from ragged/missing table cells)
-# are converted to JSON-safe None before jsonify/json.dumps.
+# GEMINI HELPER
 # ============================================================
 
-def sanitize_nan(data):
+def call_gemini(
+    prompt,
+    temperature=0.0,
+    response_mime_type=None
+):
     """
-    Recursively replace NaN / inf float values with None so
-    the result can always be safely serialized to JSON.
+    Centralized Gemini API call using the current
+    Google GenAI Python SDK.
     """
 
-    if isinstance(data, dict):
-        return {key: sanitize_nan(value) for key, value in data.items()}
+    if client is None:
 
-    elif isinstance(data, list):
-        return [sanitize_nan(item) for item in data]
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured "
+            "or Gemini client initialization failed."
+        )
 
-    elif isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
-        return None
+    config_kwargs = {
+        "temperature": temperature
+    }
 
-    else:
-        return data
+    if response_mime_type:
 
-
-def evaluate_commercial_vendors(vendors):
-
-    prompt = generate_commercial_prompt(vendors)
+        config_kwargs[
+            "response_mime_type"
+        ] = response_mime_type
 
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=prompt,
-        config={
-            "temperature": 0
-        }
+        config=types.GenerateContentConfig(
+            **config_kwargs
+        )
     )
 
-    print(response.text)
+    if response is None:
 
-    text = response.text.strip()
+        raise RuntimeError(
+            "Gemini returned an empty response."
+        )
 
-    # Remove markdown fences
-    text = text.replace("```json", "")
-    text = text.replace("```", "")
+    text = response.text
+
+    if not text:
+
+        raise RuntimeError(
+            "Gemini returned an empty text response."
+        )
+
+    return text.strip()
+
+
+# ============================================================
+
+def clean_gemini_json(text):
+    """
+    Remove markdown code fences from Gemini JSON.
+    """
+
+    if not text:
+
+        return ""
+
     text = text.strip()
 
-    try:
-        result = json.loads(text)
-    except json.JSONDecodeError:
-        print("Gemini returned invalid JSON:")
-        print(text)
-        raise
-
-    return result
-
-
-
-
-def call_gemini(prompt, temperature=0.0):
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": temperature
-        }
+    text = re.sub(
+        r"^```json\s*",
+        "",
+        text,
+        flags=re.IGNORECASE
     )
 
-    return response.text.strip()
+    text = re.sub(
+        r"^```\s*",
+        "",
+        text
+    )
+
+    text = re.sub(
+        r"\s*```$",
+        "",
+        text
+    )
+
+    return text.strip()
 
 
-# --- File Reading and AI Interaction Functions ---
+# ============================================================
+
+def sanitize_nan(obj):
+    """
+    Convert NaN values into empty strings.
+    """
+
+    if isinstance(
+        obj,
+        list
+    ):
+
+        return [
+            sanitize_nan(i)
+            for i in obj
+        ]
+
+    if isinstance(
+        obj,
+        dict
+    ):
+
+        return {
+            k: sanitize_nan(v)
+            for k, v in obj.items()
+        }
+
+    if isinstance(
+        obj,
+        float
+    ) and math.isnan(obj):
+
+        return ""
+
+    return obj
+
+
+# ============================================================
+# FILE READING
+# ============================================================
 
 def read_text_file(file_path):
     """
@@ -934,33 +1026,27 @@ def evaluate_commercial_vendors(
         "\n========================================\n"
     )
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": 0
-        }
+    raw_text = call_gemini(
+        prompt,
+        temperature=0.0,
+        response_mime_type="application/json"
     )
-
-
-    if not response:
-        raise ValueError(
-            "Gemini returned an empty response."
-        )
-
-    raw_text = response.text.strip()
 
     print(
         "\n========== RAW COMMERCIAL GEMINI RESPONSE ==========\n"
     )
 
-    print(raw_text)
+    print(
+        raw_text
+    )
 
     print(
         "\n======================================================\n"
     )
 
-    cleaned_text = clean_gemini_json(raw_text)
+    cleaned_text = clean_gemini_json(
+        raw_text
+    )
 
     try:
 
@@ -1384,17 +1470,9 @@ Do not include Arabic text in the final table.
 # TECHNICAL TABLE CLEANING
 # ============================================================
 
-def clean_gemini_json(text):
-    """
-    Strip markdown fences from a Gemini JSON response.
-    """
-    text = text.strip()
-    text = text.replace("```json", "")
-    text = text.replace("```", "")
-    return text.strip()
-
-
-def clean_evaluation_json(rows):
+def clean_evaluation_json(
+    rows
+):
     """
     Clean parsed evaluation rows.
     """
@@ -2084,114 +2162,7 @@ def evaluate_commercial():
 
 
 # ============================================================
-# TECHNICAL OVERALL AI INSIGHTS
-# ============================================================
-
-def generate_technical_overall_insights(evaluation_table, proposal_names):
-    print("\n=== AI INSIGHT DEBUG START ===")
-    print("[1] Vendors:", proposal_names)
-    print("[1] Evaluation table exists:", bool(evaluation_table))
-
-    if not evaluation_table or not proposal_names:
-        print("[ERROR] Missing evaluation data or vendor names")
-        return {}
-
-    """
-    Generate one overall AI insight for each vendor from the completed
-    technical criterion scores/reasons. The insight is returned separately
-    from the row-level evaluation table so the frontend can display it
-    inside each vendor's technical assessment.
-    """
-
-    prompt = f"""
-You are a senior government IT procurement technical evaluation expert.
-
-The technical evaluation below contains criterion/sub-criterion scores,
-reasoning, and references for multiple vendor proposals.
-
-Your task is to produce ONE concise overall AI insight for EACH vendor.
-
-The insight must:
-- Be highly concise: maximum 2 sentences.
-- Highlight the most important technical strengths and weaknesses.
-- Use specific, high-value technical keywords from the evaluation.
-- Mention the most significant evidence or gap only when relevant.
-- Focus on what matters for the procurement decision.
-- Avoid repeating individual criterion scores or the total score.
-- Avoid generic statements.
-- Do not invent or assume information.
-- Do not use bullet points.
-
-Return ONLY valid JSON in exactly this structure:
-
-{{
-    "vendors": [
-        {{
-            "name": "Vendor Name",
-            "aiInsight": "Concise, evidence-based technical assessment."
-        }}
-    ]
-}}
-
-IMPORTANT:
-- Return exactly ONE insight for every vendor.
-- Use the vendor names EXACTLY as provided.
-- Keep each insight between 20-40 words.
-- Focus on the 1-2 most decision-relevant technical findings.
-
-VENDOR NAMES:
-{json.dumps(proposal_names, ensure_ascii=False, indent=2)}
-
-TECHNICAL EVALUATION DATA:
-{json.dumps(evaluation_table, ensure_ascii=False, indent=2)}
-"""
-    print("[2] Calling Gemini...")
-
-    raw = call_gemini(prompt, temperature=0.0)
-    print(raw)
-    cleaned = clean_gemini_json(raw)
-    print(cleaned)
-
-    try:
-        result = json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        print("Technical overall insight JSON parse error:", e)
-        print(cleaned)
-        return {
-            name: "Overall technical insight could not be generated."
-            for name in proposal_names
-        }
-
-    insights = {}
-    for item in result.get("vendors", []):
-        if not isinstance(item, dict):
-            continue
-        name = str(item.get("name", "")).strip()
-        insight = str(item.get("aiInsight", "")).strip()
-        print(f"\n[DEBUG] Vendor: {name}")
-        print(f"[DEBUG] Insight: {insight}")
-        if name and insight:
-            insights[name] = insight
-
-    # Match names case-insensitively and always provide a value.
-    normalized = {}
-    for vendor_name in proposal_names:
-        matched = next(
-            (v for k, v in insights.items() if k.lower() == vendor_name.lower()),
-            None
-        )
-        normalized[vendor_name] = (
-            matched or "Overall technical insight was not provided."
-        )
-        print(f"[DEBUG] Matching {vendor_name} -> {matched}")
-
-    print("\n[DEBUG] FINAL INSIGHTS:")
-    print(normalized)
-    return normalized
-
-
-# ============================================================
-# TECHNICAL EVALUATION
+# TECHNICAL EVALUATION API
 # ============================================================
 
 @app.route(
@@ -2203,13 +2174,460 @@ def evaluate_files():
     if request.method == "OPTIONS":
         return jsonify({}), 200
 
-  try:
-       return jsonify(
-            {
-                "message":
-                    "Evaluation passed."
-            }
-        ), 200
+    try:
+
+        # ----------------------------------------------------
+        # Step 1:
+        # Read internal evaluation document
+        # ----------------------------------------------------
+
+        human_eval_text = read_text_file(
+            "evaluationDoc.txt"
+        )
+
+        if human_eval_text is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Crucial file "
+                        "'evaluationDoc.txt' not found."
+                }
+            ), 404
+
+        # ----------------------------------------------------
+        # Step 2:
+        # Find RFP PDF
+        # ----------------------------------------------------
+
+        rfp_path = None
+
+        # First look inside uploaded_files
+
+        if os.path.exists(
+            UPLOAD_FOLDER
+        ):
+
+            for filename in sorted(
+                os.listdir(
+                    UPLOAD_FOLDER
+                )
+            ):
+
+                if (
+                    filename.startswith(
+                        "rfp_"
+                    )
+                    and
+                    filename.lower().endswith(
+                        ".pdf"
+                    )
+                ):
+
+                    rfp_path = os.path.join(
+                        UPLOAD_FOLDER,
+                        filename
+                    )
+
+                    break
+
+        # Fallback to rfp.pdf
+
+        if rfp_path is None:
+
+            if os.path.exists(
+                "rfp.pdf"
+            ):
+
+                rfp_path = "rfp.pdf"
+
+        if rfp_path is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Crucial RFP PDF not found."
+                }
+            ), 404
+
+        # ----------------------------------------------------
+        # Extract RFP page
+        # ----------------------------------------------------
+
+        rfp_page_text = extract_text_from_pdf_page(
+            rfp_path,
+            18
+        )
+
+        if rfp_page_text is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Unable to extract RFP page text."
+                }
+            ), 500
+
+        # ----------------------------------------------------
+        # Step 3:
+        # Load/generate rubric
+        # ----------------------------------------------------
+
+        rubric_file_path = (
+            "generated_rubric.json"
+        )
+
+        parameter_table = None
+
+        if os.path.exists(
+            rubric_file_path
+        ):
+
+            print(
+                "Found existing rubric."
+            )
+
+            try:
+
+                with open(
+                    rubric_file_path,
+                    "r",
+                    encoding="utf-8"
+                ) as file:
+
+                    parameter_table = json.load(
+                        file
+                    )
+
+            except Exception as e:
+
+                print(
+                    "Could not load rubric:",
+                    e
+                )
+
+                parameter_table = None
+
+        # ----------------------------------------------------
+        # Generate rubric if missing
+        # ----------------------------------------------------
+
+        if not parameter_table:
+
+            print(
+                "Generating new rubric..."
+            )
+
+            gemini_table_response = (
+                extract_table_from_gemini(
+                    rfp_page_text
+                )
+            )
+
+            if not gemini_table_response:
+
+                return jsonify(
+                    {
+                        "error":
+                            "AI failed to extract "
+                            "table from RFP text."
+                    }
+                ), 500
+
+            tables = extract_tables_from_response(
+                gemini_table_response
+            )
+
+            if not tables:
+
+                return jsonify(
+                    {
+                        "error":
+                            "Could not parse criteria "
+                            "table from AI response."
+                    }
+                ), 500
+
+            parameter_table = normalize_parameter_table(
+                tables[0]
+            )
+
+            if not parameter_table:
+
+                return jsonify(
+                    {
+                        "error":
+                            "Generated evaluation "
+                            "rubric is empty."
+                    }
+                ), 500
+
+            with open(
+                rubric_file_path,
+                "w",
+                encoding="utf-8"
+            ) as file:
+
+                json.dump(
+                    parameter_table,
+                    file,
+                    ensure_ascii=False,
+                    indent=4
+                )
+
+            print(
+                f"New rubric saved to "
+                f"{rubric_file_path}"
+            )
+
+        # ----------------------------------------------------
+        # Step 4:
+        # Read proposal files
+        # ----------------------------------------------------
+
+        proposal_texts = []
+
+        if not os.path.exists(
+            UPLOAD_FOLDER
+        ):
+
+            return jsonify(
+                {
+                    "error":
+                        "Upload folder does not exist."
+                }
+            ), 400
+
+        for filename in sorted(
+            os.listdir(
+                UPLOAD_FOLDER
+            )
+        ):
+
+            if not filename.startswith(
+                "proposal_"
+            ):
+
+                continue
+
+            file_path = os.path.join(
+                UPLOAD_FOLDER,
+                filename
+            )
+
+            # ------------------------------------------------
+            # PDF proposals
+            # ------------------------------------------------
+
+            if filename.lower().endswith(
+                ".pdf"
+            ):
+
+                try:
+
+                    with fitz.open(
+                        file_path
+                    ) as doc:
+
+                        pages = []
+
+                        for (
+                            page_index,
+                            page
+                        ) in enumerate(doc):
+
+                            page_text = page.get_text()
+
+                            pages.append(
+                                f"\n[Page {page_index + 1}]\n"
+                                f"{page_text}"
+                            )
+
+                        text = "\n".join(
+                            pages
+                        )
+
+                except Exception as e:
+
+                    print(
+                        f"Error reading PDF "
+                        f"{filename}: {e}"
+                    )
+
+                    text = ""
+
+            else:
+
+                text = read_text_file(
+                    file_path
+                ) or ""
+
+            text = clean_text(
+                text
+            )
+
+            proposal_name = filename.replace(
+                "proposal_",
+                "",
+                1
+            )
+
+            proposal_texts.append(
+                (
+                    proposal_name,
+                    text
+                )
+            )
+
+        if not proposal_texts:
+
+            return jsonify(
+                {
+                    "error":
+                        "No proposal files found "
+                        "to evaluate. "
+                        "Please upload them first."
+                }
+            ), 400
+
+        # ----------------------------------------------------
+        # Step 5:
+        # Generate technical evaluation prompt
+        # ----------------------------------------------------
+
+        evaluation_prompt = generate_evaluation_prompt(
+            parameter_table,
+            proposal_texts,
+            clean_text(
+                rfp_page_text
+            ),
+            human_eval_text
+        )
+
+        # ----------------------------------------------------
+        # Step 6:
+        # Call Gemini
+        # ----------------------------------------------------
+
+        gemini_output_text = call_gemini(
+            evaluation_prompt,
+            temperature=0.0
+        )
+
+        print(
+            "\n========== RAW TECHNICAL GEMINI OUTPUT ==========\n"
+        )
+
+        print(
+            gemini_output_text
+        )
+
+        print(
+            "\n==================================================\n"
+        )
+
+        # ----------------------------------------------------
+        # Step 7:
+        # Parse markdown table
+        # ----------------------------------------------------
+
+        parsed_table_json = (
+            parse_markdown_table_to_json(
+                gemini_output_text
+            )
+        )
+
+        cleaned_output = clean_evaluation_json(
+            parsed_table_json
+        )
+
+        evaluation_table = sanitize_nan(
+            cleaned_output
+        )
+
+        print(
+            "\n========== PARSED TECHNICAL RESULT ==========\n"
+        )
+
+        print(
+            json.dumps(
+                evaluation_table,
+                indent=2,
+                ensure_ascii=False
+            )
+        )
+
+        print(
+            "\n==============================================\n"
+        )
+
+        if not evaluation_table:
+
+            return jsonify(
+                {
+                    "error":
+                        "Parsing the AI evaluation "
+                        "response failed.",
+
+                    "raw_output":
+                        gemini_output_text
+                }
+            ), 500
+
+        # ----------------------------------------------------
+        # Step 8:
+        # Generate overall AI insights
+        # ----------------------------------------------------
+
+        proposal_names = [
+            name
+            for name, _ in proposal_texts
+        ]
+
+        print(
+            "\n========== GENERATING "
+            "TECHNICAL OVERALL INSIGHTS =========="
+        )
+
+        technical_overall_insights = (
+            generate_technical_overall_insights(
+                evaluation_table,
+                proposal_names
+            )
+        )
+
+        print(
+            json.dumps(
+                technical_overall_insights,
+                indent=2,
+                ensure_ascii=False
+            )
+        )
+
+        print(
+            "==========================================================\n"
+        )
+
+        # ----------------------------------------------------
+        # Step 9:
+        # Return technical evaluation
+        # ----------------------------------------------------
+
+        return Response(
+            json.dumps(
+                {
+                    "evaluation_table":
+                        evaluation_table,
+
+                    "technical_overall_insights":
+                        technical_overall_insights
+                },
+                ensure_ascii=False,
+                sort_keys=False
+            ),
+            status=200,
+            mimetype="application/json"
+        )
 
     except Exception as e:
 

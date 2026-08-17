@@ -460,7 +460,7 @@ export default function CreatePRForm({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
           <h1 className="text-2xl font-semibold text-green-700">
-            {customTitle || (isReadOnly ? "View RFP (Submitted)" : editPrNumber ? "Edit RFP Draft" : "Create RFP")}
+            {customTitle || (isReadOnly ? "View PR (Submitted)" : editPrNumber ? "Edit PR Draft" : "Create RFP")}
           </h1>
           {isReadOnly && (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">

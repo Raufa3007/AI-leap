@@ -1025,36 +1025,23 @@ Do not return explanations outside the JSON.
       // ======================================================
       // GEMINI API
       // ======================================================
-const GEMINI_API_KEY="AQ.Ab8RN6JLDyW9djlVxZvHKwx5FInf5k3zNeBwqAW-SJDxTrG15g"
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          prompt: prompt,
+
+          config: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
           },
-
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
-              },
-            ],
-
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType:
-                "application/json",
-            },
-          }),
-        }
-      )
+        }),
+      })
 
       // ======================================================
       // API ERROR
@@ -1087,10 +1074,9 @@ const GEMINI_API_KEY="AQ.Ab8RN6JLDyW9djlVxZvHKwx5FInf5k3zNeBwqAW-SJDxTrG15g"
       // ======================================================
 
       const rawText =
-        data
-          ?.candidates?.[0]
-          ?.content?.parts?.[0]
-          ?.text
+        data?.text ||
+        data?.candidates?.[0]?.content?.parts?.[0]?.text
+
 
       if (!rawText) {
         throw new Error(

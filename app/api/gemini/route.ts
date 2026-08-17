@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(req: NextRequest) {
@@ -10,25 +11,29 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const body = await req.json()
+  try {
+    const body = await req.json()
+    const ai = new GoogleGenAI({ apiKey })
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify(body),
-    }
-  )
+    const contents = body.contents || body.prompt
+    const config = body.config || body.generationConfig || {}
 
-  const data = await response.json()
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: contents,
+      config: config,
+    })
 
-  if (!response.ok) {
-    return NextResponse.json(data, { status: response.status })
+    return NextResponse.json({
+      text: response.text,
+      candidates: response.candidates,
+    })
+  } catch (error: any) {
+    console.error("[api/gemini] Gemini SDK Error:", error)
+    return NextResponse.json(
+      { error: error?.message || "Failed to generate content from Gemini API." },
+      { status: 500 }
+    )
   }
-
-  return NextResponse.json(data)
 }
+

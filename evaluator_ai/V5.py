@@ -11,7 +11,9 @@ import re
 import math
 
 import fitz  # PyMuPDF
-import google.generativeai as genai
+from dotenv import load_dotenv
+load_dotenv()
+from google import genai
 import pandas as pd
 
 app = Flask(__name__)
@@ -22,9 +24,9 @@ UPLOAD_FOLDER = 'uploaded_files'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Configure Generative AI - Remember to replace with your key
-genai.configure(api_key="AIzaSyARTWrJapZhC3oLBxzeJfAHYIY90tlKdPI") # Replace with your actual key
-model = genai.GenerativeModel("gemini-2.5-flash")
+# Configure Google GenAI Client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 
 
 # --- Helper Functions ---
@@ -103,14 +105,12 @@ def extract_table_from_gemini(text):
         f"**Text to Analyze:**\n{text}"
     )
     try:
-        generation_config = {"temperature": 0.0}
-        safety_settings = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
-        
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config={"temperature": 0.0}
         )
+
         return response.text
     except Exception as e:
         print(f"Gemini error during table extraction: {e}")
@@ -354,14 +354,12 @@ def evaluate_files():
         # FIX: Use the correct variable 'rfp_page_text'
         evaluation_prompt = generate_evaluation_prompt(parameter_table, proposal_texts, clean_text(rfp_page_text), human_eval_text)
         
-        generation_config = {"temperature": 0.0}
-        safety_settings = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
-        
-        gemini_output = model.generate_content(
-            evaluation_prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings
+        gemini_output = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=evaluation_prompt,
+            config={"temperature": 0.0}
         )
+
         
         print("\n--- RAW GEMINI OUTPUT ---\n")
         print(gemini_output.text)
