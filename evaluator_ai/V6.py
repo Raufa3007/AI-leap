@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # V6.py
 # Proposal Evaluation Project
 # Technical + Commercial Evaluation API
@@ -2211,11 +2211,8 @@ def health_check():
 # APPLICATION START
 # ============================================================
 
-# if __name__ == "__main__":
 
-
-  
-  if __name__ == "__main__":
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
 
     app.run(
