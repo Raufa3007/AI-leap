@@ -122,20 +122,12 @@ else:
             f"Gemini client initialized successfully using {GEMINI_MODEL}"
         )
 
-   except Exception as e:
+    except Exception as e:
 
-    import traceback
+        print(
+            "ERROR: Failed to initialize Gemini client:"
+        )
 
-    print("\n========== TECHNICAL EVALUATION ERROR ==========")
-    traceback.print_exc()
-    print("================================================")
-
-    return jsonify(
-        {
-            "message": "Evaluation failed.",
-            "error": str(e)
-        }
-    ), 500
         print(
             str(e)
         )
