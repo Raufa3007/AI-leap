@@ -133,18 +133,88 @@ def clean_text(text):
 
     return text.strip()
 
+
+# ============================================================
+# FIX (Bug 1):
+# pandas removed DataFrame.applymap in newer releases.
+# Use DataFrame.apply(...) + Series.map(...) instead, which
+# is what the rest of the file (extract_tables_from_response,
+# normalize_parameter_table) already uses.
+# ============================================================
+
 def parse_markdown_table_to_json(markdown_table_text):
     try:
-        df = pd.read_csv(StringIO(markdown_table_text), sep="|", engine="python", skipinitialspace=True)
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # drop any unnamed column
-        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+        # ====================================================
+        # FIX: Gemini sometimes prepends a preamble sentence
+        # before the markdown table (e.g. "Here is the expert
+        # evaluation..."). That line has no "|" in it, so
+        # pandas was treating it as a 1-column header and
+        # every real table row after it parsed as null.
+        #
+        # Strip out any line that isn't part of the pipe table
+        # before handing the text to pd.read_csv.
+        # ====================================================
+        table_lines = [
+            line for line in markdown_table_text.splitlines()
+            if "|" in line
+        ]
+
+        if not table_lines:
+            print("No markdown table lines found in Gemini output.")
+            return []
+
+        table_text = "\n".join(table_lines)
+
+        df = pd.read_csv(
+            StringIO(table_text),
+            sep="|",
+            engine="python",
+            skipinitialspace=True
+        )
+
+        # drop any unnamed column
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+        # FIXED: applymap -> apply + map (applymap is removed in newer pandas)
+        df = df.apply(
+            lambda column: column.map(
+                lambda value: value.strip() if isinstance(value, str) else value
+            )
+        )
+
         json_data = df.to_dict(orient="records")
         return json_data
     except Exception as e:
         print("Error parsing markdown to JSON:", e)
         return []
-    
-    
+
+
+# ============================================================
+# FIX (Bug 2):
+# sanitize_nan was called in evaluate_files() but was never
+# defined anywhere in the file. Added here so NaN/inf values
+# produced by pandas (e.g. from ragged/missing table cells)
+# are converted to JSON-safe None before jsonify/json.dumps.
+# ============================================================
+
+def sanitize_nan(data):
+    """
+    Recursively replace NaN / inf float values with None so
+    the result can always be safely serialized to JSON.
+    """
+
+    if isinstance(data, dict):
+        return {key: sanitize_nan(value) for key, value in data.items()}
+
+    elif isinstance(data, list):
+        return [sanitize_nan(item) for item in data]
+
+    elif isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
+        return None
+
+    else:
+        return data
+
 
 def evaluate_commercial_vendors(vendors):
 
@@ -175,62 +245,6 @@ def evaluate_commercial_vendors(vendors):
         raise
 
     return result
-
-
-
-def generate_commercial_prompt(vendors):
-
-    prompt = []
-
-    prompt.append(
-        """
-You are an expert Procurement Commercial Evaluation Officer.
-
-Evaluate every vendor independently.
-
-Use the following weights.
-
-Technical Proposal Score : 40%
-
-Past Project Experience : 15%
-
-On-Time Delivery : 10%
-
-Compliance : 10%
-
-Financial Stability : 10%
-
-Customer References : 10%
-
-Risk Score : 5%
-
-Return ONLY valid JSON.
-"""
-    )
-
-    prompt.append(json.dumps(vendors, indent=2))
-
-    prompt.append(
-        """
-Return JSON only.
-
-Example
-
-{
-   "vendors":[
-      {
-         "id":1,
-         "overallScore":89,
-         "status":"Completed",
-         "recommendation":"Recommended",
-         "aiInsight":"Excellent financial capability with low commercial risk."
-      }
-   ]
-}
-"""
-    )
-
-    return "\n".join(prompt)
 
 
 
@@ -1637,17 +1651,17 @@ def generate_technical_overall_insights(evaluation_table, proposal_names):
     print("\n=== AI INSIGHT DEBUG START ===")
     print("[1] Vendors:", proposal_names)
     print("[1] Evaluation table exists:", bool(evaluation_table))
+
     if not evaluation_table or not proposal_names:
         print("[ERROR] Missing evaluation data or vendor names")
-        return{}
+        return {}
+
     """
     Generate one overall AI insight for each vendor from the completed
     technical criterion scores/reasons. The insight is returned separately
     from the row-level evaluation table so the frontend can display it
     inside each vendor's technical assessment.
     """
-    if not evaluation_table or not proposal_names:
-        return {}
 
     prompt = f"""
 You are a senior government IT procurement technical evaluation expert.
@@ -1703,8 +1717,10 @@ TECHNICAL EVALUATION DATA:
     except json.JSONDecodeError as e:
         print("Technical overall insight JSON parse error:", e)
         print(cleaned)
-        print(result)
-        return {name: "Overall technical insight could not be generated." for name in proposal_names}
+        return {
+            name: "Overall technical insight could not be generated."
+            for name in proposal_names
+        }
 
     insights = {}
     for item in result.get("vendors", []):
@@ -1720,12 +1736,15 @@ TECHNICAL EVALUATION DATA:
     # Match names case-insensitively and always provide a value.
     normalized = {}
     for vendor_name in proposal_names:
-        matched = next((v for k, v in insights.items() if k.lower() == vendor_name.lower()), None)
-        normalized[vendor_name] = matched or "Overall technical insight was not provided."
-        print(f"[DEBUG] Matching {vendor_name} -> {matched}")
+        matched = next(
+            (v for k, v in insights.items() if k.lower() == vendor_name.lower()),
+            None
+        )
         normalized[vendor_name] = (
-            matched
-            or "Overall technical insight was not provided.")
+            matched or "Overall technical insight was not provided."
+        )
+        print(f"[DEBUG] Matching {vendor_name} -> {matched}")
+
     print("\n[DEBUG] FINAL INSIGHTS:")
     print(normalized)
     return normalized
@@ -2077,6 +2096,7 @@ def evaluate_files():
             parsed_table_json
         )
 
+        # FIXED: sanitize_nan is now defined above.
         evaluation_table = sanitize_nan(
             cleaned_output
         )
