@@ -262,7 +262,7 @@ Return ONLY a JSON object adhering strictly to this schema:
     const userContent = `EXTRACTED PDF DOCUMENT TEXT:\n\n${extractedText}`
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: [
         {
           role: "user",
