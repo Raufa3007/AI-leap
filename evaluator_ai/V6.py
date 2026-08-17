@@ -2203,13 +2203,461 @@ def evaluate_files():
     if request.method == "OPTIONS":
         return jsonify({}), 200
 
-  try:
-       return jsonify(
-            {
-                "message":
-                    "Evaluation passed."
-            }
-        ), 200
+    try:
+
+        # ----------------------------------------------------
+        # Step 1:
+        # Read internal evaluation document
+        # ----------------------------------------------------
+
+        human_eval_text = read_text_file(
+            "evaluationDoc.txt"
+        )
+
+        if human_eval_text is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Crucial file "
+                        "'evaluationDoc.txt' not found."
+                }
+            ), 404
+
+        # ----------------------------------------------------
+        # Step 2:
+        # Find RFP PDF
+        # ----------------------------------------------------
+
+        rfp_path = None
+
+        # First look inside uploaded_files
+
+        if os.path.exists(
+            UPLOAD_FOLDER
+        ):
+
+            for filename in sorted(
+                os.listdir(
+                    UPLOAD_FOLDER
+                )
+            ):
+
+                if (
+                    filename.startswith(
+                        "rfp_"
+                    )
+                    and
+                    filename.lower().endswith(
+                        ".pdf"
+                    )
+                ):
+
+                    rfp_path = os.path.join(
+                        UPLOAD_FOLDER,
+                        filename
+                    )
+
+                    break
+
+        # Fallback to rfp.pdf
+
+        if rfp_path is None:
+
+            if os.path.exists(
+                "rfp.pdf"
+            ):
+
+                rfp_path = "rfp.pdf"
+
+        if rfp_path is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Crucial RFP PDF not found."
+                }
+            ), 404
+
+        # ----------------------------------------------------
+        # Extract RFP page
+        # ----------------------------------------------------
+
+        rfp_page_text = extract_text_from_pdf_page(
+            rfp_path,
+            18
+        )
+
+        if rfp_page_text is None:
+
+            return jsonify(
+                {
+                    "error":
+                        "Unable to extract RFP page text."
+                }
+            ), 500
+
+        # ----------------------------------------------------
+        # Step 3:
+        # Load/generate rubric
+        # ----------------------------------------------------
+
+        rubric_file_path = (
+            "generated_rubric.json"
+        )
+
+        parameter_table = None
+
+        if os.path.exists(
+            rubric_file_path
+        ):
+
+            print(
+                "Found existing rubric."
+            )
+
+            try:
+
+                with open(
+                    rubric_file_path,
+                    "r",
+                    encoding="utf-8"
+                ) as file:
+
+                    parameter_table = json.load(
+                        file
+                    )
+
+            except Exception as e:
+
+                print(
+                    "Could not load rubric:",
+                    e
+                )
+
+                parameter_table = None
+
+        # ----------------------------------------------------
+        # Generate rubric if missing
+        # ----------------------------------------------------
+
+        if not parameter_table:
+
+            print(
+                "Generating new rubric..."
+            )
+
+            gemini_table_response = (
+                extract_table_from_gemini(
+                    rfp_page_text
+                )
+            )
+
+            if not gemini_table_response:
+
+                return jsonify(
+                    {
+                        "error":
+                            "AI failed to extract "
+                            "table from RFP text."
+                    }
+                ), 500
+
+            tables = extract_tables_from_response(
+                gemini_table_response
+            )
+
+            if not tables:
+
+                return jsonify(
+                    {
+                        "error":
+                            "Could not parse criteria "
+                            "table from AI response."
+                    }
+                ), 500
+
+            parameter_table = normalize_parameter_table(
+                tables[0]
+            )
+
+            if not parameter_table:
+
+                return jsonify(
+                    {
+                        "error":
+                            "Generated evaluation "
+                            "rubric is empty."
+                    }
+                ), 500
+
+            with open(
+                rubric_file_path,
+                "w",
+                encoding="utf-8"
+            ) as file:
+
+                json.dump(
+                    parameter_table,
+                    file,
+                    ensure_ascii=False,
+                    indent=4
+                )
+
+            print(
+                f"New rubric saved to "
+                f"{rubric_file_path}"
+            )
+
+        # ----------------------------------------------------
+        # Step 4:
+        # Read proposal files
+        # ----------------------------------------------------
+
+        proposal_texts = []
+
+        if not os.path.exists(
+            UPLOAD_FOLDER
+        ):
+
+            return jsonify(
+                {
+                    "error":
+                        "Upload folder does not exist."
+                }
+            ), 400
+
+        for filename in sorted(
+            os.listdir(
+                UPLOAD_FOLDER
+            )
+        ):
+
+            if not filename.startswith(
+                "proposal_"
+            ):
+
+                continue
+
+            file_path = os.path.join(
+                UPLOAD_FOLDER,
+                filename
+            )
+
+            # ------------------------------------------------
+            # PDF proposals
+            # ------------------------------------------------
+
+            if filename.lower().endswith(
+                ".pdf"
+            ):
+
+                try:
+
+                    with fitz.open(
+                        file_path
+                    ) as doc:
+
+                        pages = []
+
+                        for (
+                            page_index,
+                            page
+                        ) in enumerate(doc):
+
+                            page_text = page.get_text()
+
+                            pages.append(
+                                f"\n[Page {page_index + 1}]\n"
+                                f"{page_text}"
+                            )
+
+                        text = "\n".join(
+                            pages
+                        )
+
+                except Exception as e:
+
+                    print(
+                        f"Error reading PDF "
+                        f"{filename}: {e}"
+                    )
+
+                    text = ""
+
+            else:
+
+                text = read_text_file(
+                    file_path
+                ) or ""
+
+            text = clean_text(
+                text
+            )
+
+            proposal_name = filename.replace(
+                "proposal_",
+                "",
+                1
+            )
+
+            proposal_texts.append(
+                (
+                    proposal_name,
+                    text
+                )
+            )
+
+        if not proposal_texts:
+
+            return jsonify(
+                {
+                    "error":
+                        "No proposal files found "
+                        "to evaluate. "
+                        "Please upload them first."
+                }
+            ), 400
+
+        # ----------------------------------------------------
+        # Step 5:
+        # Generate technical evaluation prompt
+        # ----------------------------------------------------
+
+        evaluation_prompt = generate_evaluation_prompt(
+            parameter_table,
+            proposal_texts,
+            clean_text(
+                rfp_page_text
+            ),
+            human_eval_text
+        )
+
+        # ----------------------------------------------------
+        # Step 6:
+        # Call Gemini
+        # ----------------------------------------------------
+
+        gemini_output_text = call_gemini(
+            evaluation_prompt,
+            temperature=0.0
+        )
+
+        print(
+            "\n========== RAW TECHNICAL GEMINI OUTPUT ==========\n"
+        )
+
+        print(
+            gemini_output_text
+        )
+
+        print(
+            "\n==================================================\n"
+        )
+
+        # ----------------------------------------------------
+        # Step 7:
+        # Parse markdown table
+        # ----------------------------------------------------
+
+        parsed_table_json = (
+            parse_markdown_table_to_json(
+                gemini_output_text
+            )
+        )
+
+        cleaned_output = clean_evaluation_json(
+            parsed_table_json
+        )
+
+        # FIXED: sanitize_nan is now defined above.
+        evaluation_table = sanitize_nan(
+            cleaned_output
+        )
+
+        print(
+            "\n========== PARSED TECHNICAL RESULT ==========\n"
+        )
+
+        print(
+            json.dumps(
+                evaluation_table,
+                indent=2,
+                ensure_ascii=False
+            )
+        )
+
+        print(
+            "\n==============================================\n"
+        )
+
+        if not evaluation_table:
+
+            return jsonify(
+                {
+                    "error":
+                        "Parsing the AI evaluation "
+                        "response failed.",
+
+                    "raw_output":
+                        gemini_output_text
+                }
+            ), 500
+
+        # ----------------------------------------------------
+        # Step 8:
+        # Generate overall AI insights
+        # ----------------------------------------------------
+
+        proposal_names = [
+            name
+            for name, _ in proposal_texts
+        ]
+
+        print(
+            "\n========== GENERATING "
+            "TECHNICAL OVERALL INSIGHTS =========="
+        )
+
+        technical_overall_insights = (
+            generate_technical_overall_insights(
+                evaluation_table,
+                proposal_names
+            )
+        )
+
+        print(
+            json.dumps(
+                technical_overall_insights,
+                indent=2,
+                ensure_ascii=False
+            )
+        )
+
+        print(
+            "==========================================================\n"
+        )
+
+        # ----------------------------------------------------
+        # Step 9:
+        # Return technical evaluation
+        # ----------------------------------------------------
+
+        return Response(
+            json.dumps(
+                {
+                    "evaluation_table":
+                        evaluation_table,
+
+                    "technical_overall_insights":
+                        technical_overall_insights
+                },
+                ensure_ascii=False,
+                sort_keys=False
+            ),
+            status=200,
+            mimetype="application/json"
+        )
 
     except Exception as e:
 
