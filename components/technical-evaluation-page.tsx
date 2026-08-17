@@ -1,6 +1,12 @@
+
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import {
+  useState,
+  useEffect,
+  useRef,
+} from "react"
+
 import {
   ChevronLeft,
   LayoutGrid,
@@ -10,166 +16,486 @@ import {
 } from "lucide-react"
 
 import SignatureVerificationDialog from "./signature-verification-dialog"
-import TechnicalEvaluationTable from "./technical-evaluation-table"
-import FinancialEvaluationTable from "./financial-evaluation-table"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
 
-// ============================================================
-// TYPES
-// ============================================================
+import {
+  evaluateTechnicalProposals,
+} from "@/app/actions/ai-technical-evaluation"
+
+/* ============================================================
+   TYPES
+============================================================ */
 
 type EvaluationRow = {
-  [key: string]: string
+  [key: string]:
+    | string
+    | number
+    | null
+    | undefined
 }
 
-// ============================================================
-// VENDOR CONFIGURATION
-// ============================================================
-
-const VENDOR_SCORE_MAP: {
+type VendorConfig = {
   name: string
   scoreKey: string
+  proposalName: string
+  aliases: string[]
   location: string
   avatar: string
   color: string
-}[] = [
+}
+
+type TechnicalEvaluationResponse = {
+  success?: boolean
+  message?: string
+  error?: string
+
+  evaluation_table?: EvaluationRow[]
+
+  technical_overall_insights?: {
+    [vendor: string]: string
+  }
+}
+
+/* ============================================================
+   VENDOR CONFIGURATION
+
+   IMPORTANT:
+   The backend now reads actual PDF filenames.
+
+   Example:
+
+   Accenture Proposal.pdf
+   Deloitte Proposal.pdf
+   KaarTech Proposal.pdf
+
+   The aliases make the frontend tolerant of filenames such as:
+
+   1_Accenture Proposal.pdf
+   Accenture Technical Proposal.pdf
+   2_Deloitte Proposal.pdf
+   3_KaarTech Proposal.pdf
+============================================================ */
+
+const VENDOR_SCORE_MAP: VendorConfig[] = [
   {
     name: "Accenture",
-    scoreKey: "1_Accenture Proposal.txt Score",
+    proposalName:
+      "Accenture Proposal.pdf",
+    scoreKey:
+      "Accenture Proposal.pdf Score",
+    aliases: [
+      "Accenture",
+      "Accenture Proposal",
+      "1_Accenture",
+      "1_Accenture Proposal",
+      "Technical Proposal Accenture",
+    ],
     location: "New York",
     avatar: "A",
     color: "#4A5568",
   },
+
   {
     name: "Deloitte",
-    scoreKey: "2_Deloitte Proposal.txt Score",
+    proposalName:
+      "Deloitte Proposal.pdf",
+    scoreKey:
+      "Deloitte Proposal.pdf Score",
+    aliases: [
+      "Deloitte",
+      "Deloitte Proposal",
+      "2_Deloitte",
+      "2_Deloitte Proposal",
+      "Technical Proposal Deloitte",
+    ],
     location: "London",
     avatar: "D",
     color: "#3B82F6",
   },
+
   {
     name: "Kaar Technologies",
-    scoreKey: "3_KaarTech Proposal.txt Score",
+    proposalName:
+      "KaarTech Proposal.pdf",
+    scoreKey:
+      "KaarTech Proposal.pdf Score",
+    aliases: [
+      "Kaar Technologies",
+      "KaarTech",
+      "Kaar",
+      "KaarTech Proposal",
+      "3_KaarTech",
+      "3_KaarTech Proposal",
+      "Technical Proposal KaarTech",
+    ],
     location: "Chennai",
     avatar: "K",
     color: "#FF6B6B",
   },
 ]
 
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
+/* ============================================================
+   HELPER FUNCTIONS
+============================================================ */
 
-function parseScore(raw: string | undefined): number | null {
-  if (!raw) return null
-
-  const n = parseInt(
-    raw.replace(/\*/g, "").trim(),
-    10
-  )
-
-  return isNaN(n) ? null : n
-}
-
-/**
- * Gets the score, reason and reference for a particular vendor
- * from one evaluation row.
- */
-function getVendorEvaluation(
-  row: EvaluationRow,
-  vendor: {
-    name: string
-    scoreKey: string
-  }
-) {
-  const scoreKey = vendor.scoreKey
-
-  const reasonKey = scoreKey.replace(
-    " Score",
-    " Reason"
-  )
-
-  const referenceKey = scoreKey.replace(
-    " Score",
-    " Reference"
-  )
-
-  return {
-    score: parseScore(row[scoreKey]),
-    reason: row[reasonKey] || "",
-    reference: row[referenceKey] || "",
-  }
-}
-
-function normalizeInsightMap(insights: {
-  [key: string]: string
-}): { [key: string]: string } {
-  return Object.fromEntries(
-    Object.entries(insights).map(([key, value]) => [
-      key.trim().toLowerCase(),
-      String(value).trim(),
-    ])
-  )
-}
-
-function getInsightForVendor(
-  insights: { [vendor: string]: string },
-  vendorName: string,
-  scoreKey?: string
+function normalizeText(
+  value: unknown
 ): string {
-  const normalizedVendorName =
-    vendorName.trim().toLowerCase()
+  return String(value ?? "")
+    .replace(/\*/g, "")
+    .trim()
+    .toLowerCase()
+}
 
-  if (insights[normalizedVendorName]) {
-    return insights[normalizedVendorName]
+function parseScore(
+  raw:
+    | string
+    | number
+    | null
+    | undefined
+): number | null {
+  if (
+    raw === null ||
+    raw === undefined ||
+    raw === ""
+  ) {
+    return null
   }
 
-  if (scoreKey) {
-    const normalizedScoreKey = scoreKey
-      .replace(/\s*Score$/i, "")
+  const cleaned =
+    String(raw)
+      .replace(/\*/g, "")
+      .replace(/%/g, "")
       .trim()
-      .toLowerCase()
 
-    if (insights[normalizedScoreKey]) {
-      return insights[normalizedScoreKey]
+  const n =
+    parseFloat(cleaned)
+
+  return Number.isNaN(n)
+    ? null
+    : n
+}
+
+/* ============================================================
+   FIND ACTUAL VENDOR SCORE KEY
+============================================================ */
+
+function findVendorScoreKey(
+  row: EvaluationRow,
+  vendor: VendorConfig
+): string | null {
+  const keys =
+    Object.keys(row)
+
+  /* ----------------------------------------------------------
+     1. Exact expected key
+  ---------------------------------------------------------- */
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      row,
+      vendor.scoreKey
+    )
+  ) {
+    return vendor.scoreKey
+  }
+
+  /* ----------------------------------------------------------
+     2. Normalized exact match
+  ---------------------------------------------------------- */
+
+  const normalizedExpected =
+    normalizeText(
+      vendor.scoreKey
+    )
+
+  const exactNormalized =
+    keys.find(
+      (key) =>
+        normalizeText(key) ===
+        normalizedExpected
+    )
+
+  if (exactNormalized) {
+    return exactNormalized
+  }
+
+  /* ----------------------------------------------------------
+     3. Score columns only
+  ---------------------------------------------------------- */
+
+  const scoreKeys =
+    keys.filter(
+      (key) =>
+        normalizeText(
+          key
+        ).endsWith("score")
+    )
+
+  /* ----------------------------------------------------------
+     4. Alias matching
+  ---------------------------------------------------------- */
+
+  for (
+    const alias of
+      vendor.aliases
+  ) {
+    const normalizedAlias =
+      normalizeText(
+        alias
+      )
+
+    const match =
+      scoreKeys.find(
+        (key) => {
+          const normalizedKey =
+            normalizeText(
+              key
+            )
+
+          return (
+            normalizedKey.includes(
+              normalizedAlias
+            ) &&
+            normalizedKey.endsWith(
+              "score"
+            )
+          )
+        }
+      )
+
+    if (match) {
+      return match
     }
   }
 
-  const match = Object.entries(insights).find(
-    ([key]) => {
-      const normalizedKey =
-        key.trim().toLowerCase()
+  /* ----------------------------------------------------------
+     5. Vendor-name matching
+  ---------------------------------------------------------- */
+
+  const normalizedVendor =
+    normalizeText(
+      vendor.name
+    )
+
+  const vendorMatch =
+    scoreKeys.find(
+      (key) =>
+        normalizeText(
+          key
+        ).includes(
+          normalizedVendor
+        )
+    )
+
+  if (vendorMatch) {
+    return vendorMatch
+  }
+
+  return null
+}
+
+/* ============================================================
+   GET VENDOR EVALUATION
+============================================================ */
+
+function getVendorEvaluation(
+  row: EvaluationRow,
+  vendor: VendorConfig
+) {
+  const scoreKey =
+    findVendorScoreKey(
+      row,
+      vendor
+    )
+
+  if (!scoreKey) {
+    return {
+      score: null,
+      reason: "",
+      reference: "",
+    }
+  }
+
+  const reasonKey =
+    scoreKey.replace(
+      /\s*Score$/i,
+      " Reason"
+    )
+
+  const referenceKey =
+    scoreKey.replace(
+      /\s*Score$/i,
+      " Reference"
+    )
+
+  return {
+    score:
+      parseScore(
+        row[scoreKey]
+      ),
+
+    reason:
+      String(
+        row[reasonKey] ??
+          ""
+      ).trim(),
+
+    reference:
+      String(
+        row[referenceKey] ??
+          ""
+      ).trim(),
+  }
+}
+
+/* ============================================================
+   NORMALIZE INSIGHTS
+============================================================ */
+
+function normalizeInsightMap(
+  insights:
+    | {
+        [key: string]: string
+      }
+    | undefined
+): {
+  [key: string]: string
+} {
+  if (!insights) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(
+      insights
+    ).map(
+      ([key, value]) => [
+        normalizeText(key),
+        String(
+          value ?? ""
+        ).trim(),
+      ]
+    )
+  )
+}
+
+/* ============================================================
+   GET INSIGHT FOR VENDOR
+============================================================ */
+
+function getInsightForVendor(
+  insights: {
+    [vendor: string]: string
+  },
+  vendor: VendorConfig
+): string {
+  const normalizedVendorName =
+    normalizeText(
+      vendor.name
+    )
+
+  /* ----------------------------------------------------------
+     1. Direct vendor name
+  ---------------------------------------------------------- */
+
+  if (
+    insights[
+      normalizedVendorName
+    ]
+  ) {
+    return insights[
+      normalizedVendorName
+    ]
+  }
+
+  /* ----------------------------------------------------------
+     2. Proposal filename
+  ---------------------------------------------------------- */
+
+  const normalizedProposalName =
+    normalizeText(
+      vendor.proposalName
+    )
+
+  if (
+    insights[
+      normalizedProposalName
+    ]
+  ) {
+    return insights[
+      normalizedProposalName
+    ]
+  }
+
+  /* ----------------------------------------------------------
+     3. Alias matching
+  ---------------------------------------------------------- */
+
+  for (
+    const alias of
+      vendor.aliases
+  ) {
+    const normalizedAlias =
+      normalizeText(
+        alias
+      )
+
+    const match =
+      Object.entries(
+        insights
+      ).find(
+        ([key]) =>
+          key.includes(
+            normalizedAlias
+          ) ||
+          normalizedAlias.includes(
+            key
+          )
+      )
+
+    if (
+      match?.[1]
+    ) {
+      return match[1]
+    }
+  }
+
+  return ""
+}
+
+/* ============================================================
+   FIND TOTAL SCORE ROW
+============================================================ */
+
+function findTotalScoreRow(
+  rows: EvaluationRow[]
+): EvaluationRow | undefined {
+  return rows.find(
+    (row) => {
+      const criterion =
+        normalizeText(
+          row[
+            "Main Criterion"
+          ]
+        )
 
       return (
-        normalizedKey === normalizedVendorName ||
-        normalizedKey ===
-          scoreKey?.trim().toLowerCase() ||
-        normalizedKey.includes(
-          normalizedVendorName
-        ) ||
-        normalizedVendorName.includes(
-          normalizedKey
-        ) ||
-        (scoreKey &&
-          normalizedKey.includes(
-            scoreKey.trim().toLowerCase()
-          )) ||
-        normalizedKey.startsWith(
-          normalizedVendorName
-        ) ||
-        normalizedVendorName.startsWith(
-          normalizedKey
+        criterion ===
+          "total score" ||
+        criterion ===
+          "total" ||
+        criterion.includes(
+          "total score"
         )
       )
     }
   )
-
-  return match?.[1] || ""
 }
 
-// ============================================================
-// PROPS
-// ============================================================
+/* ============================================================
+   PROPS
+============================================================ */
 
 interface TechnicalEvaluationPageProps {
   onBack: () => void
@@ -177,168 +503,236 @@ interface TechnicalEvaluationPageProps {
   onCommercialCompleted?: () => void
 }
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
 
 export default function TechnicalEvaluationPage({
   onBack,
   onNavigateToVendorEvaluation,
   onCommercialCompleted,
 }: TechnicalEvaluationPageProps) {
+  /* ==========================================================
+     STATE
+  ========================================================== */
 
-  // ==========================================================
-  // STATE
-  // ==========================================================
+  const [
+    acknowledged,
+    setAcknowledged,
+  ] = useState(false)
 
-  const [acknowledged, setAcknowledged] =
-    useState(false)
-
-  const [activeSection, setActiveSection] =
-    useState("rfp-details")
-
-  const [collapsed, setCollapsed] =
-    useState(false)
-
-  const [showSignatureDialog, setShowSignatureDialog] =
-    useState(false)
-
-  const [showDecisionDialog, setShowDecisionDialog] =
-    useState(false)
-
-  const [selectedDecision, setSelectedDecision] =
-    useState("")
-
-  const [showSuccessMessage, setShowSuccessMessage] =
-    useState(false)
-
-  const [vendorDecisions, setVendorDecisions] =
-    useState<{
-      [name: string]:
-        | "approved"
-        | "rejected"
-        | "pending"
-    }>(
-      Object.fromEntries(
-        VENDOR_SCORE_MAP.map((v) => [
-          v.name,
-          "pending",
-        ])
-      )
+  const [
+    activeSection,
+    setActiveSection,
+  ] =
+    useState(
+      "rfp-details"
     )
 
-  const [vendorScores, setVendorScores] =
-    useState<{
-      [name: string]: number | null
-    }>(() => {
-      try {
-        return (
-          JSON.parse(
-            localStorage.getItem(
-              "evalVendorScores"
-            ) || "null"
-          ) ?? {}
-        )
-      } catch {
-        return {}
-      }
-    })
+  const [
+    collapsed,
+    setCollapsed,
+  ] = useState(false)
 
-  const [evalRows, setEvalRows] =
-    useState<EvaluationRow[]>(() => {
-      try {
-        return (
-          JSON.parse(
-            localStorage.getItem(
-              "evalRows"
-            ) || "null"
-          ) ?? []
-        )
-      } catch {
-        return []
-      }
-    })
+  const [
+    showSignatureDialog,
+    setShowSignatureDialog,
+  ] = useState(false)
 
-  const [overallInsights, setOverallInsights] =
-    useState<{
-      [vendor: string]: string
-    }>(() => {
-      try {
-        return normalizeInsightMap(
-          JSON.parse(
-            localStorage.getItem(
-              "overallInsights"
-            ) || "null"
-          ) ?? {}
-        )
-      } catch {
-        return {}
-      }
-    })
+  const [
+    showDecisionDialog,
+    setShowDecisionDialog,
+  ] = useState(false)
 
-  const [showEvalModal, setShowEvalModal] =
-    useState(false)
+  const [
+    selectedDecision,
+    setSelectedDecision,
+  ] = useState("")
 
-  const [isReviewing, setIsReviewing] =
-    useState(false)
+  const [
+    showSuccessMessage,
+    setShowSuccessMessage,
+  ] = useState(false)
 
-  const [reviewError, setReviewError] =
-    useState("")
+  const [
+    vendorDecisions,
+    setVendorDecisions,
+  ] = useState<{
+    [name: string]:
+      | "approved"
+      | "rejected"
+      | "pending"
+  }>(
+    Object.fromEntries(
+      VENDOR_SCORE_MAP.map(
+        (vendor) => [
+          vendor.name,
+          "pending",
+        ]
+      )
+    )
+  )
 
-  // ==========================================================
-  // SELECTED SCORE / AI REASONING
-  // ==========================================================
+  const [
+    vendorScores,
+    setVendorScores,
+  ] = useState<{
+    [name: string]:
+      | number
+      | null
+  }>(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return {}
+    }
 
-  const [selectedEvaluation, setSelectedEvaluation] =
-    useState<{
-      vendor: string
-      score: number | null
-      reason: string
-      reference: string
-      subCriterion: string
-      weight: string
-    } | null>(null)
+    try {
+      return (
+        JSON.parse(
+          localStorage.getItem(
+            "evalVendorScores"
+          ) || "null"
+        ) ?? {}
+      )
+    } catch {
+      return {}
+    }
+  })
 
-  // ==========================================================
-  // REFS
-  // ==========================================================
+  const [
+    evalRows,
+    setEvalRows,
+  ] = useState<
+    EvaluationRow[]
+  >(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return []
+    }
+
+    try {
+      return (
+        JSON.parse(
+          localStorage.getItem(
+            "evalRows"
+          ) || "null"
+        ) ?? []
+      )
+    } catch {
+      return []
+    }
+  })
+
+  const [
+    overallInsights,
+    setOverallInsights,
+  ] = useState<{
+    [vendor: string]: string
+  }>(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return {}
+    }
+
+    try {
+      return normalizeInsightMap(
+        JSON.parse(
+          localStorage.getItem(
+            "overallInsights"
+          ) || "null"
+        ) ?? {}
+      )
+    } catch {
+      return {}
+    }
+  })
+
+  const [
+    showEvalModal,
+    setShowEvalModal,
+  ] = useState(false)
+
+  const [
+    isReviewing,
+    setIsReviewing,
+  ] = useState(false)
+
+  const [
+    reviewError,
+    setReviewError,
+  ] = useState("")
+
+  const [
+    selectedEvaluation,
+    setSelectedEvaluation,
+  ] = useState<{
+    vendor: string
+    score: number | null
+    reason: string
+    reference: string
+    subCriterion: string
+    weight: string
+  } | null>(null)
+
+  /* ==========================================================
+     REFS
+  ========================================================== */
 
   const rfpDetailsRef =
-    useRef<HTMLDivElement>(null)
+    useRef<HTMLDivElement>(
+      null
+    )
 
   const acknowledgmentRef =
-    useRef<HTMLDivElement>(null)
+    useRef<HTMLDivElement>(
+      null
+    )
 
   const vendorsRef =
-    useRef<HTMLDivElement>(null)
+    useRef<HTMLDivElement>(
+      null
+    )
 
-  // ==========================================================
-  // SCROLL HANDLER
-  // ==========================================================
+  /* ==========================================================
+     SCROLL HANDLER
+  ========================================================== */
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition =
-        window.scrollY + 200
+    const handleScroll =
+      () => {
+        const scrollPosition =
+          window.scrollY + 200
 
-      if (
-        vendorsRef.current &&
-        scrollPosition >=
-          vendorsRef.current.offsetTop
-      ) {
-        setActiveSection("vendors")
-      } else if (
-        acknowledgmentRef.current &&
-        scrollPosition >=
-          acknowledgmentRef.current.offsetTop
-      ) {
-        setActiveSection(
-          "acknowledgment"
-        )
-      } else {
-        setActiveSection("rfp-details")
+        if (
+          vendorsRef.current &&
+          scrollPosition >=
+            vendorsRef.current
+              .offsetTop
+        ) {
+          setActiveSection(
+            "vendors"
+          )
+        } else if (
+          acknowledgmentRef.current &&
+          scrollPosition >=
+            acknowledgmentRef.current
+              .offsetTop
+        ) {
+          setActiveSection(
+            "acknowledgment"
+          )
+        } else {
+          setActiveSection(
+            "rfp-details"
+          )
+        }
       }
-    }
 
     window.addEventListener(
       "scroll",
@@ -352,17 +746,20 @@ export default function TechnicalEvaluationPage({
       )
   }, [])
 
-  // ==========================================================
-  // SCROLL TO SECTION
-  // ==========================================================
+  /* ==========================================================
+     SCROLL TO SECTION
+  ========================================================== */
 
   const scrollToSection = (
     sectionId: string
   ) => {
     const refs = {
-      "rfp-details": rfpDetailsRef,
-      acknowledgment: acknowledgmentRef,
-      vendors: vendorsRef,
+      "rfp-details":
+        rfpDetailsRef,
+      acknowledgment:
+        acknowledgmentRef,
+      vendors:
+        vendorsRef,
     }
 
     const ref =
@@ -371,196 +768,286 @@ export default function TechnicalEvaluationPage({
       ]
 
     if (ref?.current) {
-      ref.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
+      ref.current.scrollIntoView(
+        {
+          behavior:
+            "smooth",
+          block: "start",
+        }
+      )
     }
   }
 
-  // ==========================================================
-  // ACKNOWLEDGEMENT
-  // ==========================================================
+  /* ==========================================================
+     ACKNOWLEDGEMENT
+  ========================================================== */
 
-  const handleAcknowledgeClick = () => {
-    setShowSignatureDialog(true)
-  }
-
-  const handleSignatureAcknowledge = () => {
-    setAcknowledged(true)
-    setShowSignatureDialog(false)
-  }
-
-  // ==========================================================
-  // AI TECHNICAL EVALUATION
-  // ==========================================================
-
-  const handleReview = async () => {
-    setIsReviewing(true)
-    setReviewError("")
-
-    try {
-      const res = await fetch(
-        "https://ai-leap.onrender.com/evaluate",
-        {
-          method: "POST",
-    headers: {
-            "Content-Type":
-              "application/json",
-            Accept:
-              "application/json",
-          }
-        }
+  const handleAcknowledgeClick =
+    () => {
+      setShowSignatureDialog(
+        true
       )
+    }
 
-      if (!res.ok) {
-        throw new Error()
-      }
+  const handleSignatureAcknowledge =
+    () => {
+      setAcknowledged(true)
+      setShowSignatureDialog(
+        false
+      )
+    }
 
-      const data = await res.json()
+  /* ==========================================================
+     AI TECHNICAL EVALUATION
+  ========================================================== */
 
-      const rows: EvaluationRow[] =
-        data?.evaluation_table ?? []
-
-      const insights: {
-        [name: string]: string
-      } =
-        data?.technical_overall_insights ?? {}
-
-      // ------------------------------------------------------
-      // CHECK RESULT
-      // ------------------------------------------------------
-
-      if (!rows.length) {
-        setReviewError(
-          "Evaluation has not been completed yet."
-        )
-
-        setIsReviewing(false)
-
+  const handleReview =
+    async () => {
+      if (isReviewing) {
         return
       }
 
-      // ------------------------------------------------------
-      // FIND TOTAL SCORE ROW
-      // ------------------------------------------------------
+      setIsReviewing(true)
+      setReviewError("")
 
-      const totalRow = rows.find(
-        (r) =>
-          r["Main Criterion"]
-            ?.replace(/\*/g, "")
-            .trim()
-            .toLowerCase() ===
-          "total score"
-      )
+      try {
+        /* ----------------------------------------------------
+           IMPORTANT:
 
-      // ------------------------------------------------------
-      // EXTRACT VENDOR SCORES
-      // ------------------------------------------------------
+           The server action now finds the RFP and proposal
+           PDFs itself.
 
-      const scores: {
-        [name: string]: number | null
-      } = {}
+           DO NOT send:
 
-      VENDOR_SCORE_MAP.forEach(
-        ({
-          name,
-          scoreKey,
-        }) => {
-          scores[name] =
-            parseScore(
-              totalRow?.[scoreKey]
-            )
+           rfpFile
+           proposalFiles
+
+           anymore.
+        ---------------------------------------------------- */
+
+        const response =
+          (await evaluateTechnicalProposals()) as TechnicalEvaluationResponse
+
+        /* ----------------------------------------------------
+           SERVER ACTION ERROR
+        ---------------------------------------------------- */
+
+        if (
+          response?.success ===
+          false
+        ) {
+          setReviewError(
+            response.message ||
+              response.error ||
+              "Unable to load evaluation results."
+          )
+
+          return
         }
-      )
 
-      // ------------------------------------------------------
-      // SAVE RESULTS
-      // ------------------------------------------------------
+        /* ----------------------------------------------------
+           EVALUATION TABLE
+        ---------------------------------------------------- */
 
-      setVendorScores(scores)
-      setOverallInsights(
-        normalizeInsightMap(insights)
-      )
-      setEvalRows(rows)
+        const rows: EvaluationRow[] =
+          Array.isArray(
+            response?.evaluation_table
+          )
+            ? response.evaluation_table
+            : []
 
-      localStorage.setItem(
-        "evalVendorScores",
-        JSON.stringify(scores)
-      )
+        /* ----------------------------------------------------
+           AI INSIGHTS
+        ---------------------------------------------------- */
 
-      localStorage.setItem(
-        "overallInsights",
-        JSON.stringify(insights)
-      )
+        const insights: {
+          [name: string]: string
+        } =
+          response?.technical_overall_insights ??
+          {}
 
-      localStorage.setItem(
-        "evalRows",
-        JSON.stringify(rows)
-      )
+        /* ----------------------------------------------------
+           VALIDATE RESULT
+        ---------------------------------------------------- */
 
-      // ------------------------------------------------------
-      // SHOW RESULT MODAL
-      // ------------------------------------------------------
+        if (!rows.length) {
+          setReviewError(
+            response?.message ||
+              "Evaluation has not been completed yet."
+          )
 
-      setShowEvalModal(true)
+          return
+        }
 
-    } catch {
-      setReviewError(
-        "Unable to load evaluation results."
-      )
-    } finally {
-      setIsReviewing(false)
+        /* ----------------------------------------------------
+           TOTAL SCORE ROW
+        ---------------------------------------------------- */
+
+        const totalRow =
+          findTotalScoreRow(
+            rows
+          )
+
+        /* ----------------------------------------------------
+           EXTRACT VENDOR SCORES
+        ---------------------------------------------------- */
+
+        const scores: {
+          [name: string]:
+            | number
+            | null
+        } = {}
+
+        VENDOR_SCORE_MAP.forEach(
+          (vendor) => {
+            const scoreKey =
+              findVendorScoreKey(
+                totalRow ?? {},
+                vendor
+              )
+
+            scores[
+              vendor.name
+            ] =
+              scoreKey
+                ? parseScore(
+                    totalRow?.[
+                      scoreKey
+                    ]
+                  )
+                : null
+          }
+        )
+
+        /* ----------------------------------------------------
+           SAVE STATE
+        ---------------------------------------------------- */
+
+        setVendorScores(
+          scores
+        )
+
+        setOverallInsights(
+          normalizeInsightMap(
+            insights
+          )
+        )
+
+        setEvalRows(rows)
+
+        /* ----------------------------------------------------
+           SAVE LOCAL STORAGE
+        ---------------------------------------------------- */
+
+        localStorage.setItem(
+          "evalVendorScores",
+          JSON.stringify(
+            scores
+          )
+        )
+
+        localStorage.setItem(
+          "overallInsights",
+          JSON.stringify(
+            insights
+          )
+        )
+
+        localStorage.setItem(
+          "evalRows",
+          JSON.stringify(
+            rows
+          )
+        )
+
+        /* ----------------------------------------------------
+           SHOW RESULTS
+        ---------------------------------------------------- */
+
+        setShowEvalModal(
+          true
+        )
+      } catch (error) {
+        console.error(
+          "Technical evaluation error:",
+          error
+        )
+
+        setReviewError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load evaluation results."
+        )
+      } finally {
+        setIsReviewing(false)
+      }
     }
-  }
 
-  // ==========================================================
-  // DECISION
-  // ==========================================================
+  /* ==========================================================
+     DECISION
+  ========================================================== */
 
-  const handleDecideClick = () => {
-    setShowDecisionDialog(true)
-  }
+  const handleDecideClick =
+    () => {
+      setShowDecisionDialog(
+        true
+      )
+    }
 
-  const handleCompleteDecision = () => {
-    setShowDecisionDialog(false)
-    setShowSuccessMessage(true)
-
-    if (
-      selectedDecision === "completed" &&
-      onCommercialCompleted
-    ) {
-      console.log(
-        "[v0] Technical evaluation completed, triggering commercial evaluation visibility"
+  const handleCompleteDecision =
+    () => {
+      setShowDecisionDialog(
+        false
       )
 
-      onCommercialCompleted()
+      setShowSuccessMessage(
+        true
+      )
+
+      if (
+        selectedDecision ===
+          "completed" &&
+        onCommercialCompleted
+      ) {
+        onCommercialCompleted()
+      }
+
+      setTimeout(() => {
+        setShowSuccessMessage(
+          false
+        )
+      }, 3000)
     }
 
-    setTimeout(() => {
-      setShowSuccessMessage(false)
-    }, 3000)
-  }
+  /* ==========================================================
+     SORT VENDORS
+  ========================================================== */
 
-  // ==========================================================
-  // SORTED VENDORS
-  // ==========================================================
+  const sortedVendors =
+    [
+      ...VENDOR_SCORE_MAP,
+    ].sort(
+      (a, b) => {
+        const scoreA =
+          vendorScores[
+            a.name
+          ] ?? -1
 
-  const sortedVendors = [...VENDOR_SCORE_MAP].sort(
-    (a, b) => {
-      const scoreA =
-        vendorScores[a.name] ?? -1
+        const scoreB =
+          vendorScores[
+            b.name
+          ] ?? -1
 
-      const scoreB =
-        vendorScores[b.name] ?? -1
+        return (
+          scoreB -
+          scoreA
+        )
+      }
+    )
 
-      return scoreB - scoreA
-    }
-  )
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  /* ==========================================================
+     RENDER
+  ========================================================== */
 
   return (
     <div className="w-full h-screen flex flex-col bg-white">
@@ -609,14 +1096,16 @@ export default function TechnicalEvaluationPage({
             <i
               className="ri-checkbox-circle-line text-2xl"
               style={{
-                color: "#1B733D",
+                color:
+                  "#1B733D",
               }}
             />
 
             <span
               className="font-normal text-base"
               style={{
-                color: "#000525",
+                color:
+                  "#000525",
               }}
             >
               Technical evaluation completed successfully
@@ -626,7 +1115,9 @@ export default function TechnicalEvaluationPage({
 
           <button
             onClick={() =>
-              setShowSuccessMessage(false)
+              setShowSuccessMessage(
+                false
+              )
             }
             className="p-1 hover:bg-gray-100 rounded transition-colors"
           >
@@ -674,6 +1165,7 @@ export default function TechnicalEvaluationPage({
           </button>
 
         </div>
+
       </div>
 
       {/* ======================================================
@@ -706,7 +1198,9 @@ export default function TechnicalEvaluationPage({
 
               <button
                 onClick={() =>
-                  setCollapsed(!collapsed)
+                  setCollapsed(
+                    !collapsed
+                  )
                 }
                 className="p-1 hover:bg-gray-200 rounded transition"
                 aria-label="Toggle collapse"
@@ -731,31 +1225,34 @@ export default function TechnicalEvaluationPage({
                   id: "vendors",
                   label: "Vendors",
                 },
-              ].map((item) => (
-
-                <button
-                  key={item.id}
-                  onClick={() =>
-                    scrollToSection(
+              ].map(
+                (item) => (
+                  <button
+                    key={
                       item.id
-                    )
-                  }
-                  className={`group relative w-full text-left px-3 py-2 rounded text-sm flex items-center transition-all duration-200 ${
-                    activeSection === item.id
-                      ? "bg-green-100 text-green-700 border-l-4 border-green-600"
-                      : "text-gray-700 hover:bg-green-50 hover:text-green-700"
-                  }`}
-                >
-
-                  {!collapsed && (
-                    <span className="transition-all duration-200">
-                      {item.label}
-                    </span>
-                  )}
-
-                </button>
-
-              ))}
+                    }
+                    onClick={() =>
+                      scrollToSection(
+                        item.id
+                      )
+                    }
+                    className={`group relative w-full text-left px-3 py-2 rounded text-sm flex items-center transition-all duration-200 ${
+                      activeSection ===
+                      item.id
+                        ? "bg-green-100 text-green-700 border-l-4 border-green-600"
+                        : "text-gray-700 hover:bg-green-50 hover:text-green-700"
+                    }`}
+                  >
+                    {!collapsed && (
+                      <span>
+                        {
+                          item.label
+                        }
+                      </span>
+                    )}
+                  </button>
+                )
+              )}
 
             </nav>
 
@@ -771,7 +1268,9 @@ export default function TechnicalEvaluationPage({
 
           <div className="max-w-6xl mx-auto p-8 space-y-8">
 
-            {/* PAGE TITLE */}
+            {/* =================================================
+                PAGE TITLE
+            ================================================= */}
 
             <div className="flex items-center justify-between">
 
@@ -790,7 +1289,9 @@ export default function TechnicalEvaluationPage({
             ================================================= */}
 
             <div
-              ref={rfpDetailsRef}
+              ref={
+                rfpDetailsRef
+              }
               className="space-y-6"
             >
 
@@ -859,7 +1360,9 @@ export default function TechnicalEvaluationPage({
             ================================================= */}
 
             <div
-              ref={acknowledgmentRef}
+              ref={
+                acknowledgmentRef
+              }
               className="space-y-4"
             >
 
@@ -878,16 +1381,15 @@ export default function TechnicalEvaluationPage({
                 </p>
 
                 {!acknowledged ? (
-
                   <button
-                    onClick={handleAcknowledgeClick}
+                    onClick={
+                      handleAcknowledgeClick
+                    }
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
                     I acknowledge
                   </button>
-
                 ) : (
-
                   <button
                     disabled
                     className="px-6 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 cursor-not-allowed"
@@ -895,7 +1397,6 @@ export default function TechnicalEvaluationPage({
                     <i className="ri-check-line" />
                     You have acknowledged
                   </button>
-
                 )}
 
               </div>
@@ -907,7 +1408,9 @@ export default function TechnicalEvaluationPage({
             ================================================= */}
 
             <div
-              ref={vendorsRef}
+              ref={
+                vendorsRef
+              }
               className="space-y-4"
             >
 
@@ -918,65 +1421,65 @@ export default function TechnicalEvaluationPage({
                 </h3>
 
                 {acknowledged && (
-
                   <div className="flex items-center gap-3">
 
                     {reviewError && (
-                      <span className="text-xs text-red-500">
-                        {reviewError}
+                      <span className="text-xs text-red-500 max-w-xs">
+                        {
+                          reviewError
+                        }
                       </span>
                     )}
 
-                    {evalRows.length > 0 && (
-
+                    {evalRows.length >
+                      0 && (
                       <button
                         onClick={() =>
-                          setShowEvalModal(true)
+                          setShowEvalModal(
+                            true
+                          )
                         }
                         className="px-6 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 flex items-center gap-2"
                       >
                         View Results
                       </button>
-
                     )}
 
                     <button
-                      onClick={handleReview}
-                      disabled={isReviewing}
+                      onClick={
+                        handleReview
+                      }
+                      disabled={
+                        isReviewing
+                      }
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-
                       {isReviewing ? (
-
                         <>
                           <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" />
                           Evaluating...
                         </>
-
                       ) : (
-
                         <>
                           <Sparkles size={16} />
-
-                          {evalRows.length > 0
+                          {evalRows.length >
+                          0
                             ? "Re-evaluate with AI"
                             : "Evaluate with AI"}
                         </>
-
                       )}
-
                     </button>
 
                   </div>
-
                 )}
 
               </div>
 
-              {/* LOCKED VENDOR VIEW */}
+              {/* =================================================
+                  LOCKED VIEW
+              ================================================= */}
 
               {!acknowledged ? (
-
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
 
                   <div className="relative">
@@ -990,7 +1493,9 @@ export default function TechnicalEvaluationPage({
                     <div className="absolute inset-0 flex items-center justify-center">
 
                       <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+
                         <i className="ri-lock-fill text-3xl text-white" />
+
                       </div>
 
                     </div>
@@ -1006,13 +1511,11 @@ export default function TechnicalEvaluationPage({
                   </p>
 
                 </div>
-
               ) : (
-
                 <div className="space-y-8">
 
                   {/* =================================================
-                      VENDOR SCORE TABLE
+                      VENDOR TABLE
                   ================================================= */}
 
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -1020,7 +1523,11 @@ export default function TechnicalEvaluationPage({
                     <div className="grid grid-cols-12 gap-4 bg-[rgb(27,115,61)] p-4 text-sm font-medium text-white">
 
                       <div className="col-span-3">
-                        Vendors ({VENDOR_SCORE_MAP.length})
+                        Vendors (
+                        {
+                          VENDOR_SCORE_MAP.length
+                        }
+                        )
                       </div>
 
                       <div className="col-span-3">
@@ -1037,21 +1544,8 @@ export default function TechnicalEvaluationPage({
 
                     </div>
 
-                    {[...VENDOR_SCORE_MAP]
-                      .sort((a, b) => {
-
-                        const sa =
-                          vendorScores[a.name] ??
-                          -1
-
-                        const sb =
-                          vendorScores[b.name] ??
-                          -1
-
-                        return sb - sa
-                      })
-                      .map((vendor) => {
-
+                    {sortedVendors.map(
+                      (vendor) => {
                         const decision =
                           vendorDecisions[
                             vendor.name
@@ -1063,9 +1557,10 @@ export default function TechnicalEvaluationPage({
                           ]
 
                         return (
-
                           <div
-                            key={vendor.name}
+                            key={
+                              vendor.name
+                            }
                             className="grid grid-cols-12 gap-4 p-4 border-t border-gray-200 items-center"
                           >
 
@@ -1081,7 +1576,9 @@ export default function TechnicalEvaluationPage({
                                   onNavigateToVendorEvaluation
                                 }
                               >
-                                {vendor.avatar}
+                                {
+                                  vendor.avatar
+                                }
                               </div>
 
                               <div>
@@ -1092,7 +1589,9 @@ export default function TechnicalEvaluationPage({
                                     onNavigateToVendorEvaluation
                                   }
                                 >
-                                  {vendor.name}
+                                  {
+                                    vendor.name
+                                  }
                                 </p>
 
                                 <p
@@ -1101,7 +1600,9 @@ export default function TechnicalEvaluationPage({
                                     onNavigateToVendorEvaluation
                                   }
                                 >
-                                  {vendor.location}
+                                  {
+                                    vendor.location
+                                  }
                                 </p>
 
                               </div>
@@ -1112,28 +1613,32 @@ export default function TechnicalEvaluationPage({
 
                               <span
                                 className={`inline-block px-3 py-1 text-xs font-medium rounded ${
-                                  decision === "approved"
+                                  decision ===
+                                  "approved"
                                     ? "bg-green-100 text-green-700"
-                                    : decision === "rejected"
+                                    : decision ===
+                                      "rejected"
                                     ? "bg-red-100 text-red-600"
-                                    : score !== null &&
-                                      score !== undefined
+                                    : score !==
+                                        null &&
+                                      score !==
+                                        undefined
                                     ? "bg-blue-100 text-blue-700"
                                     : "bg-orange-100 text-orange-600"
                                 }`}
                               >
-
                                 {decision ===
                                 "approved"
                                   ? "Approved"
                                   : decision ===
                                     "rejected"
                                   ? "Rejected"
-                                  : score !== null &&
-                                    score !== undefined
+                                  : score !==
+                                      null &&
+                                    score !==
+                                      undefined
                                   ? "Completed"
                                   : "Pending"}
-
                               </span>
 
                             </div>
@@ -1141,8 +1646,10 @@ export default function TechnicalEvaluationPage({
                             <div className="col-span-3">
 
                               <p className="text-sm font-semibold text-gray-900">
-                                {score !== null &&
-                                score !== undefined
+                                {score !==
+                                  null &&
+                                score !==
+                                  undefined
                                   ? score
                                   : "--"}
                               </p>
@@ -1154,7 +1661,9 @@ export default function TechnicalEvaluationPage({
                               <button
                                 onClick={() =>
                                   setVendorDecisions(
-                                    (prev) => ({
+                                    (
+                                      prev
+                                    ) => ({
                                       ...prev,
                                       [vendor.name]:
                                         "approved",
@@ -1164,15 +1673,19 @@ export default function TechnicalEvaluationPage({
                                 disabled={
                                   decision !==
                                     "pending" ||
-                                  score === null ||
-                                  score === undefined
+                                  score ===
+                                    null ||
+                                  score ===
+                                    undefined
                                 }
                                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                   decision ===
                                   "approved"
                                     ? "bg-green-600 text-white cursor-not-allowed"
-                                    : score === null ||
-                                      score === undefined
+                                    : score ===
+                                        null ||
+                                      score ===
+                                        undefined
                                     ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                     : decision !==
                                       "pending"
@@ -1186,7 +1699,9 @@ export default function TechnicalEvaluationPage({
                               <button
                                 onClick={() =>
                                   setVendorDecisions(
-                                    (prev) => ({
+                                    (
+                                      prev
+                                    ) => ({
                                       ...prev,
                                       [vendor.name]:
                                         "rejected",
@@ -1196,15 +1711,19 @@ export default function TechnicalEvaluationPage({
                                 disabled={
                                   decision !==
                                     "pending" ||
-                                  score === null ||
-                                  score === undefined
+                                  score ===
+                                    null ||
+                                  score ===
+                                    undefined
                                 }
                                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                   decision ===
                                   "rejected"
                                     ? "bg-red-600 text-white cursor-not-allowed"
-                                    : score === null ||
-                                      score === undefined
+                                    : score ===
+                                        null ||
+                                      score ===
+                                        undefined
                                     ? "border border-gray-300 text-gray-400 cursor-not-allowed"
                                     : decision !==
                                       "pending"
@@ -1218,14 +1737,13 @@ export default function TechnicalEvaluationPage({
                             </div>
 
                           </div>
-
                         )
-                      })}
+                      }
+                    )}
 
                   </div>
 
                 </div>
-
               )}
 
             </div>
@@ -1239,7 +1757,6 @@ export default function TechnicalEvaluationPage({
         ====================================================== */}
 
         {showDecisionDialog && (
-
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 
             <AssessmentDecisionDialog
@@ -1247,7 +1764,9 @@ export default function TechnicalEvaluationPage({
                 handleCompleteDecision
               }
               onCancel={() =>
-                setShowDecisionDialog(false)
+                setShowDecisionDialog(
+                  false
+                )
               }
               onDecisionChange={
                 setSelectedDecision
@@ -1255,7 +1774,6 @@ export default function TechnicalEvaluationPage({
             />
 
           </div>
-
         )}
 
         {/* ======================================================
@@ -1267,7 +1785,9 @@ export default function TechnicalEvaluationPage({
             showSignatureDialog
           }
           onClose={() =>
-            setShowSignatureDialog(false)
+            setShowSignatureDialog(
+              false
+            )
           }
           onAcknowledge={
             handleSignatureAcknowledge
@@ -1281,21 +1801,22 @@ export default function TechnicalEvaluationPage({
       ======================================================== */}
 
       {showEvalModal && (
-
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
           <div
             className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{
               width: "92vw",
-              maxWidth: "1400px",
-              maxHeight: "88vh",
+              maxWidth:
+                "1400px",
+              maxHeight:
+                "88vh",
             }}
           >
 
-            {/* ==================================================
+            {/* =================================================
                 MODAL HEADER
-            ================================================== */}
+            ================================================= */}
 
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0 bg-white">
 
@@ -1313,7 +1834,9 @@ export default function TechnicalEvaluationPage({
 
               <button
                 onClick={() =>
-                  setShowEvalModal(false)
+                  setShowEvalModal(
+                    false
+                  )
                 }
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Close"
@@ -1323,46 +1846,35 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-            {/* ==================================================
-                MODAL BODY
+            {/* =================================================
+                MODAL CONTENT
+            ================================================= */}
 
-                IMPORTANT UI CHANGE:
-                - This remains the ONLY scroll container.
-                - Scrollbar stays on the right side of the popup.
-                - Cards are sticky.
-                - Table header is sticky.
-                - Rows scroll underneath them.
-            ================================================== */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto px-6">
 
-            <div
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6"
-            >
+              {/* =================================================
+                  VENDOR SCORE CARDS
+              ================================================= */}
 
-              {/* ==================================================
-                  STICKY VENDOR SUMMARY CARDS
-
-                  Cards remain visible while the evaluation
-                  rows are being scrolled.
-              ================================================== */}
-
-              <div
-                className="sticky top-0 z-30 bg-white pt-6 pb-4"
-              >
+              <div className="sticky top-0 z-30 bg-white pt-6 pb-4">
 
                 <div className="grid grid-cols-3 gap-4">
 
                   {sortedVendors.map(
-                    (vendor, index) => {
-
+                    (
+                      vendor,
+                      index
+                    ) => {
                       const score =
                         vendorScores[
                           vendor.name
                         ]
 
                       return (
-
                         <div
-                          key={vendor.name}
+                          key={
+                            vendor.name
+                          }
                           className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between shadow-sm"
                         >
 
@@ -1375,13 +1887,17 @@ export default function TechnicalEvaluationPage({
                                   vendor.color,
                               }}
                             >
-                              {vendor.avatar}
+                              {
+                                vendor.avatar
+                              }
                             </div>
 
                             <div className="min-w-0">
 
                               <p className="font-semibold text-gray-900 text-sm truncate">
-                                {vendor.name}
+                                {
+                                  vendor.name
+                                }
                               </p>
 
                               <p className="text-xs text-gray-500">
@@ -1394,19 +1910,23 @@ export default function TechnicalEvaluationPage({
 
                           <div className="text-right flex-shrink-0">
 
-                            {index === 0 &&
-                              score !== null &&
-                              score !== undefined && (
-
+                            {index ===
+                              0 &&
+                              score !==
+                                null &&
+                              score !==
+                                undefined && (
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium block mb-1">
                                   Highest
                                 </span>
-
                               )}
 
                             <p className="text-2xl font-bold text-gray-900">
 
-                              {score ?? "--"}
+                              {
+                                score ??
+                                "--"
+                              }
 
                               <span className="text-xs font-normal text-gray-400">
                                 /100
@@ -1417,7 +1937,6 @@ export default function TechnicalEvaluationPage({
                           </div>
 
                         </div>
-
                       )
                     }
                   )}
@@ -1426,31 +1945,15 @@ export default function TechnicalEvaluationPage({
 
               </div>
 
-              {/* ==================================================
-                  TABLE
-
-                  The table itself does NOT have overflow-auto.
-                  Therefore there is no second scrollbar.
-
-                  The parent modal body controls scrolling.
-              ================================================== */}
+              {/* =================================================
+                  EVALUATION TABLE
+              ================================================= */}
 
               <div className="border border-gray-200 rounded-xl overflow-visible mb-6">
 
                 <table className="w-full border-collapse">
 
-                  {/* =================================================
-                      FIXED TABLE HEADER
-
-                      The header sticks below the vendor cards.
-
-                      Vendor cards approximately occupy 100px,
-                      so the header starts at 112px.
-                  ================================================= */}
-
-                  <thead
-                    className="sticky top-[112px] z-20"
-                  >
+                  <thead className="sticky top-[112px] z-20">
 
                     <tr className="bg-[#1B733D] text-white shadow-sm">
 
@@ -1463,15 +1966,19 @@ export default function TechnicalEvaluationPage({
                       </th>
 
                       {VENDOR_SCORE_MAP.map(
-                        (vendor) => (
-
+                        (
+                          vendor
+                        ) => (
                           <th
-                            key={vendor.name}
+                            key={
+                              vendor.name
+                            }
                             className="px-4 py-4 text-center min-w-[170px]"
                           >
-                            {vendor.name}
+                            {
+                              vendor.name
+                            }
                           </th>
-
                         )
                       )}
 
@@ -1479,24 +1986,16 @@ export default function TechnicalEvaluationPage({
 
                   </thead>
 
-                  {/* =================================================
-                      TABLE BODY
-                  ================================================= */}
-
                   <tbody>
 
                     {evalRows
                       .filter(
                         (row) =>
-                          row[
-                            "Main Criterion"
-                          ]
-                            ?.replace(
-                              /\*/g,
-                              ""
-                            )
-                            .trim()
-                            .toLowerCase() !==
+                          normalizeText(
+                            row[
+                              "Main Criterion"
+                            ]
+                          ) !==
                           "total score"
                       )
                       .map(
@@ -1506,76 +2005,89 @@ export default function TechnicalEvaluationPage({
                         ) => {
 
                           const mainCriterion =
-                            row[
-                              "Main Criterion"
-                            ]
-                              ?.replace(
+                            String(
+                              row[
+                                "Main Criterion"
+                              ] ??
+                                ""
+                            )
+                              .replace(
                                 /\*/g,
                                 ""
                               )
-                              .trim() ||
-                            ""
+                              .trim()
 
                           const subCriterion =
-                            row[
-                              "Sub-Criterion"
-                            ]
-                              ?.replace(
+                            String(
+                              row[
+                                "Sub-Criterion"
+                              ] ??
+                                ""
+                            )
+                              .replace(
                                 /\*/g,
                                 ""
                               )
-                              .trim() ||
-                            ""
+                              .trim()
 
                           const weight =
-                            row[
-                              "Sub Weight"
-                            ] ||
-                            row[
-                              "Sub Weight "
-                            ] ||
-                            ""
+                            String(
+                              row[
+                                "Sub Weight"
+                              ] ??
+                                row[
+                                  "Sub Weight "
+                                ] ??
+                                row[
+                                  "Sub-Weight"
+                                ] ??
+                                row[
+                                  "Sub-Weight "
+                                ] ??
+                                ""
+                            ).trim()
 
                           return (
-
                             <tr
-                              key={index}
+                              key={
+                                index
+                              }
                               className="border-t border-gray-200 hover:bg-gray-50 transition-colors"
                             >
-
-                              {/* CRITERIA */}
 
                               <td className="px-4 py-4 align-top">
 
                                 <div className="font-semibold text-gray-900">
-                                  {mainCriterion}
+                                  {
+                                    mainCriterion
+                                  }
                                 </div>
 
                                 {subCriterion && (
-
                                   <div className="mt-1 text-sm text-gray-500 leading-5">
-                                    {subCriterion}
+                                    {
+                                      subCriterion
+                                    }
                                   </div>
-
                                 )}
 
                               </td>
 
-                              {/* WEIGHT */}
-
                               <td className="px-4 py-4 text-center align-top border-r-2 border-gray-300">
 
                                 <span className="inline-flex items-center justify-center text-gray-700 rounded-full px-3 py-1 text-sm font-semibold">
-                                  {weight ||
-                                    "--"}
+                                  {
+                                    weight ||
+                                    "--"
+                                  }
                                 </span>
 
                               </td>
 
-                              {/* VENDOR SCORES */}
-
                               {VENDOR_SCORE_MAP.map(
-                                (vendor) => {
+                                (
+                                  vendor
+                                ) => {
 
                                   const evaluation =
                                     getVendorEvaluation(
@@ -1587,7 +2099,6 @@ export default function TechnicalEvaluationPage({
                                     evaluation.score
 
                                   return (
-
                                     <td
                                       key={
                                         vendor.name
@@ -1597,7 +2108,6 @@ export default function TechnicalEvaluationPage({
 
                                       {score !==
                                       null ? (
-
                                         <button
                                           onClick={() =>
                                             setSelectedEvaluation(
@@ -1620,34 +2130,33 @@ export default function TechnicalEvaluationPage({
                                           title="Click for more detail"
                                           className="inline-flex items-center justify-center min-w-[65px] px-3 py-2 rounded-lg font-bold text-sm text-gray-800 transition hover:scale-105 cursor-pointer"
                                         >
-                                          {score}
+                                          {
+                                            score
+                                          }
                                           /
-                                          {weight ||
-                                            "?"}
+                                          {
+                                            weight ||
+                                            "?"
+                                          }
                                         </button>
-
                                       ) : (
-
                                         <span className="text-gray-400">
                                           --
                                         </span>
-
                                       )}
 
                                     </td>
-
                                   )
                                 }
                               )}
 
                             </tr>
-
                           )
                         }
                       )}
 
                     {/* =================================================
-                        INSIGHTS ROW
+                        AI INSIGHTS
                     ================================================= */}
 
                     <tr className="border-t border-gray-200 bg-blue-50/40">
@@ -1663,61 +2172,17 @@ export default function TechnicalEvaluationPage({
                       <td className="px-4 py-3 border-r-2 border-gray-300" />
 
                       {VENDOR_SCORE_MAP.map(
-                        (vendor) => {
+                        (
+                          vendor
+                        ) => {
 
                           const insight =
                             getInsightForVendor(
                               overallInsights,
-                              vendor.name,
-                              vendor.scoreKey
-                            ) ||
-                            ((): string => {
-
-                              const totalRow =
-                                evalRows.find(
-                                  (r) =>
-                                    r[
-                                      "Main Criterion"
-                                    ]
-                                      ?.replace(
-                                        /\*/g,
-                                        ""
-                                      )
-                                      .trim()
-                                      .toLowerCase() ===
-                                    "total score"
-                                )
-
-                              const prefix =
-                                vendor.scoreKey
-                                  .replace(
-                                    " Score",
-                                    ""
-                                  )
-                                  .toLowerCase()
-
-                              return totalRow
-                                ? Object.entries(
-                                    totalRow
-                                  ).find(
-                                    ([k]) =>
-                                      k
-                                        .toLowerCase()
-                                        .startsWith(
-                                          prefix
-                                        ) &&
-                                      k
-                                        .toLowerCase()
-                                        .includes(
-                                          "reason"
-                                        )
-                                  )?.[1] ||
-                                    "--"
-                                : "--"
-                            })()
+                              vendor
+                            )
 
                           return (
-
                             <td
                               key={
                                 vendor.name
@@ -1726,12 +2191,13 @@ export default function TechnicalEvaluationPage({
                             >
 
                               <p className="text-xs text-gray-600 leading-5">
-                                {insight ||
-                                  "--"}
+                                {
+                                  insight ||
+                                  "--"
+                                }
                               </p>
 
                             </td>
-
                           )
                         }
                       )}
@@ -1741,7 +2207,7 @@ export default function TechnicalEvaluationPage({
                   </tbody>
 
                   {/* =================================================
-                      TOTAL SCORE
+                      TOTAL
                   ================================================= */}
 
                   <tfoot>
@@ -1757,7 +2223,9 @@ export default function TechnicalEvaluationPage({
                       </td>
 
                       {VENDOR_SCORE_MAP.map(
-                        (vendor) => {
+                        (
+                          vendor
+                        ) => {
 
                           const score =
                             vendorScores[
@@ -1765,7 +2233,6 @@ export default function TechnicalEvaluationPage({
                             ]
 
                           return (
-
                             <td
                               key={
                                 vendor.name
@@ -1775,15 +2242,16 @@ export default function TechnicalEvaluationPage({
 
                               <span className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold text-lg text-gray-900">
 
-                                {score ??
-                                  "--"}
+                                {
+                                  score ??
+                                  "--"
+                                }
 
                                 /100
 
                               </span>
 
                             </td>
-
                           )
                         }
                       )}
@@ -1798,9 +2266,9 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-            {/* ==================================================
+            {/* =================================================
                 MODAL FOOTER
-            ================================================== */}
+            ================================================= */}
 
             <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-white">
 
@@ -1810,7 +2278,9 @@ export default function TechnicalEvaluationPage({
 
               <button
                 onClick={() =>
-                  setShowEvalModal(false)
+                  setShowEvalModal(
+                    false
+                  )
                 }
                 className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
@@ -1822,7 +2292,6 @@ export default function TechnicalEvaluationPage({
           </div>
 
         </div>
-
       )}
 
       {/* ========================================================
@@ -1830,12 +2299,13 @@ export default function TechnicalEvaluationPage({
       ======================================================== */}
 
       {selectedEvaluation && (
-
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
 
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
 
-            {/* REASONING HEADER */}
+            {/* =================================================
+                POPUP HEADER
+            ================================================= */}
 
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
 
@@ -1846,14 +2316,18 @@ export default function TechnicalEvaluationPage({
                 </p>
 
                 <h2 className="text-xl font-semibold text-gray-900 mt-1">
-                  {selectedEvaluation.vendor}
+                  {
+                    selectedEvaluation.vendor
+                  }
                 </h2>
 
               </div>
 
               <button
                 onClick={() =>
-                  setSelectedEvaluation(null)
+                  setSelectedEvaluation(
+                    null
+                  )
                 }
                 className="p-2 hover:bg-gray-100 rounded-lg"
                 aria-label="Close AI reasoning"
@@ -1863,11 +2337,11 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-            {/* REASONING BODY */}
+            {/* =================================================
+                POPUP CONTENT
+            ================================================= */}
 
             <div className="p-6 space-y-6">
-
-              {/* SCORE */}
 
               <div className="flex items-center justify-between">
 
@@ -1879,10 +2353,15 @@ export default function TechnicalEvaluationPage({
 
                   <p className="text-4xl font-bold text-green-700 mt-1">
 
-                    {selectedEvaluation.score}
+                    {
+                      selectedEvaluation.score
+                    }
 
                     <span className="text-lg text-gray-400">
-                      /{selectedEvaluation.weight}
+                      /
+                      {
+                        selectedEvaluation.weight
+                      }
                     </span>
 
                   </p>
@@ -1896,14 +2375,14 @@ export default function TechnicalEvaluationPage({
                   </p>
 
                   <p className="text-xl font-bold text-green-700 text-center">
-                    {selectedEvaluation.weight}
+                    {
+                      selectedEvaluation.weight
+                    }
                   </p>
 
                 </div>
 
               </div>
-
-              {/* EVALUATION CRITERIA */}
 
               <div>
 
@@ -1912,13 +2391,13 @@ export default function TechnicalEvaluationPage({
                 </p>
 
                 <p className="mt-2 text-sm text-gray-800 leading-6">
-                  {selectedEvaluation.subCriterion ||
-                    "No sub-criterion provided."}
+                  {
+                    selectedEvaluation.subCriterion ||
+                    "No sub-criterion provided."
+                  }
                 </p>
 
               </div>
-
-              {/* AI REASONING */}
 
               <div>
 
@@ -1929,15 +2408,15 @@ export default function TechnicalEvaluationPage({
                 <div className="mt-2 bg-gray-50 border border-gray-200 rounded-xl p-4">
 
                   <p className="text-sm text-gray-700 leading-6">
-                    {selectedEvaluation.reason ||
-                      "No reasoning provided."}
+                    {
+                      selectedEvaluation.reason ||
+                      "No reasoning provided."
+                    }
                   </p>
 
                 </div>
 
               </div>
-
-              {/* PROPOSAL REFERENCE */}
 
               <div>
 
@@ -1952,8 +2431,10 @@ export default function TechnicalEvaluationPage({
                   </span>
 
                   <p className="text-sm font-medium text-blue-700">
-                    {selectedEvaluation.reference ||
-                      "No page reference provided."}
+                    {
+                      selectedEvaluation.reference ||
+                      "No page reference provided."
+                    }
                   </p>
 
                 </div>
@@ -1962,13 +2443,17 @@ export default function TechnicalEvaluationPage({
 
             </div>
 
-            {/* REASONING FOOTER */}
+            {/* =================================================
+                POPUP FOOTER
+            ================================================= */}
 
             <div className="flex justify-end px-6 py-4 border-t border-gray-200">
 
               <button
                 onClick={() =>
-                  setSelectedEvaluation(null)
+                  setSelectedEvaluation(
+                    null
+                  )
                 }
                 className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
@@ -1980,9 +2465,9 @@ export default function TechnicalEvaluationPage({
           </div>
 
         </div>
-
       )}
 
     </div>
   )
 }
+

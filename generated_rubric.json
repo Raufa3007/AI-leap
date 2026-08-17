@@ -1,0 +1,58 @@
+[
+  {
+    "main_criteria": "الخبرة المتخصصة للشركة المتقدمة (Specialized Experience of the Proposing Company)",
+    "main_weight": "6",
+    "sub_criteria": "خبرة العمل على مشاريع مشابهه في المملكة العربية السعودية مع ذكر العملاء الرئيسيين (Experience working on similar projects in Saudi Arabia, mentioning key clients)",
+    "sub_weight": "6",
+    "expectation": "**Excellent (Full Marks):** Demonstrates extensive and highly relevant experience in similar projects within Saudi Arabia, providing detailed case studies and strong references from multiple key clients. The experience directly aligns with the project's scope and complexity.<br><br>**Good (Partial Marks):** Shows relevant experience in similar projects in Saudi Arabia, with some client mentions. The experience is generally applicable but may lack depth or direct alignment with all aspects of the current project.<br><br>**Insufficient (Low/No Marks):** Lacks relevant experience in similar projects in Saudi Arabia, or fails to provide sufficient details and client references. The experience presented is not clearly applicable to the project."
+  },
+  {
+    "main_criteria": "مؤهلات فريق العمل القائم على المشروع (Qualifications of the Project Team)",
+    "main_weight": "25",
+    "sub_criteria": "خبرة فريق العمل في العمل على مشاريع مشابهه مع ارفاق مؤهلات فريق العمل. (Team's experience in similar projects, attaching team qualifications.)",
+    "sub_weight": "5",
+    "expectation": "**Excellent (Full Marks):** The entire project team demonstrates exceptional and highly relevant experience in similar projects, with comprehensive and impressive qualifications attached for all key members, clearly showing their roles and contributions.<br><br>**Good (Partial Marks):** The project team shows relevant experience in similar projects, and qualifications are provided. Most key members have adequate experience, but some may have less direct relevance or less detailed qualifications.<br><br>**Insufficient (Low/No Marks):** The project team lacks sufficient relevant experience in similar projects, or the provided qualifications are incomplete, vague, or do not demonstrate adequate expertise for the project roles."
+  },
+  {
+    "main_criteria": "",
+    "main_weight": "",
+    "sub_criteria": "خبرة فريق العمل بالتكنولوجيا المطلوبة للمشروع (Team's experience with the required project technology)",
+    "sub_weight": "10",
+    "expectation": "**Excellent (Full Marks):** The project team possesses deep and proven expertise in all required project technologies, demonstrated through certifications, successful past implementations, and detailed technical profiles.<br><br>**Good (Partial Marks):** The project team has adequate experience with most of the required project technologies. Some areas might show less depth, but overall competency is acceptable.<br><br>**Insufficient (Low/No Marks):** The project team lacks critical experience or demonstrated proficiency in the core technologies required for the project, posing a significant risk to successful implementation."
+  },
+  {
+    "main_criteria": "",
+    "main_weight": "",
+    "sub_criteria": "خبرة مدير المشروع في العمل على مشاريع مشابهه (Project Manager's experience in similar projects)",
+    "sub_weight": "5",
+    "expectation": "**Excellent (Full Marks):** The Project Manager has extensive, proven, and highly successful experience managing similar projects, demonstrating strong leadership, problem-solving skills, and a track record of on-time, on-budget delivery.<br><br>**Good (Partial Marks):** The Project Manager has relevant experience managing similar projects, with a generally positive track record. Some aspects of their experience might be less directly aligned or less extensive than ideal.<br><br>**Insufficient (Low/No Marks):** The Project Manager lacks sufficient experience in managing similar projects, or their track record raises concerns about their ability to successfully lead this project."
+  },
+  {
+    "main_criteria": "",
+    "main_weight": "",
+    "sub_criteria": "نسبة السعوديين في فريق العمل 20 % فأكثر (Percentage of Saudis in the team 20% or more)",
+    "sub_weight": "5",
+    "expectation": "**Excellent (Full Marks):** The percentage of Saudis in the project team significantly exceeds 20%, demonstrating a strong commitment to nationalization and local talent development.<br><br>**Good (Partial Marks):** The percentage of Saudis in the project team meets or slightly exceeds the 20% requirement.<br><br>**Insufficient (Low/No Marks):** The percentage of Saudis in the project team is below 20%, failing to meet the specified nationalization requirement."
+  },
+  {
+    "main_criteria": "الفهم والحلول المقدمة (Understanding and Proposed Solutions)",
+    "main_weight": "30",
+    "sub_criteria": "أن يكون الحل المقدم يشمل المتطلبات الفنية الملحقة ملحق رقم 1 (The proposed solution must include the technical requirements attached in Appendix 1)",
+    "sub_weight": "30",
+    "expectation": "**Excellent (Full Marks):** The proposed solution comprehensively addresses and exceeds all technical requirements detailed in Appendix 1, demonstrating innovative approaches and robust architecture.<br><br>**Good (Partial Marks):** The proposed solution adequately addresses all technical requirements in Appendix 1. Minor gaps or areas for improvement may exist but do not critically impact functionality.<br><br>**Insufficient (Low/No Marks):** The proposed solution fails to meet significant technical requirements outlined in Appendix 1, or demonstrates fundamental flaws in its design or approach."
+  },
+  {
+    "main_criteria": "الدعم والصيانة (Support and Maintenance)",
+    "main_weight": "25",
+    "sub_criteria": "تقديم خطة تفصيلية للدعم والصيانة (Submission of a detailed support and maintenance plan)",
+    "sub_weight": "25",
+    "expectation": "**Excellent (Full Marks):** A highly detailed, proactive, and comprehensive support and maintenance plan is provided, covering all aspects from incident management to preventative maintenance, SLAs, and continuous improvement, with clear roles and responsibilities.<br><br>**Good (Partial Marks):** A detailed support and maintenance plan is provided, covering key aspects of support and maintenance. It is generally adequate but might lack some specific details or proactive elements.<br><br>**Insufficient (Low/No Marks):** The support and maintenance plan is incomplete, lacks sufficient detail, or fails to address critical aspects of ongoing system support and maintenance."
+  },
+  {
+    "main_criteria": "نقل المعرفة (Knowledge Transfer)",
+    "main_weight": "10",
+    "sub_criteria": "تقديم خطة تفصيلية لنقل المعرفة المقدمة مع متطلبات المشروع وفريق عمل المركز (Submission of a detailed knowledge transfer plan aligned with project requirements and the Center's team)",
+    "sub_weight": "10",
+    "expectation": "**Excellent (Full Marks):** A highly detailed, structured, and effective knowledge transfer plan is presented, clearly outlining methodologies, timelines, resources, and measurable outcomes to fully empower the Center's team.<br><br>**Good (Partial Marks):** A detailed knowledge transfer plan is provided, generally aligned with project requirements and the Center's team needs. It covers key aspects but might benefit from more specific methodologies or measurable objectives.<br><br>**Insufficient (Low/No Marks):** The knowledge transfer plan is vague, incomplete, or does not adequately demonstrate how the Center's team will be effectively enabled to manage and operate the solution post-implementation."
+  }
+]
