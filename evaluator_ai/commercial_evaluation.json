@@ -1,0 +1,211 @@
+{
+  "criteria": [
+    {
+      "name": "Technical Proposal",
+      "weight": 40
+    },
+    {
+      "name": "Past Project Experience",
+      "weight": 15
+    },
+    {
+      "name": "On-Time Delivery",
+      "weight": 10
+    },
+    {
+      "name": "Compliance",
+      "weight": 10
+    },
+    {
+      "name": "Financial Stability",
+      "weight": 10
+    },
+    {
+      "name": "Customer References",
+      "weight": 10
+    },
+    {
+      "name": "Risk Score",
+      "weight": 5
+    }
+  ],
+  "vendors": [
+    {
+      "id": 1,
+      "name": "Accenture",
+      "overallScore": 82.0,
+      "status": "Completed",
+      "recommendation": "Recommended",
+      "aiInsight": "High technical proficiency and strong market presence, though pricing is at the higher end of the spectrum.",
+      "evaluations": [
+        {
+          "criterion": "Technical Proposal",
+          "weight": 40,
+          "score": 35.0,
+          "reason": "Comprehensive technical solution provided.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Past Project Experience",
+          "weight": 15,
+          "score": 12.0,
+          "reason": "Extensive experience in similar large-scale implementations.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "On-Time Delivery",
+          "weight": 10,
+          "score": 8.0,
+          "reason": "Proven track record of meeting project milestones.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Compliance",
+          "weight": 10,
+          "score": 8.0,
+          "reason": "Full adherence to regulatory and internal standards.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Financial Stability",
+          "weight": 10,
+          "score": 9.0,
+          "reason": "Strong balance sheet and market capitalization.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Customer References",
+          "weight": 10,
+          "score": 7.0,
+          "reason": "Satisfactory references provided.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Risk Score",
+          "weight": 5,
+          "score": 3.0,
+          "reason": "Low operational risk profile.",
+          "reference": "Not specified"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Deloitte",
+      "overallScore": 78.0,
+      "status": "Completed",
+      "recommendation": "Conditionally Recommended",
+      "aiInsight": "Strong consulting capabilities, but requires further clarification on specific delivery timelines.",
+      "evaluations": [
+        {
+          "criterion": "Technical Proposal",
+          "weight": 40,
+          "score": 32.0,
+          "reason": "Solid technical approach, though some modules require further detail.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Past Project Experience",
+          "weight": 15,
+          "score": 13.0,
+          "reason": "Strong industry-specific experience.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "On-Time Delivery",
+          "weight": 10,
+          "score": 7.0,
+          "reason": "Delivery schedule is aggressive; requires monitoring.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Compliance",
+          "weight": 10,
+          "score": 9.0,
+          "reason": "Excellent compliance documentation.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Financial Stability",
+          "weight": 10,
+          "score": 8.0,
+          "reason": "Stable financial performance.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Customer References",
+          "weight": 10,
+          "score": 6.0,
+          "reason": "References provided but limited in scope.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Risk Score",
+          "weight": 5,
+          "score": 3.0,
+          "reason": "Moderate risk due to project complexity.",
+          "reference": "Not specified"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "KaarTech",
+      "overallScore": 65.0,
+      "status": "Completed",
+      "recommendation": "Conditionally Recommended",
+      "aiInsight": "Cost-effective solution, but lacks the depth of experience compared to larger competitors.",
+      "evaluations": [
+        {
+          "criterion": "Technical Proposal",
+          "weight": 40,
+          "score": 28.0,
+          "reason": "Technical proposal is adequate but lacks depth in certain areas.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Past Project Experience",
+          "weight": 15,
+          "score": 9.0,
+          "reason": "Limited experience with projects of this scale.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "On-Time Delivery",
+          "weight": 10,
+          "score": 7.0,
+          "reason": "Delivery timelines are realistic.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Compliance",
+          "weight": 10,
+          "score": 7.0,
+          "reason": "Compliance requirements met with minor gaps.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Financial Stability",
+          "weight": 10,
+          "score": 6.0,
+          "reason": "Financial data provided is limited.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Customer References",
+          "weight": 10,
+          "score": 5.0,
+          "reason": "References are insufficient.",
+          "reference": "Not specified"
+        },
+        {
+          "criterion": "Risk Score",
+          "weight": 5,
+          "score": 3.0,
+          "reason": "Higher risk due to limited track record.",
+          "reference": "Not specified"
+        }
+      ]
+    }
+  ]
+}

@@ -1,1 +1,10 @@
+.env
+.env.local
+.env.*.local
+*.env
+__pycache__/
+*.pyc
+*.db
+.venv/
+venv/
 evaluator_ai/venv311/

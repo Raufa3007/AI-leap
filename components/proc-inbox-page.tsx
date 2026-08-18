@@ -24,7 +24,7 @@ import ProcClosureReportPage from "./proc-closure-report-page" // Import Closure
 import ProcClosureReportAppPage from "./proc-closure-report-app-page" // Import Closure Report App Page
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
 import COCDecisionDialog from "./coc-decision-dialog" // Import COC Decision Dialog
-import VendorEvaluationPage from "./vendor-evaluation-page"
+
 
 // Added imports for icons
 import { Search, Filter, MoreHorizontal, RefreshCw } from "lucide-react"
@@ -88,33 +88,6 @@ interface ProcInboxPageProps {
 }
 
 const mockTasks: InboxTask[] = [
-  {
-    id: "vendor-evaluation-task",
-    title: "Enterprise Vendor Evaluation & Scorecard (Palm Tree IT, Accenture, Deloitte)",
-    department: "Procurement & Strategic Sourcing",
-    timestamp: "Today, 09:30 am",
-    owner: "AI Solution Architect",
-    status: "In Progress",
-    statusColor: "orange",
-    rfpId: "VEN-SCORECARD-2026",
-    process: "Vendor Evaluation",
-    dueDate: "20 Aug 2026",
-    createdOn: "05 Aug 2026",
-    owner_name: "Procurement AI Engine",
-    requestor: "Senior Procurement Officer",
-    requestor_manager: "Chief Procurement Officer",
-    budget_remaining: "SAR 120,000,000",
-    budget_rfp: "SAR 45,000,000",
-    budget_after_approval: "SAR 75,000,000",
-    other_requests: "SAR 15,000,000",
-    department_detail: "Vendor Management & Governance",
-    cost_centre: "VEND-EVAL-01",
-    purchase_group: "Strategic Sourcing",
-    contract_duration: "Multi-Year",
-    scope_of_work:
-      "Enterprise SAP Ariba inspired Vendor Scorecard PoC evaluating vendors using historical JSON data and Gemini 2.5 Flash AI document analysis.",
-    priority: 1,
-  },
   {
     id: "checklist-4542",
     title: "Assign committee members & evaluation criteria for RFP #4542",
@@ -832,9 +805,6 @@ const ProcInboxPage = ({
   }, [selectedTask])
 
   const visibleTasks = allTasks.filter((task) => {
-    if (task.id === "vendor-evaluation-task") {
-      return true
-    }
     // Always show supplier tasks (priority 1) and PR tasks (priority 2)
     if (task.priority === 1 || task.priority === 2) {
       return true
@@ -1511,18 +1481,8 @@ const ProcInboxPage = ({
             {/* Right Panel - Task Details */}
             <div className="flex-1 overflow-y-auto bg-white scrollbar-hide">
               {selectedTask ? (
-                <div className={selectedTask.id === "checklist-4542" && showRFPOverview ? "h-full" : (selectedTask.id === "vendor-evaluation-task" ? "p-0 h-full overflow-hidden" : "p-8")}>
-                  {selectedTask.id === "vendor-evaluation-task" ? (
-                    <VendorEvaluationPage
-                      onBack={() => {
-                        if (onViewVendorEvaluation) {
-                          onViewVendorEvaluation()
-                        } else {
-                          setSelectedTask(null)
-                        }
-                      }}
-                    />
-                  ) : selectedTask.id === "confirm-closure-3432" && showConfirmClosure ? (
+                <div className={selectedTask.id === "checklist-4542" && showRFPOverview ? "h-full" : "p-8"}>
+                  {selectedTask.id === "confirm-closure-3432" && showConfirmClosure ? (
                     <div className="p-8" style={{ backgroundColor: "#F7F8FA" }}>
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">

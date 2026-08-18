@@ -826,7 +826,9 @@ export default function TechnicalEvaluationPage({
         ---------------------------------------------------- */
 
         const response =
-          (await evaluateTechnicalProposals()) as TechnicalEvaluationResponse
+          (await evaluateTechnicalProposals({
+            reEvaluate: evalRows.length > 0,
+          })) as TechnicalEvaluationResponse
 
         /* ----------------------------------------------------
            SERVER ACTION ERROR
@@ -1278,9 +1280,9 @@ export default function TechnicalEvaluationPage({
                 Leadership Development Training Program
               </h2>
 
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 text-sm font-medium rounded">
+              {/* <span className="px-3 py-1 bg-orange-100 text-orange-600 text-sm font-medium rounded">
                 Evaluation Inprogress
-              </span>
+              </span> */}
 
             </div>
 

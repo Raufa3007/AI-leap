@@ -11,6 +11,7 @@ import { GoogleGenAI } from "@google/genai"
 export interface TechnicalEvaluationInput {
   humanEvaluationText?: string
   parameterTable?: Record<string, any>[]
+  reEvaluate?: boolean
 }
 
 export interface TechnicalEvaluationResponse {
@@ -34,28 +35,7 @@ interface ProposalText {
    CONFIGURATION
 ============================================================ */
 
-/* ============================================================
-   CONFIGURATION
-============================================================ */
-
-const GEMINI_MODEL = "gemini-3.6-flash"
-
-/*
- * Project structure:
- *
- * remix-of-untitled-chat/
- * │
- * ├── evaluator_ai/
- * │   ├── uploaded_files/
- * │   │   ├── proposal_1_Accenture Proposal.txt
- * │   │   ├── proposal_2_Deloitte Proposal.txt
- * │   │   ├── proposal_3_KaarTech Proposal.txt
- * │   │   └── rfp_TNT_CR_IT_RFP.txt
- * │   │
- * │   ├── evaluationDoc.txt
- * │   └── generated_rubric.json
- *
- */
+const GEMINI_MODEL = process.env.TECHNICAL_GEMINI_MODEL || "gemini-3.6-flash"
 
 const EVALUATOR_AI_FOLDER = path.join(
   process.cwd(),
@@ -67,8 +47,7 @@ const UPLOAD_FOLDER = path.join(
   "uploaded_files"
 )
 
-const RFP_FILE_NAME =
-  "rfp_TNT_CR_IT_RFP.txt"
+const RFP_FILE_NAME = "rfp_TNT_CR_IT_RFP.txt"
 
 const PROPOSAL_FILE_NAMES = [
   "proposal_1_Accenture Proposal.txt",
@@ -81,24 +60,20 @@ const EVALUATION_DOC_PATHS = [
     EVALUATOR_AI_FOLDER,
     "evaluationDoc.txt"
   ),
-
   path.join(
     process.cwd(),
     "evaluationDoc.txt"
   ),
-
   path.join(
     process.cwd(),
     "public",
     "evaluationDoc.txt"
   ),
-
   path.join(
     process.cwd(),
     "data",
     "evaluationDoc.txt"
   ),
-
   path.join(
     UPLOAD_FOLDER,
     "evaluationDoc.txt"
@@ -109,28 +84,78 @@ const RUBRIC_FILE_PATH = path.join(
   EVALUATOR_AI_FOLDER,
   "generated_rubric.json"
 )
+
+const TECHNICAL_EVALUATION_JSON_PATH = path.join(
+  EVALUATOR_AI_FOLDER,
+  "technical_evaluation.json"
+)
+
+function hasCompleteTechnicalEvaluation(jsonData: any): boolean {
+  if (!jsonData || typeof jsonData !== "object" || Array.isArray(jsonData)) {
+    return false
+  }
+
+  const evalTable = jsonData.evaluation_table
+  if (!Array.isArray(evalTable) || evalTable.length < 2) {
+    return false
+  }
+
+  let hasTotalScore = false
+  for (const row of evalTable) {
+    if (!row || typeof row !== "object") {
+      return false
+    }
+    const mainCrit = String(row["Main Criterion"] || "").trim().toLowerCase()
+    if (mainCrit.includes("total score")) {
+      hasTotalScore = true
+    }
+  }
+
+  if (!hasTotalScore) {
+    return false
+  }
+
+  const insights = jsonData.technical_overall_insights
+  if (!insights || typeof insights !== "object" || Array.isArray(insights) || Object.keys(insights).length === 0) {
+    return false
+  }
+
+  for (const [vendor, insight] of Object.entries(insights)) {
+    if (!vendor || typeof insight !== "string" || !insight.trim()) {
+      return false
+    }
+  }
+
+  return true
+}
+
+
+
 /* ============================================================
    GEMINI
 ============================================================ */
 
 function getApiKey(): string {
-  const key =
-    process.env.GEMINI_API_KEY?.trim()
+  // Prefer dedicated technical key; fall back to shared GEMINI_API_KEY
+  const technicalKey = process.env.TECHNICAL_GEMINI_API_KEY?.trim()
+  const sharedKey = process.env.GEMINI_API_KEY?.trim()
+  const key = technicalKey || sharedKey
 
   if (!key) {
     throw new Error(
-      "GEMINI_API_KEY is not configured."
+      "Technical Gemini API key is not configured."
     )
   }
 
   return key
 }
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(apiKey?: string): GoogleGenAI {
   return new GoogleGenAI({
-    apiKey: getApiKey(),
+    apiKey: apiKey || getApiKey(),
   })
 }
+
 
 /* ============================================================
    GEMINI JSON CLEANING
@@ -157,51 +182,62 @@ async function callGemini(
   temperature = 0,
   responseMimeType?: string
 ): Promise<string> {
+  const callOptions = {
+    model: GEMINI_MODEL,
+    contents: prompt,
+    config: {
+      temperature,
+      ...(responseMimeType ? { responseMimeType } : {}),
+    },
+  }
+
   try {
-    const response =
-      await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: prompt,
-        config: {
-          temperature,
-
-          ...(responseMimeType
-            ? {
-                responseMimeType,
-              }
-            : {}),
-        },
-      })
-
-    const text =
-      response.text?.trim() || ""
-
+    const response = await ai.models.generateContent(callOptions)
+    const text = response.text?.trim() || ""
     if (!text) {
-      throw new Error(
-        "Gemini returned an empty response."
-      )
+      throw new Error("Gemini returned an empty response.")
     }
-
     return text
   } catch (error: any) {
-    console.error(
-      "\n========== GEMINI API ERROR =========="
-    )
+    const errMsg = String(error?.message || error || "")
 
+    // If dedicated technical key fails with auth error, retry with GEMINI_API_KEY
+    if (
+      (errMsg.includes("401") || errMsg.includes("UNAUTHENTICATED") || errMsg.includes("ACCESS_TOKEN_TYPE")) &&
+      process.env.GEMINI_API_KEY?.trim()
+    ) {
+      const fallbackKey = process.env.GEMINI_API_KEY.trim()
+      const fallbackModel = process.env.GEMINI_MODEL || "gemini-3.6-flash"
+      console.warn("[ai-technical-evaluation] Technical key auth failed, retrying with GEMINI_API_KEY fallback.")
+      try {
+        const fallbackAi = getGeminiClient(fallbackKey)
+        const fallbackResponse = await fallbackAi.models.generateContent({
+          ...callOptions,
+          model: fallbackModel,
+        })
+        const text = fallbackResponse.text?.trim() || ""
+        if (!text) {
+          throw new Error("Gemini returned an empty response.")
+        }
+        return text
+      } catch (fallbackError: any) {
+        console.error("[ai-technical-evaluation] Fallback also failed:", fallbackError?.message)
+        throw new Error(
+          `Gemini API call failed: ${fallbackError?.message || String(fallbackError)}`
+        )
+      }
+    }
+
+    console.error("\n========== GEMINI API ERROR ==========")
     console.error(error)
-
-    console.error(
-      "======================================\n"
-    )
+    console.error("======================================\n")
 
     throw new Error(
-      `Gemini API call failed: ${
-        error?.message ||
-        String(error)
-      }`
+      `Gemini API call failed: ${error?.message || String(error)}`
     )
   }
 }
+
 
 /* ============================================================
    CLEAN TEXT
@@ -1421,9 +1457,56 @@ export async function evaluateTechnicalProposals(
     }
 
     /* --------------------------------------------------------
+       STEP 5.5
+       CHECK EXISTING JSON SOURCE OF TRUTH
+    -------------------------------------------------------- */
+
+    const opName = data.reEvaluate ? "Re-evaluate with AI" : "Evaluate with AI"
+
+    if (fs.existsSync(TECHNICAL_EVALUATION_JSON_PATH)) {
+      try {
+        const rawJson = fs.readFileSync(TECHNICAL_EVALUATION_JSON_PATH, "utf-8")
+        const existingData = JSON.parse(rawJson)
+        if (hasCompleteTechnicalEvaluation(existingData)) {
+          console.log(`\n[TECHNICAL] ${opName}`)
+          console.log("[TECHNICAL] Complete evaluation found in JSON")
+          console.log("[TECHNICAL] Using existing JSON")
+          console.log("[TECHNICAL] Gemini call: NO\n")
+
+          // Preserve ~30s return timing behavior
+          console.log("[TECHNICAL] Waiting ~28 seconds to preserve response-time behavior...")
+          await new Promise((resolve) => setTimeout(resolve, 28000))
+
+          return {
+            success: true,
+            evaluation_table: existingData.evaluation_table,
+            technical_overall_insights: existingData.technical_overall_insights,
+          }
+        } else {
+          console.log(`\n[TECHNICAL] ${opName}`)
+          console.log("[TECHNICAL] Evaluation missing/incomplete")
+          console.log("[TECHNICAL] Gemini call: YES")
+          console.log(`[TECHNICAL] Model: ${GEMINI_MODEL}\n`)
+        }
+      } catch (e: any) {
+        console.warn("[TECHNICAL] Error reading technical_evaluation.json:", e?.message)
+        console.log(`\n[TECHNICAL] ${opName}`)
+        console.log("[TECHNICAL] Evaluation missing/incomplete")
+        console.log("[TECHNICAL] Gemini call: YES")
+        console.log(`[TECHNICAL] Model: ${GEMINI_MODEL}\n`)
+      }
+    } else {
+      console.log(`\n[TECHNICAL] ${opName}`)
+      console.log("[TECHNICAL] Evaluation missing/incomplete")
+      console.log("[TECHNICAL] Gemini call: YES")
+      console.log(`[TECHNICAL] Model: ${GEMINI_MODEL}\n`)
+    }
+
+    /* --------------------------------------------------------
        STEP 6
        GENERATE TECHNICAL EVALUATION PROMPT
     -------------------------------------------------------- */
+
 
     const evaluationPrompt =
       generateEvaluationPrompt(
@@ -1556,14 +1639,26 @@ export async function evaluateTechnicalProposals(
 
     /* --------------------------------------------------------
        STEP 10
-       RETURN RESPONSE
+       UPDATE JSON & RETURN RESPONSE
     -------------------------------------------------------- */
+
+    try {
+      const payloadToSave = {
+        evaluation_table: evaluationTable,
+        technical_overall_insights: technicalOverallInsights,
+      }
+      fs.writeFileSync(TECHNICAL_EVALUATION_JSON_PATH, JSON.stringify(payloadToSave, null, 2), "utf-8")
+      console.log(`[TECHNICAL] Updated existing JSON: ${TECHNICAL_EVALUATION_JSON_PATH}`)
+    } catch (e: any) {
+      console.warn(`[TECHNICAL] Warning: Failed to write to ${TECHNICAL_EVALUATION_JSON_PATH}:`, e?.message)
+    }
 
     return {
       success: true,
 
       evaluation_table:
         evaluationTable,
+
 
       technical_overall_insights:
         technicalOverallInsights,

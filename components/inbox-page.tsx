@@ -36,21 +36,6 @@ interface RFQItem {
 
 const mockRFQs: RFQItem[] = [
   {
-    id: "vendor-eval-task",
-    title: "Enterprise Vendor Evaluation & Scorecard (Palm Tree IT, Accenture, Deloitte)",
-    priority: "High",
-    timestamp: "Today, 09:30 am",
-    rfpId: "VEN-SCORECARD-2026",
-    issuingOrg: "Procurement & Strategic Sourcing",
-    deadline: "20-Aug-2026",
-    budget: "120,000,000 ﷼",
-    category: "Vendor Governance",
-    daysElapsed: 1,
-    objective: "Enterprise SAP Ariba inspired Vendor Scorecard PoC evaluating vendors using historical JSON data and Gemini AI document analysis.",
-    scopeItems: [],
-    documents: [],
-  },
-  {
     id: "approve-rfp-108",
     title: "Approve & publish RFP - 10000000108",
     priority: "Medium",

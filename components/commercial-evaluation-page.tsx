@@ -11,6 +11,8 @@ import {
 
 import SignatureVerificationDialog from "./signature-verification-dialog"
 import AssessmentDecisionDialog from "./assessment-decision-dialog"
+import { evaluateCommercialVendors } from "@/app/actions/ai-commercial-evaluation"
+
 
 // ============================================================
 // TYPES
@@ -592,60 +594,25 @@ export default function CommercialAssessmentPage({
           })
         )
 
-      const res = await fetch(
-        "https://ai-leap.onrender.com/evaluate-commercial",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-            Accept:
-              "application/json",
-          },
-          body: JSON.stringify({
-            vendors:
-              requestVendors,
-          }),
-        }
+      const data = await evaluateCommercialVendors(
+        requestVendors,
+        vendors.length > 0
       )
-
-      if (!res.ok) {
-        const errorText =
-          await res.text()
-
-        console.error(
-          "Commercial API error:",
-          errorText
-        )
-
-        throw new Error(
-          "Commercial evaluation request failed"
-        )
-      }
-
-      const data =
-        await res.json()
 
       console.log(
         "COMMERCIAL AI RESPONSE:",
         data
       )
 
-      if (
-        !data ||
-        !Array.isArray(
-          data.vendors
-        ) ||
-        data.vendors.length === 0
-      ) {
+      if (!data?.success || !Array.isArray(data.vendors) || data.vendors.length === 0) {
         setReviewError(
-          "Commercial evaluation has not been completed yet."
+          data?.message || "Commercial evaluation has not been completed yet."
         )
-
         return
       }
 
       const normalizedVendors: CommercialVendor[] =
+
         data.vendors.map(
           (
             vendor: any,
@@ -1015,9 +982,9 @@ export default function CommercialAssessmentPage({
                 Leadership Development Training Program
               </h2>
 
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 text-sm font-medium rounded">
+              {/* <span className="px-3 py-1 bg-orange-100 text-orange-600 text-sm font-medium rounded">
                 Evaluation Inprogress
-              </span>
+              </span> */}
 
             </div>
 

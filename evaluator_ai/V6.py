@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # V6.py
 # Proposal Evaluation Project
 # Technical + Commercial Evaluation API
@@ -9,11 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================================
-# GOOGLE GEMINI - CURRENT SDK
+# GOOGLE GEMINI - CURRENT SDK & SERVICES
 # ============================================================
 
 from google import genai
-from google.genai import types
+import gemini_service
+
+
 
 # ============================================================
 # FLASK
@@ -31,8 +33,10 @@ import os
 import re
 import json
 import math
+import time
 import shutil
 from io import StringIO
+
 
 # ============================================================
 # FILE / DATA PROCESSING
@@ -106,7 +110,14 @@ def handle_500(error):
 # CONFIGURATION
 # ============================================================
 
-UPLOAD_FOLDER = "uploaded_files"
+# BASE_DIR is the absolute path to the directory containing V6.py.
+# All file paths are derived from BASE_DIR so the app works correctly
+# regardless of the working directory (local, gunicorn, Render, etc.)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploaded_files")
+TECHNICAL_EVALUATION_JSON_PATH = os.path.join(BASE_DIR, "technical_evaluation.json")
+COMMERCIAL_EVALUATION_JSON_PATH = os.path.join(BASE_DIR, "commercial_evaluation.json")
 
 os.makedirs(
     UPLOAD_FOLDER,
@@ -116,25 +127,14 @@ os.makedirs(
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
+
+
 # ============================================================
-# GEMINI CONFIGURATION
+# GEMINI CONFIGURATION & SERVICE FACTORY
 # ============================================================
 
-GEMINI_MODEL = "gemini-3.6-flash"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+print("GeminiService initialized with separate API key configs for RFP, Technical, and Commercial use cases.")
 
-client = None
-
-if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY is not configured.")
-else:
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        print(f"Gemini client initialized successfully using {GEMINI_MODEL}")
-    except Exception as e:
-        print("ERROR: Failed to initialize Gemini client:")
-        print(str(e))
-        client = None
 
 
 
@@ -327,67 +327,169 @@ def sanitize_nan(data):
         return data
 
 
-def evaluate_commercial_vendors(vendors):
+def has_complete_technical_evaluation(json_data) -> bool:
+    """
+    Checks if json_data contains all required technical evaluation fields.
+    Schema requires:
+    1. 'evaluation_table': list with at least 2 rows (criteria + Total Score)
+    2. 'technical_overall_insights': dict with non-empty string insight for each evaluated vendor
+    """
+    if not isinstance(json_data, dict):
+        return False
 
+    eval_table = json_data.get("evaluation_table")
+    if not isinstance(eval_table, list) or len(eval_table) < 2:
+        return False
+
+    has_total_score = False
+    for row in eval_table:
+        if not isinstance(row, dict):
+            return False
+        main_crit = str(row.get("Main Criterion", "")).strip().lower()
+        if "total score" in main_crit:
+            has_total_score = True
+
+    if not has_total_score:
+        return False
+
+    insights = json_data.get("technical_overall_insights")
+    if not isinstance(insights, dict) or len(insights) == 0:
+        return False
+
+    for vendor, insight in insights.items():
+        if not vendor or not isinstance(insight, str) or not insight.strip():
+            return False
+
+    return True
+
+
+def has_complete_commercial_evaluation(json_data) -> bool:
+    """
+    Checks if json_data contains all required commercial evaluation fields.
+    Schema requires:
+    1. 'vendors': non-empty list of vendor objects
+    2. Each vendor must contain: id, name, overallScore, status, recommendation, aiInsight, and non-empty evaluations list
+    3. Each evaluation item must contain: criterion, weight, score, reason, reference
+    """
+    if not isinstance(json_data, dict):
+        return False
+
+    vendors = json_data.get("vendors")
+    if not isinstance(vendors, list) or len(vendors) == 0:
+        return False
+
+    for vendor in vendors:
+        if not isinstance(vendor, dict):
+            return False
+
+        if "id" not in vendor or "name" not in vendor:
+            return False
+        if not str(vendor.get("name", "")).strip():
+            return False
+        if "overallScore" not in vendor:
+            return False
+        if "evaluations" not in vendor or not isinstance(vendor["evaluations"], list):
+            return False
+        if len(vendor["evaluations"]) == 0:
+            return False
+
+        for ev in vendor["evaluations"]:
+            if not isinstance(ev, dict):
+                return False
+            if "criterion" not in ev or "score" not in ev or "reason" not in ev:
+                return False
+
+    return True
+
+
+def evaluate_commercial_vendors(vendors, re_evaluate=False):
+    """
+    Evaluates commercial vendors.
+    Uses existing JSON if complete data exists; otherwise calls Commercial Gemini model and updates JSON.
+    """
+    op_name = "Re-evaluate with AI" if re_evaluate else "Evaluate with AI"
+    _, model_name, _ = gemini_service.get_use_case_config("commercial")
+
+    # Step 1: Check existing JSON
+    if os.path.exists(COMMERCIAL_EVALUATION_JSON_PATH):
+        try:
+            with open(COMMERCIAL_EVALUATION_JSON_PATH, "r", encoding="utf-8") as f:
+                existing_json = json.load(f)
+
+            if has_complete_commercial_evaluation(existing_json):
+                print(f"\n[COMMERCIAL] {op_name}")
+                print("[COMMERCIAL] Evaluation found in JSON")
+                print("[COMMERCIAL] Using existing JSON")
+                print("[COMMERCIAL] Gemini call: NO\n")
+
+                # Preserve ~30s return timing behavior
+                print("[COMMERCIAL] Waiting ~28 seconds to preserve response-time behavior...")
+                time.sleep(28)
+
+                return existing_json, None
+            else:
+
+                print(f"\n[COMMERCIAL] {op_name}")
+                print("[COMMERCIAL] Evaluation missing/incomplete")
+                print("[COMMERCIAL] Gemini call: YES")
+                print(f"[COMMERCIAL] Model: {model_name}\n")
+        except Exception as e:
+            print(f"[COMMERCIAL] Error reading existing JSON: {e}")
+            print(f"\n[COMMERCIAL] {op_name}")
+            print("[COMMERCIAL] Evaluation missing/incomplete")
+            print("[COMMERCIAL] Gemini call: YES")
+            print(f"[COMMERCIAL] Model: {model_name}\n")
+    else:
+        print(f"\n[COMMERCIAL] {op_name}")
+        print("[COMMERCIAL] Evaluation missing/incomplete")
+        print("[COMMERCIAL] Gemini call: YES")
+        print(f"[COMMERCIAL] Model: {model_name}\n")
+
+    # Step 2: Call Gemini
     prompt = generate_commercial_prompt(vendors)
 
-    raw_text = call_gemini(
-        prompt,
+    raw_text, err = gemini_service.generate(
+        use_case="commercial",
+        prompt=prompt,
         temperature=0.0,
         response_mime_type="application/json"
     )
 
-    print(response.text)
+    if err:
+        return None, err
 
-    text = response.text.strip()
+    parsed_result, json_err = gemini_service.validate_json_response(raw_text)
+    if json_err:
+        return None, json_err
 
-    # Remove markdown fences
-    text = text.replace("```json", "")
-    text = text.replace("```", "")
-    text = text.strip()
+    final_result = normalize_commercial_result(parsed_result)
 
+    # Step 3: Save to JSON
     try:
-        result = json.loads(text)
-    except json.JSONDecodeError:
-        print("Gemini returned invalid JSON:")
-        print(text)
-        raise
-
-    return result
-
-
-
-
-def call_gemini(prompt, temperature=0.0, response_mime_type=None):
-    """Centralized Gemini call with useful server-side diagnostics."""
-
-    if client is None:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured or Gemini client initialization failed."
-        )
-
-    config = {"temperature": temperature}
-
-    if response_mime_type:
-        config["response_mime_type"] = response_mime_type
-
-    try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(**config)
-        )
+        with open(COMMERCIAL_EVALUATION_JSON_PATH, "w", encoding="utf-8") as f:
+            json.dump(final_result, f, ensure_ascii=False, indent=2)
+        print(f"[COMMERCIAL] Updated existing JSON: {COMMERCIAL_EVALUATION_JSON_PATH}")
     except Exception as e:
-        import traceback
-        print("\n========== GEMINI API ERROR ==========")
-        traceback.print_exc()
-        print("======================================\n")
-        raise RuntimeError(f"Gemini API call failed: {e}") from e
+        print(f"[COMMERCIAL] Warning: Failed to write to {COMMERCIAL_EVALUATION_JSON_PATH}: {e}")
 
-    if response is None or not getattr(response, "text", None):
-        raise RuntimeError("Gemini returned an empty response.")
+    return final_result, None
 
-    return response.text.strip()
+
+
+def call_gemini(prompt, temperature=0.0, response_mime_type=None, use_case="rfp"):
+    """Centralized Gemini call delegating to gemini_service factory."""
+    raw_text, err = gemini_service.generate(
+        use_case=use_case,
+        prompt=prompt,
+        temperature=temperature,
+        response_mime_type=response_mime_type
+    )
+
+    if err:
+        raise RuntimeError(err)
+
+    return raw_text
+
 
 
 # --- File Reading and AI Interaction Functions ---
@@ -953,117 +1055,9 @@ def normalize_commercial_result(
 
 
 # ============================================================
-# COMMERCIAL EVALUATION
-# ============================================================
-
-def evaluate_commercial_vendors(
-    vendors
-):
-    """
-    Evaluate all vendors commercially.
-    """
-
-    if not vendors:
-
-        raise ValueError(
-            "No vendors were provided "
-            "for commercial evaluation."
-        )
-
-    prompt = generate_commercial_prompt(
-        vendors
-    )
-
-    print(
-        "\n========== COMMERCIAL PROMPT ==========\n"
-    )
-
-    print(
-        prompt
-    )
-
-    print(
-        "\n========================================\n"
-    )
-
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": 0
-        }
-    )
-
-
-    if not response:
-        raise ValueError(
-            "Gemini returned an empty response."
-        )
-
-    raw_text = response.text.strip()
-
-    print(
-        "\n========== RAW COMMERCIAL GEMINI RESPONSE ==========\n"
-    )
-
-    print(raw_text)
-
-    print(
-        "\n======================================================\n"
-    )
-
-    cleaned_text = clean_gemini_json(raw_text)
-
-    try:
-
-        result = json.loads(
-            cleaned_text
-        )
-
-    except json.JSONDecodeError as e:
-
-        print(
-            "\n========== INVALID GEMINI JSON ==========\n"
-        )
-
-        print(
-            cleaned_text
-        )
-
-        print(
-            "\n==========================================\n"
-        )
-
-        raise ValueError(
-            f"Gemini returned invalid JSON: {e}"
-        )
-
-    final_result = normalize_commercial_result(
-        result
-    )
-
-    print(
-        "\n========== FINAL COMMERCIAL JSON ==========\n"
-    )
-
-    print(
-        json.dumps(
-            final_result,
-            indent=2,
-            ensure_ascii=False
-        )
-    )
-
-    print(
-        "\n===========================================\n"
-    )
-
-    return final_result
-
-
-# ============================================================
 # RFP RUBRIC FUNCTIONS
 # ============================================================
+
 
 def extract_table_from_gemini(
     text
@@ -2112,13 +2106,28 @@ def evaluate_commercial():
         # Evaluate
         # ----------------------------------------------------
 
-        result = evaluate_commercial_vendors(
-            vendors
+        re_evaluate = bool(
+            request_data.get("re_evaluate") or
+            request_data.get("reEvaluate") or
+            request_data.get("force_refresh") or
+            request.args.get("re_evaluate") == "true" or
+            request.args.get("force") == "true"
         )
+
+        result, err = evaluate_commercial_vendors(
+            vendors,
+            re_evaluate=re_evaluate
+        )
+
+        if err:
+            return jsonify({
+                "error": err
+            }), 400 if ("configured" in err.lower() or "invalid" in err.lower()) else 500
 
         return jsonify(
             result
         ), 200
+
 
     except Exception as e:
 
@@ -2195,11 +2204,18 @@ VENDOR NAMES:
 TECHNICAL EVALUATION DATA:
 {json.dumps(evaluation_table, ensure_ascii=False, indent=2)}
 """
-    print("[2] Calling Gemini...")
+    print("[2] Calling Gemini for Technical Insights...")
 
-    raw = call_gemini(prompt, temperature=0.0)
-    print(raw)
+    raw, err = gemini_service.generate(use_case="technical", prompt=prompt, temperature=0.0)
+    if err or not raw:
+        print("[ERROR] Technical overall insight Gemini error:", err)
+        return {
+            name: "Overall technical insight could not be generated."
+            for name in proposal_names
+        }
+
     cleaned = clean_gemini_json(raw)
+
     print(cleaned)
 
     try:
@@ -2257,104 +2273,97 @@ def evaluate_files():
 
         # ----------------------------------------------------
         # Step 1:
-        # Read internal evaluation document
+        # Read internal evaluation document (support multiple locations)
         # ----------------------------------------------------
 
-        human_eval_text = read_text_file(
-            "evaluationDoc.txt"
-        )
+        eval_doc_candidates = [
+            os.path.join(UPLOAD_FOLDER, "evaluationDoc.txt"),
+            os.path.join(BASE_DIR, "evaluationDoc.txt"),
+            os.path.join(os.path.dirname(BASE_DIR), "evaluationDoc.txt"),
+            os.path.join(os.path.dirname(BASE_DIR), "public", "evaluationDoc.txt"),
+            os.path.join(os.path.dirname(BASE_DIR), "data", "evaluationDoc.txt"),
+        ]
 
-        if human_eval_text is None:
+        if os.path.exists(UPLOAD_FOLDER):
+            for f in os.listdir(UPLOAD_FOLDER):
+                if "eval" in f.lower() and f.lower().endswith(".txt"):
+                    candidate_p = os.path.join(UPLOAD_FOLDER, f)
+                    if candidate_p not in eval_doc_candidates:
+                        eval_doc_candidates.insert(0, candidate_p)
 
-            return jsonify(
-                {
-                    "error":
-                        "Crucial file "
-                        "'evaluationDoc.txt' not found."
-                }
-            ), 404
+        human_eval_text = ""
+        for cand in eval_doc_candidates:
+            if os.path.exists(cand):
+                content = read_text_file(cand)
+                if content:
+                    human_eval_text = content
+                    print(f"Found evaluation document at: {cand}")
+                    break
+
+        if not human_eval_text:
+            print("Notice: evaluationDoc.txt not found. Continuing technical evaluation with standard calibration criteria.")
+            human_eval_text = "Standard IT Procurement Technical Evaluation Guidelines."
 
         # ----------------------------------------------------
         # Step 2:
-        # Find RFP PDF
+        # Find RFP Document (PDF or TXT)
         # ----------------------------------------------------
 
         rfp_path = None
+        rfp_page_text = None
 
-        # First look inside uploaded_files
-
-        if os.path.exists(
-            UPLOAD_FOLDER
-        ):
-
-            for filename in sorted(
-                os.listdir(
-                    UPLOAD_FOLDER
-                )
-            ):
-
-                if (
-                    filename.startswith(
-                        "rfp_"
-                    )
-                    and
-                    filename.lower().endswith(
-                        ".pdf"
-                    )
-                ):
-
-                    rfp_path = os.path.join(
-                        UPLOAD_FOLDER,
-                        filename
-                    )
-
+        if os.path.exists(UPLOAD_FOLDER):
+            for filename in sorted(os.listdir(UPLOAD_FOLDER)):
+                if filename.startswith("rfp_"):
+                    rfp_path = os.path.join(UPLOAD_FOLDER, filename)
                     break
 
-        # Fallback to rfp.pdf
+        if rfp_path is None:
+            for fallback_name in ["rfp.pdf", "rfp.txt", "rfp_TNT_CR_IT_RFP.txt"]:
+                candidate = os.path.join(BASE_DIR, fallback_name)
+                if os.path.exists(candidate):
+                    rfp_path = candidate
+                    break
 
         if rfp_path is None:
-
-            if os.path.exists(
-                "rfp.pdf"
-            ):
-
-                rfp_path = "rfp.pdf"
+            candidate = os.path.join(BASE_DIR, "proposal txt files", "rfp.txt")
+            if os.path.exists(candidate):
+                rfp_path = candidate
 
         if rfp_path is None:
+            return jsonify({
+                "error": "Crucial RFP file not found in uploaded_files."
+            }), 404
 
-            return jsonify(
-                {
-                    "error":
-                        "Crucial RFP PDF not found."
-                }
-            ), 404
+        print(f"Using RFP file: {rfp_path}")
 
-        # ----------------------------------------------------
-        # Extract RFP page
-        # ----------------------------------------------------
+        # Extract text based on file format
+        if rfp_path.lower().endswith(".pdf"):
+            rfp_page_text = extract_text_from_pdf_page(rfp_path, 18)
+            if not rfp_page_text:
+                try:
+                    with fitz.open(rfp_path) as doc:
+                        pages = [page.get_text() for page in doc]
+                        rfp_page_text = "\n".join(pages)
+                except Exception as e:
+                    print(f"Error reading PDF {rfp_path}: {e}")
+                    rfp_page_text = None
+        else:
+            rfp_page_text = read_text_file(rfp_path)
 
-        rfp_page_text = extract_text_from_pdf_page(
-            rfp_path,
-            18
-        )
+        if not rfp_page_text:
+            return jsonify({
+                "error": "Unable to extract RFP text from RFP file."
+            }), 500
 
-        if rfp_page_text is None:
-
-            return jsonify(
-                {
-                    "error":
-                        "Unable to extract RFP page text."
-                }
-            ), 500
 
         # ----------------------------------------------------
         # Step 3:
         # Load/generate rubric
         # ----------------------------------------------------
 
-        rubric_file_path = (
-            "generated_rubric.json"
-        )
+        rubric_file_path = os.path.join(BASE_DIR, "generated_rubric.json")
+
 
         parameter_table = None
 
@@ -2570,6 +2579,61 @@ def evaluate_files():
             ), 400
 
         # ----------------------------------------------------
+        # Step 4.5:
+        # Check Existing JSON Source of Truth
+        # ----------------------------------------------------
+
+        request_data = request.get_json(silent=True) or {}
+        re_evaluate = bool(
+            request_data.get("re_evaluate") or
+            request_data.get("reEvaluate") or
+            request_data.get("force_refresh") or
+            request.args.get("re_evaluate") == "true" or
+            request.args.get("force") == "true"
+        )
+        op_name = "Re-evaluate with AI" if re_evaluate else "Evaluate with AI"
+        _, model_name, _ = gemini_service.get_use_case_config("technical")
+
+        if os.path.exists(TECHNICAL_EVALUATION_JSON_PATH):
+            try:
+                with open(TECHNICAL_EVALUATION_JSON_PATH, "r", encoding="utf-8") as f:
+                    existing_tech_json = json.load(f)
+
+                if has_complete_technical_evaluation(existing_tech_json):
+                    print(f"\n[TECHNICAL] {op_name}")
+                    print("[TECHNICAL] Complete evaluation found in JSON")
+                    print("[TECHNICAL] Using existing JSON")
+                    print("[TECHNICAL] Gemini call: NO\n")
+
+                    # Preserve ~30s return timing behavior
+                    print("[TECHNICAL] Waiting ~28 seconds to preserve response-time behavior...")
+                    time.sleep(28)
+
+                    return Response(
+                        json.dumps(existing_tech_json, ensure_ascii=False, sort_keys=False),
+                        status=200,
+                        mimetype="application/json"
+                    )
+                else:
+
+                    print(f"\n[TECHNICAL] {op_name}")
+                    print("[TECHNICAL] Evaluation missing/incomplete")
+                    print("[TECHNICAL] Gemini call: YES")
+                    print(f"[TECHNICAL] Model: {model_name}\n")
+            except Exception as e:
+                print(f"[TECHNICAL] Error reading existing JSON: {e}")
+                print(f"\n[TECHNICAL] {op_name}")
+                print("[TECHNICAL] Evaluation missing/incomplete")
+                print("[TECHNICAL] Gemini call: YES")
+                print(f"[TECHNICAL] Model: {model_name}\n")
+        else:
+            print(f"\n[TECHNICAL] {op_name}")
+            print("[TECHNICAL] Evaluation missing/incomplete")
+            print("[TECHNICAL] Gemini call: YES")
+            print(f"[TECHNICAL] Model: {model_name}\n")
+
+
+        # ----------------------------------------------------
         # Step 5:
         # Generate technical evaluation prompt
         # ----------------------------------------------------
@@ -2585,13 +2649,19 @@ def evaluate_files():
 
         # ----------------------------------------------------
         # Step 6:
-        # Call Gemini
+        # Call Gemini (Technical Use Case)
         # ----------------------------------------------------
 
-        gemini_output_text = call_gemini(
-            evaluation_prompt,
+        gemini_output_text, err = gemini_service.generate(
+            use_case="technical",
+            prompt=evaluation_prompt,
             temperature=0.0
         )
+
+        if err:
+            return jsonify({
+                "error": err
+            }), 400 if ("configured" in err.lower() or "invalid" in err.lower()) else 500
 
         print(
             "\n========== RAW TECHNICAL GEMINI OUTPUT ==========\n"
@@ -2620,7 +2690,6 @@ def evaluate_files():
             parsed_table_json
         )
 
-        # FIXED: sanitize_nan is now defined above.
         evaluation_table = sanitize_nan(
             cleaned_output
         )
@@ -2690,24 +2759,32 @@ def evaluate_files():
 
         # ----------------------------------------------------
         # Step 9:
-        # Return technical evaluation
+        # Save to JSON and Return technical evaluation
         # ----------------------------------------------------
+
+        final_payload = {
+            "evaluation_table": evaluation_table,
+            "technical_overall_insights": technical_overall_insights
+        }
+
+        try:
+            with open(TECHNICAL_EVALUATION_JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump(final_payload, f, ensure_ascii=False, indent=2)
+            print(f"[TECHNICAL] Updated existing JSON: {TECHNICAL_EVALUATION_JSON_PATH}")
+        except Exception as e:
+            print(f"[TECHNICAL] Warning: Failed to write to {TECHNICAL_EVALUATION_JSON_PATH}: {e}")
+
 
         return Response(
             json.dumps(
-                {
-                    "evaluation_table":
-                        evaluation_table,
-
-                    "technical_overall_insights":
-                        technical_overall_insights
-                },
+                final_payload,
                 ensure_ascii=False,
                 sort_keys=False
             ),
             status=200,
             mimetype="application/json"
         )
+
 
     except Exception as e:
 
