@@ -671,7 +671,7 @@ From the following RFP text, extract the
 Present the data in markdown table format with these columns:
 
 - Main Criterion (with English in brackets)
-- Weight %
+- Weight 
 - Sub-Criterion (with English in brackets)
 - Sub-Weight 
 - Expectation
