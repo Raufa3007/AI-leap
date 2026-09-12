@@ -6,9 +6,10 @@ import { ArrowLeft, Info, X, Send, Download, FileText, MessageSquare } from "luc
 interface ProcRFPViewFormProps {
   rfpId: string
   onBack: () => void
+  readOnly?: boolean
 }
 
-export default function ProcRFPViewForm({ rfpId, onBack }: ProcRFPViewFormProps) {
+export default function ProcRFPViewForm({ rfpId, onBack, readOnly = false }: ProcRFPViewFormProps) {
   const [activeSection, setActiveSection] = useState("RFP Details")
   const [showDocumentChecklist, setShowDocumentChecklist] = useState(false)
   const [showComments, setShowComments] = useState(false)
@@ -197,18 +198,22 @@ export default function ProcRFPViewForm({ rfpId, onBack }: ProcRFPViewFormProps)
             <h1 className="text-lg font-medium text-gray-900">View RFP</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Modify
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90 transition-colors"
-              style={{ backgroundColor: "#1B733D" }}
-            >
-              Proceed for evaluation
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <i className="ri-more-2-fill text-gray-600" />
-            </button>
+            {!readOnly && (
+              <>
+                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                  Modify
+                </button>
+                <button
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90 transition-colors"
+                  style={{ backgroundColor: "#1B733D" }}
+                >
+                  Proceed for evaluation
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <i className="ri-more-2-fill text-gray-600" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 

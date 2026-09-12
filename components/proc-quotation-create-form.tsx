@@ -7,9 +7,10 @@ interface ProcQuotationCreateFormProps {
   quotationId: string
   onBack: () => void
   onSuccess: () => void
+  readOnly?: boolean
 }
 
-export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess }: ProcQuotationCreateFormProps) {
+export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess, readOnly = false }: ProcQuotationCreateFormProps) {
   const [formData, setFormData] = useState({
     title: "Leadership training program quotation",
     linkedRFP: "32425",
@@ -75,23 +76,28 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
             <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Create Quotation</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Request for Quotation</h1>
+            {readOnly && (
+              <span className="px-3 py-1 border border-gray-300 rounded-full text-sm text-gray-600 bg-white">Read Only - Sent</span>
+            )}
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              Save As Draft
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              style={{ backgroundColor: "#1B733D" }}
-            >
-              Submit Quotation
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center gap-3">
+              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                Save As Draft
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: "#1B733D" }}
+              >
+                Submit Quotation
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Scrollable Content */}
@@ -109,7 +115,8 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                   <input
                     type="text"
                     defaultValue={formData.title}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                   />
                 </div>
 
@@ -150,7 +157,7 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Category <span className="text-red-500">*</span>
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent">
+                    <select disabled={readOnly} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500">
                       <option value="">Select Here</option>
                       <option value="goods">Goods</option>
                       <option value="services">Services</option>
@@ -160,7 +167,7 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Mode of tenor <span className="text-red-500">*</span>
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent">
+                    <select disabled={readOnly} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500">
                       <option value="">Select Here</option>
                       <option value="public">Public</option>
                       <option value="private">Private</option>
@@ -180,7 +187,8 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                   </label>
                   <input
                     type="datetime-local"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                   />
                 </div>
                 <div>
@@ -189,7 +197,8 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                   </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -206,7 +215,8 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                   <textarea
                     rows={4}
                     defaultValue={formData.purpose}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                   />
                 </div>
                 <div>
@@ -216,7 +226,8 @@ export default function ProcQuotationCreateForm({ quotationId, onBack, onSuccess
                   <textarea
                     rows={4}
                     defaultValue={formData.scopeOfWork}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B733D] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                   />
                 </div>
               </div>

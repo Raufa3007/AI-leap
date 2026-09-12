@@ -239,6 +239,15 @@ export default function ProcInvoiceAppPage({
   const [showInvoiceDialog, setShowInvoiceDialog] =
     useState(false)
 
+  const [showDisputePanel, setShowDisputePanel] =
+    useState(false)
+
+  const [disputeText, setDisputeText] =
+    useState("")
+
+  const [disputeSubmitted, setDisputeSubmitted] =
+    useState(false)
+
   // ==========================================================
   // AI 3-WAY MATCH STATE
   // ==========================================================
@@ -294,6 +303,16 @@ export default function ProcInvoiceAppPage({
       id: "other-ses",
       label: "Other SES in PO",
       icon: "ri-folder-line",
+    },
+    {
+      id: "payment-tracking",
+      label: "Payment Tracking",
+      icon: "ri-map-pin-time-line",
+    },
+    {
+      id: "payment-details",
+      label: "Payment Details & Deductions",
+      icon: "ri-bank-card-line",
     },
   ]
 
@@ -3463,6 +3482,165 @@ Do not return explanations outside the JSON.
 
               </div>
 
+              {/* =================================================
+                  PAYMENT TRACKING (BR-25)
+              ================================================= */}
+
+              <div
+                ref={(el) => {
+                  if (el) sectionRefs.current["payment-tracking"] = el
+                }}
+                className="bg-white rounded-lg shadow-[0px_4px_60px_rgba(0,0,0,0.05)] p-6"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-lg font-semibold text-[#1B733D]">Payment Tracking</h2>
+                  <span className="text-xs text-gray-400 font-normal"> · Synced from SAP</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">Real-time payment stage for invoice INV5001</p>
+
+                {/* 5-stage stepper */}
+                <div className="relative flex items-start justify-between">
+                  {/* connector line */}
+                  <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200" style={{ zIndex: 0 }} />
+                  <div className="absolute top-4 left-0 h-0.5 bg-[#1B733D]" style={{ width: "75%", zIndex: 0 }} />
+
+                  {[
+                    { label: "Received", date: "15-Jun-25", done: true },
+                    { label: "Under Review", date: "17-Jun-25", done: true },
+                    { label: "Approved", date: "20-Jun-25", done: true },
+                    { label: "Scheduled for Payment", date: "25-Jun-25", done: true },
+                    { label: "Paid", date: null, done: false },
+                  ].map((stage, i) => (
+                    <div key={i} className="relative flex flex-col items-center flex-1" style={{ zIndex: 1 }}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                          stage.done
+                            ? "bg-[#1B733D] border-[#1B733D] text-white"
+                            : "bg-white border-gray-300 text-gray-400"
+                        }`}
+                      >
+                        {stage.done ? (
+                          <i className="ri-check-line text-sm" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-gray-300" />
+                        )}
+                      </div>
+                      <p className={`mt-2 text-xs font-semibold text-center ${
+                        stage.done ? "text-[#1B733D]" : "text-gray-400"
+                      }`}>{stage.label}</p>
+                      {stage.date && (
+                        <p className="text-xs text-gray-400 mt-0.5">{stage.date}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-3">
+                  <i className="ri-information-line text-blue-500 mt-0.5" />
+                  <p className="text-sm text-blue-700">
+                    Payment stage is automatically synced from SAP. Timestamps reflect the actual processing dates recorded in the ERP system.
+                  </p>
+                </div>
+              </div>
+
+              {/* =================================================
+                  PAYMENT DETAILS & DEDUCTIONS (BR-26 / BR-27)
+              ================================================= */}
+
+              <div
+                ref={(el) => {
+                  if (el) sectionRefs.current["payment-details"] = el
+                }}
+                className="bg-white rounded-lg shadow-[0px_4px_60px_rgba(0,0,0,0.05)] p-6"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-semibold text-[#1B733D]">Payment Details & Deductions</h2>
+                  <span className="text-xs text-gray-400 font-normal"></span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">Payment notification and deductions breakdown for INV5001</p>
+
+                {/* BR-26 — Payment notification */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-4">Payment Notification (BR-26)</p>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Invoice Amount</p>
+                      <p className="text-sm font-semibold text-gray-900">1,950,000 SAR</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Deductions</p>
+                      <p className="text-sm font-semibold text-red-600">− 97,500 SAR</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Net Payment Amount</p>
+                      <p className="text-sm font-bold text-[#1B733D]">1,852,500 SAR</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Bank Reference</p>
+                      <p className="text-sm font-medium text-gray-900">TRF-2025-00841</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Payment Date</p>
+                      <p className="text-sm font-medium text-gray-900">Pending</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Retained Amount</p>
+                      <p className="text-sm font-medium text-gray-900">97,500 SAR</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BR-27 — Deductions breakdown */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+                    <p className="text-sm font-semibold text-gray-900">Deductions & Withholdings (BR-27)</p>
+                  </div>
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Description</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">Rate</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700">Amount (SAR)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { type: "Retention", desc: "Performance retention per contract clause 8.2", rate: "5%", amount: "97,500" },
+                        { type: "Withholding Tax", desc: "WHT on services — ZATCA requirement", rate: "0%", amount: "0" },
+                        { type: "Penalty", desc: "No penalties applied", rate: "—", amount: "0" },
+                      ].map((row, i) => (
+                        <tr key={i} className="border-t border-gray-200">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.type}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{row.desc}</td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-700">{row.rate}</td>
+                          <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{row.amount}</td>
+                        </tr>
+                      ))}
+                      <tr className="border-t-2 border-gray-300 bg-gray-50">
+                        <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-900">Total Deductions</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-red-600">97,500</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-orange-100 bg-orange-50 px-4 py-3 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <i className="ri-alert-line text-orange-500 mt-0.5" />
+                    <p className="text-sm text-orange-700">
+                      If any deduction appears incorrect, flag it for Finance review. A dispute record will be created and the vendor will be notified.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setShowDisputePanel(true); setDisputeSubmitted(false) }}
+                    className="flex-shrink-0 px-4 py-2 border border-orange-400 text-orange-700 text-sm font-medium rounded-md hover:bg-orange-100 transition-colors"
+                  >
+                    Raise Dispute
+                  </button>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -3474,6 +3652,117 @@ Do not return explanations outside the JSON.
       {/* ======================================================
           INVOICE SNAPSHOT DIALOG
       ====================================================== */}
+
+      {/* ======================================================
+          DISPUTE PANEL
+      ====================================================== */}
+
+      {/* backdrop */}
+      {showDisputePanel && (
+        <div
+          className="fixed inset-0 bg-black/20 z-40"
+          onClick={() => setShowDisputePanel(false)}
+        />
+      )}
+
+      {/* slide-in panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ${
+          showDisputePanel ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Raise Dispute</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Invoice INV5001 · Deduction dispute</p>
+          </div>
+          <button
+            onClick={() => setShowDisputePanel(false)}
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <i className="ri-close-line text-lg text-gray-500" />
+          </button>
+        </div>
+
+        {/* body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+          {/* context summary */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dispute Context</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-gray-400">Invoice</p>
+                <p className="text-sm font-medium text-gray-900">INV5001</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Deduction Type</p>
+                <p className="text-sm font-medium text-gray-900">Retention</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Disputed Amount</p>
+                <p className="text-sm font-medium text-red-600">97,500 SAR</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Supplier</p>
+                <p className="text-sm font-medium text-gray-900">Kaar Technologies</p>
+              </div>
+            </div>
+          </div>
+
+          {/* deduction selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Deduction to dispute</label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B733D]">
+              <option>Retention — 97,500 SAR</option>
+              <option>Withholding Tax — 0 SAR</option>
+              <option>Penalty — 0 SAR</option>
+            </select>
+          </div>
+
+          {/* reason */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Reason for dispute</label>
+            <textarea
+              rows={5}
+              value={disputeText}
+              onChange={(e) => setDisputeText(e.target.value)}
+              placeholder="Describe why this deduction is incorrect or needs review..."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-[#1B733D]"
+            />
+          </div>
+
+          {/* success state */}
+          {disputeSubmitted && (
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-start gap-3">
+              <i className="ri-checkbox-circle-line text-green-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-green-700">Dispute raised successfully</p>
+                <p className="text-xs text-green-600 mt-0.5">Finance has been notified and the vendor will receive a dispute notification.</p>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* footer */}
+        <div className="px-5 py-4 border-t border-gray-200 flex items-center gap-3">
+          <button
+            onClick={() => setShowDisputePanel(false)}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={!disputeText.trim() || disputeSubmitted}
+            onClick={() => setDisputeSubmitted(true)}
+            className="flex-1 px-4 py-2 bg-[#1B733D] text-white rounded-md text-sm font-medium hover:bg-[#155a30] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {disputeSubmitted ? "Submitted" : "Submit Dispute"}
+          </button>
+        </div>
+      </div>
 
       <InvoiceSnapshotDialog
         isOpen={

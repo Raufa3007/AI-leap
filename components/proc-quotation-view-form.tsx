@@ -6,9 +6,10 @@ import { ArrowLeft } from "lucide-react"
 interface ProcQuotationViewFormProps {
   quotationId: string
   onBack: () => void
+  readOnly?: boolean
 }
 
-export default function ProcQuotationViewForm({ quotationId, onBack }: ProcQuotationViewFormProps) {
+export default function ProcQuotationViewForm({ quotationId, onBack, readOnly = false }: ProcQuotationViewFormProps) {
   const [showDocumentChecklist, setShowDocumentChecklist] = useState(false)
   const [showComments, setShowComments] = useState(false)
 
@@ -75,23 +76,32 @@ export default function ProcQuotationViewForm({ quotationId, onBack }: ProcQuota
             <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Create Quotation</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {readOnly ? "View Quotation" : "Create Quotation"}
+            </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Modify
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              style={{ backgroundColor: "#1B733D" }}
-            >
-              Proceed for evalation
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
+            {!readOnly && (
+              <>
+                <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                  Modify
+                </button>
+                <button
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                  style={{ backgroundColor: "#1B733D" }}
+                >
+                  Proceed for evalation
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </>
+            )}
+            {readOnly && (
+              <span className="px-3 py-1 rounded text-sm font-medium" style={{ backgroundColor: "#FFF3E0", color: "#F57C00" }}>Read Only</span>
+            )}
           </div>
         </div>
 

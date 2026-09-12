@@ -70,6 +70,7 @@ export default function ProcMainContent({ onNavigate, currentPage = "dashboard" 
   const [viewingInboxRFIFormId, setViewingInboxRFIFormId] = useState<string | null>(null)
   const [viewingInboxRFPFormId, setViewingInboxRFPFormId] = useState<string | null>(null)
   const [viewingInboxQuotationFormId, setViewingInboxQuotationFormId] = useState<string | null>(null)
+  const [inboxQuotationSubmitted, setInboxQuotationSubmitted] = useState(false)
   const [viewingPRApp, setViewingPRApp] = useState<{ prId: string; prData: any } | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
@@ -200,11 +201,12 @@ export default function ProcMainContent({ onNavigate, currentPage = "dashboard" 
       <div className={mainContentClass}>
         <ProcInboxPREditQuotation
           quotationId={viewingInboxQuotationFormId}
-          onBack={() => setViewingInboxQuotationFormId(null)}
-          onSuccess={() => {
+          initialReadOnly={inboxQuotationSubmitted}
+          onBack={() => {
             setViewingInboxQuotationFormId(null)
-            setToastMessage("Quotation submitted successfully")
-            setShowToast(true)
+          }}
+          onSuccess={() => {
+            setInboxQuotationSubmitted(true)
           }}
         />
       </div>
