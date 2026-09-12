@@ -26,6 +26,7 @@ import AssessmentDecisionDialog from "./assessment-decision-dialog"
 import COCDecisionDialog from "./coc-decision-dialog" // Import COC Decision Dialog
 import VendorEvaluationPage from "./vendor-evaluation-page"
 import ProcInboxPREditQuotation from "./proc_inbox_pr_edit_quotation"
+import ProcScoreAlertAppPage from "./proc-score-alert-app-page"
 
 // Added imports for icons
 import { Search, Filter, MoreHorizontal, RefreshCw } from "lucide-react"
@@ -89,6 +90,32 @@ interface ProcInboxPageProps {
 }
 
 const mockTasks: InboxTask[] = [
+  {
+    id: "score-alert-kaar",
+    title: "Vendor Score Below Threshold — Kaar Technologies (BR-32)",
+    department: "Procurement & Vendor Management",
+    timestamp: "Today, 08:15 am",
+    owner: "Procurement AI Engine",
+    status: "In Progress",
+    statusColor: "orange",
+    rfpId: "VEN-SCORE-KT-2026",
+    process: "Vendor Management",
+    dueDate: "24 Jul 2026",
+    createdOn: "10 Jul 2026",
+    owner_name: "Procurement AI Engine",
+    requestor: "Senior Procurement Officer",
+    requestor_manager: "Chief Procurement Officer",
+    budget_remaining: "N/A",
+    budget_rfp: "N/A",
+    budget_after_approval: "N/A",
+    other_requests: "N/A",
+    department_detail: "Vendor Management & Governance",
+    cost_centre: "VEND-GOV-01",
+    purchase_group: "Strategic Sourcing",
+    contract_duration: "N/A",
+    scope_of_work: "Kaar Technologies vendor performance score has dropped below the acceptable threshold (58/70). Per BR-32, a formal notice must be issued and the vendor must be given the opportunity to submit an improvement plan.",
+    priority: 2,
+  },
   {
     id: "vendor-evaluation-task",
     title: "Enterprise Vendor Evaluation & Scorecard (Palm Tree IT, Accenture, Deloitte)",
@@ -481,6 +508,7 @@ const ProcInboxPage = ({
     return false
   })
   const [showClosureReportApp, setShowClosureReportApp] = useState(false)
+  const [showScoreAlertApp, setShowScoreAlertApp] = useState(false)
   const [showMinBidQuotation, setShowMinBidQuotation] = useState(false)
 
   const [isRFPPublished, setIsRFPPublished] = useState(() => {
@@ -860,6 +888,9 @@ const ProcInboxPage = ({
   }, [selectedTask])
 
   const visibleTasks = allTasks.filter((task) => {
+    if (task.id === "score-alert-kaar") {
+      return true
+    }
     if (task.id === "vendor-evaluation-task" || task.id === "min-bid-flag") {
       return true
     }
@@ -1014,6 +1045,7 @@ const ProcInboxPage = ({
     setShowCommercialAssignment(false) // Reset commercial assignment view
     setShowCommercialEvaluation(false) // Reset commercial evaluation view
     setShowCOCDecisionDialog(false) // Reset COC decision dialog
+    setShowScoreAlertApp(false)
     setShowMinBidQuotation(false)
 
     if (task.isSupplier && task.requestor) {
@@ -1252,6 +1284,14 @@ const ProcInboxPage = ({
     })
   }, [visibleTasks, taskEnableOrder])
 
+  if (showScoreAlertApp && selectedTask?.id === "score-alert-kaar") {
+    return (
+      <ProcScoreAlertAppPage
+        onBack={() => setShowScoreAlertApp(false)}
+      />
+    )
+  }
+
   // Early return for full-screen min-bid quotation view
   if (showMinBidQuotation && selectedTask?.id === "min-bid-flag") {
     return (
@@ -1318,6 +1358,7 @@ const ProcInboxPage = ({
     setShowRatingApp(false)
     setShowClosureReport(false)
     setShowClosureReportApp(false)
+    setShowScoreAlertApp(false)
     setShowConfirmClosure(false)
     setShowRFPOverview(false)
     setShowChecklistDetail(false)
@@ -1553,7 +1594,93 @@ const ProcInboxPage = ({
             <div className="flex-1 overflow-y-auto bg-white scrollbar-hide">
               {selectedTask ? (
                 <div className={selectedTask.id === "checklist-4542" && showRFPOverview ? "h-full" : (selectedTask.id === "vendor-evaluation-task" ? "p-0 h-full overflow-hidden" : "p-8")}>
-                  {selectedTask.id === "min-bid-flag" ? (
+                  {selectedTask.id === "score-alert-kaar" ? (
+                    <div>
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <h2 className="text-2xl font-bold" style={{ color: "#1B733D" }}>{selectedTask.rfpId}</h2>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i className="ri-message-2-line text-xl text-gray-600" />
+                          </button>
+                          <button onClick={() => { setHistoryRfpNumber(selectedTask.rfpId); setShowProcessHistoryModal(true) }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i className="ri-history-line text-xl text-gray-600" />
+                          </button>
+                        </div>
+                        <button className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-colors" style={{ backgroundColor: "#1B733D" }}>Decide</button>
+                      </div>
+
+                      {/* Task card */}
+                      <div className="bg-white rounded-lg p-6 mb-6" style={{ boxShadow: "0px 0px 8px rgba(0,0,0,0.12)" }}>
+                        <h3 className="text-base font-medium mb-3" style={{ color: "#000525" }}>{selectedTask.title}</h3>
+                        <span className="inline-block px-3 py-1 rounded text-sm font-medium mb-6" style={{ backgroundColor: "#FFF3E0", color: "#F57C00" }}>In progress</span>
+                        <div className="grid grid-cols-4 gap-6 mt-4">
+                          <div>
+                            <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Owner</p>
+                            <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.owner_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Process</p>
+                            <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.process}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Due date</p>
+                            <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.dueDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Created on</p>
+                            <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.createdOn}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* App tray */}
+                      <div className="mb-6">
+                        <h4 className="text-base font-medium mb-4" style={{ color: "#1B733D" }}>App tray</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div
+                            onClick={() => setShowScoreAlertApp(true)}
+                            className="flex items-center gap-4 p-0 bg-white rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                            style={{ boxShadow: "0px 0px 8px rgba(0,0,0,0.12)", height: "72px" }}
+                          >
+                            <div className="flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#F7F8FA", width: "72px", height: "72px", padding: "24px" }}>
+                              <i className="ri-bar-chart-line text-2xl" style={{ color: "#1B733D" }} />
+                            </div>
+                            <div className="flex-1 pr-4">
+                              <p className="text-sm font-medium mb-1" style={{ color: "#000525" }}>Score Alert App</p>
+                              <span className="text-sm flex items-center gap-1" style={{ color: "#45546E" }}>View More <i className="ri-arrow-right-line" style={{ color: "#5F6C81" }} /></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Additional details */}
+                      <div className="mb-6">
+                        <h4 className="text-base font-medium mb-4" style={{ color: "#1B733D" }}>Additional details</h4>
+                        <div className="bg-white rounded-lg p-6" style={{ boxShadow: "0px 0px 8px rgba(0,0,0,0.12)" }}>
+                          <h5 className="text-base font-medium mb-4" style={{ color: "#000525" }}>Vendor Score Alert — Kaar Technologies</h5>
+                          <div className="grid grid-cols-4 gap-6">
+                            <div>
+                              <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Department</p>
+                              <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.department_detail}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Cost Centre</p>
+                              <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.cost_centre}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Purchase Group</p>
+                              <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.purchase_group}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-normal mb-1" style={{ color: "#5F6C81" }}>Contract Duration</p>
+                              <p className="text-sm font-medium" style={{ color: "#000525" }}>{selectedTask.contract_duration}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedTask.id === "min-bid-flag" ? (
                     <div>
                       {/* Header */}
                       <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
