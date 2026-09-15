@@ -92,7 +92,7 @@ interface ProcInboxPageProps {
 const mockTasks: InboxTask[] = [
   {
     id: "score-alert-kaar",
-    title: "Vendor Score Below Threshold — Kaar Technologies (BR-32)",
+    title: "Vendor Score Below Threshold — Kaar Technologies ",
     department: "Procurement & Vendor Management",
     timestamp: "Today, 08:15 am",
     owner: "Procurement AI Engine",
@@ -113,7 +113,7 @@ const mockTasks: InboxTask[] = [
     cost_centre: "VEND-GOV-01",
     purchase_group: "Strategic Sourcing",
     contract_duration: "N/A",
-    scope_of_work: "Kaar Technologies vendor performance score has dropped below the acceptable threshold (58/70). Per BR-32, a formal notice must be issued and the vendor must be given the opportunity to submit an improvement plan.",
+    scope_of_work: "Kaar Technologies vendor performance score has dropped below the acceptable threshold (58/70). A formal notice must be issued and the vendor must be given the opportunity to submit an improvement plan.",
     priority: 2,
   },
   {

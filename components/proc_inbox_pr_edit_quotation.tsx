@@ -885,7 +885,7 @@ export default function ProcInboxPREditQuotation({ quotationId, onBack, onSucces
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-amber-800">Minimum Bid Threshold Not Met</p>
                             <p className="text-sm text-amber-700 mt-1">
-                              Only {vendors.filter((v) => v.status === "submitted").length} of 3 required bids received. Per procurement policy (BR-16), please select a path forward:
+                              Only {vendors.filter((v) => v.status === "submitted").length} of 3 required bids received. Per procurement policy, please select a path forward:
                             </p>
                             <div className="flex flex-wrap gap-2 mt-3">
                               <button
@@ -986,7 +986,7 @@ export default function ProcInboxPREditQuotation({ quotationId, onBack, onSucces
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <h2 className="text-lg font-semibold text-[#1B733D]">Clarifications</h2>
-                    <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium rounded">BR-13</span>
+                    
                   </div>
                   <button onClick={() => toggleSection("clarifications")} className="text-gray-500 hover:text-gray-700 transition-colors">
                     <i className={`ri-arrow-${collapsedSections["clarifications"] ? "down" : "up"}-s-line text-xl`}></i>
@@ -1081,7 +1081,7 @@ export default function ProcInboxPREditQuotation({ quotationId, onBack, onSucces
 
                     {/* Add question / comment box */}
                     <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <p className="text-xs text-gray-500">Add a question or comment (questions received outside the portal via phone/email should be logged here per BR-13):</p>
+                      <p className="text-xs text-gray-500">Add a question or comment (questions received outside the portal via phone/email should be logged here ):</p>
                       <textarea
                         rows={3}
                         value={newQuestion}
