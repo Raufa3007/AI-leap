@@ -3561,7 +3561,7 @@ Do not return explanations outside the JSON.
 
                 {/* BR-26 — Payment notification */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-4">Payment Notification (BR-26)</p>
+                  <p className="text-sm font-semibold text-gray-900 mb-4">Payment Notification </p>
                   <div className="grid grid-cols-3 gap-6">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Invoice Amount</p>
@@ -3593,7 +3593,7 @@ Do not return explanations outside the JSON.
                 {/* BR-27 — Deductions breakdown */}
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-                    <p className="text-sm font-semibold text-gray-900">Deductions & Withholdings (BR-27)</p>
+                    <p className="text-sm font-semibold text-gray-900">Deductions & Withholdings </p>
                   </div>
                   <table className="w-full">
                     <thead className="bg-gray-50">

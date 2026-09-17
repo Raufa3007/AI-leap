@@ -45,10 +45,10 @@ export default function PRAIChatbot({
     {
       id: "welcome-1",
       role: "assistant",
-      text: `Hello! I'm your RFP AI Assistant. Tell me what you'd like to requisition in natural language, and I will extract the details into your form automatically.
+      text: `Hello! I'm your PR AI Assistant. Tell me what you'd like to requisition in natural language, and I will extract the details into your form automatically.
 
 For example:
-"Create a RFP for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003."`,
+"Create a PR for the IT Department to purchase 10 business laptops and 5 USB keyboards, budget code BC003."`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ])
@@ -249,8 +249,8 @@ For example:
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 leading-tight">RFP AI Assistant</h2>
-            <p className="text-xs text-slate-500 font-medium">AI-powered RFP creation</p>
+            <h2 className="text-base font-bold text-slate-900 leading-tight">PR AI Assistant</h2>
+            <p className="text-xs text-slate-500 font-medium">AI-powered PR creation</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ For example:
           >
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-green-600" />
-              <span>RFP Draft Card — {prState.formData.pr_number}</span>
+              <span>PR Draft Card — {prState.formData.pr_number}</span>
             </div>
             {isDraftCardExpanded ? (
               <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -428,7 +428,7 @@ For example:
         <div className="p-3 bg-green-50 border-t border-green-200 shadow-inner">
           <div className="flex items-center gap-2 text-green-800 font-semibold text-xs mb-2">
             <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span>RFP is ready for submission!</span>
+            <span>PR is ready for submission!</span>
           </div>
           <div className="flex gap-2">
             <button
@@ -492,8 +492,8 @@ For example:
             disabled={isProcessing || isReadOnly}
             placeholder={
               isReadOnly
-                ? "This RFP is submitted and read-only"
-                : "Describe your RFP request..."
+                ? "This PR is submitted and read-only"
+                : "Describe your PR request..."
             }
             rows={2}
             className="w-full resize-none bg-transparent px-2 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"

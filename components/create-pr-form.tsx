@@ -460,7 +460,7 @@ export default function CreatePRForm({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
           <h1 className="text-2xl font-semibold text-green-700">
-            {customTitle || (isReadOnly ? "View PR (Submitted)" : editPrNumber ? "Edit PR Draft" : "Create RFP")}
+            {customTitle || (isReadOnly ? "View PR (Submitted)" : editPrNumber ? "Edit PR Draft" : "Create PR")}
           </h1>
           {isReadOnly && (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
@@ -500,7 +500,7 @@ export default function CreatePRForm({
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
               >
-                {isSubmitting ? "Submitting..." : "Submit RFP"}
+                {isSubmitting ? "Submitting..." : "Submit PR"}
               </button>
             </>
           )}
@@ -520,7 +520,7 @@ export default function CreatePRForm({
             </button>
             <div className="space-y-3 w-full flex flex-col items-center">
               {[
-                { title: "RFP Details", icon: "ri-file-list-line" },
+                { title: "PR Details", icon: "ri-file-list-line" },
                 { title: "Bill of Quantity", icon: "ri-shopping-cart-line" },
                 { title: "Scope Of Work", icon: "ri-draft-line" },
                 { title: "Purpose & Justification", icon: "ri-file-text-line" },
@@ -556,7 +556,7 @@ export default function CreatePRForm({
               </div>
               <nav className="space-y-1">
                 {[
-                  "RFP Details",
+                  "PR Details",
                   "Bill of Quantity",
                   "Scope Of Work",
                   "Purpose & Justification",
@@ -568,7 +568,7 @@ export default function CreatePRForm({
                   <button
                     key={section}
                     className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      section === "RFP Details"
+                      section === "PR Details"
                         ? "bg-green-100 text-green-700 border-l-4 border-green-600 font-medium"
                         : "text-gray-700 hover:bg-gray-200"
                     }`}
@@ -584,7 +584,7 @@ export default function CreatePRForm({
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-6 space-y-8">
             <div>
-              <h2 className="text-xl font-semibold text-green-700 mb-4">RFP Details</h2>
+              <h2 className="text-xl font-semibold text-green-700 mb-4">PR Details</h2>
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -1009,7 +1009,7 @@ export default function CreatePRForm({
                       <div>
                         <p className="text-base font-bold text-gray-800">Upload Procurement Document</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Upload an RFP, Scope of Work, quotation, proposal, or other procurement document.
+                          Upload an PR, Scope of Work, quotation, proposal, or other procurement document.
                         </p>
                       </div>
                     </>
